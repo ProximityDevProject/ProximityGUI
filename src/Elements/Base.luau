@@ -50,7 +50,7 @@ function Base.new(class, section, options: { [string]: any })
 	self.Section = section
 	self.Window = section and section.Window
 	self.Tab = section and section.Tab
-	self.Options = options
+	self.Opts = options
 	self.Id = Util.Uid()
 	self.Name = Util.Opt(options, "Name", "Title", "Text") or class.Kind
 	self.Description = Util.Opt(options, "Description", "Desc")
@@ -567,7 +567,10 @@ function Base:OpenContextMenu(at: Vector2?)
 	if #items == 0 then
 		return
 	end
-	Shared.Overlay.Menu(items, { At = at or game:GetService("UserInputService"):GetMouseLocation() })
+	if not at then
+		at = game:GetService("UserInputService"):GetMouseLocation() - game:GetService("GuiService"):GetGuiInset()
+	end
+	Shared.Overlay.Menu(items, { At = at })
 end
 
 local clipboard = nil -- library-local clipboard (works without setclipboard)
@@ -648,6 +651,9 @@ function Base:GetPath(): string
 	end
 	if self.Section and self.Section.Page and self.Section.Page.Name ~= (self.Tab and self.Tab.Name) and not self.Section.Page.Implicit then
 		table.insert(parts, self.Section.Page.Name)
+	end
+	if self.Section and self.Section.ParentSection then
+		table.insert(parts, self.Section.ParentSection.Name)
 	end
 	if self.Section and self.Section.Name then
 		table.insert(parts, self.Section.Name)

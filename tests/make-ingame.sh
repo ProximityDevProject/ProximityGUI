@@ -7,7 +7,7 @@ for ex in examples/*.luau; do
 	name=$(basename "$ex" .luau)
 	{
 		printf 'local Proximity = (function()\n'
-		cat dist/Proximity.luau
+		cat build/Proximity.dev.luau
 		printf '\nend)()\n'
 		grep -v 'loadstring(game:HttpGet("https://raw.githubusercontent.com/ProximityDevProject' "$ex"
 	} > "build/ingame-$name.luau"

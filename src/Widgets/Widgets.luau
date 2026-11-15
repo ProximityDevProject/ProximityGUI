@@ -34,7 +34,7 @@ return function(Lib)
 		frame.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 				dragging, start = true, Vector2.new(input.Position.X, input.Position.Y)
-				startPos = frame.AbsolutePosition
+				startPos = frame.AbsolutePosition - frame.Parent.AbsolutePosition
 				frame.AnchorPoint = Vector2.new(0, 0)
 				frame.Position = UDim2.fromOffset(startPos.X, startPos.Y)
 			end
@@ -50,8 +50,8 @@ return function(Lib)
 				return
 			end
 			dragging = false
-			local view = workspace.CurrentCamera.ViewportSize
-			local pos, size = frame.AbsolutePosition, frame.AbsoluteSize
+			local view = frame.Parent.AbsoluteSize
+			local pos, size = frame.AbsolutePosition - frame.Parent.AbsolutePosition, frame.AbsoluteSize
 			local cx, cy = (pos.X + size.X / 2) / view.X, (pos.Y + size.Y / 2) / view.Y
 			-- snap to 3×3 zones with a 12 px margin
 			local ax = cx < 0.33 and 0 or (cx > 0.66 and 1 or 0.5)
@@ -138,10 +138,7 @@ return function(Lib)
 		Theme.Paint(card, { BackgroundColor3 = "Elevated" })
 		Theme.Paint(Util.Stroke(card), { Color = "StrokeHi" })
 		Shared.Overlay.Shadow(card, 0.55, 14)
-		Util.Padding(card, 11, 12, 13, 14)
-		local bar = Util.New("Frame", { Size = UDim2.new(0, 2, 1, -16), Position = UDim2.new(0, -8, 0, 8), BorderSizePixel = 0, Parent = card })
-		Util.Round(bar)
-		Theme.Paint(bar, { BackgroundColor3 = typeTokens[kind] or "Accent" })
+		Util.Padding(card, 11, 12, 9, 12)
 		local list = Util.List(card, 3)
 		local top = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 16), LayoutOrder = 1, Parent = card })
 		local icon = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = Icons.Get(options.Icon or typeIcons[kind]) or "", Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(0, 1), Parent = top })
@@ -167,7 +164,10 @@ return function(Lib)
 				end)
 			end
 		end
-		local progress = Util.New("Frame", { Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 1, 10), BorderSizePixel = 0, BackgroundTransparency = 0.6, Parent = card })
+		-- timer line: a normal list item, so it never feeds back into the card height
+		local track = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 6), LayoutOrder = 99, Parent = card })
+		local progress = Util.New("Frame", { Size = UDim2.new(1, 0, 0, 2), Position = UDim2.fromOffset(0, 4), BorderSizePixel = 0, BackgroundTransparency = 0.6, Parent = track })
+		Util.Round(progress)
 		Theme.Paint(progress, { BackgroundColor3 = "Accent" })
 
 		local closed = false
@@ -210,12 +210,16 @@ return function(Lib)
 			handle:Close()
 		end)
 		-- slide in once the card knows its height
+		local function fitWrap()
+			local h = math.floor(card.AbsoluteSize.Y / notifyScale.Scale + 0.5)
+			if not closed and wrap.Size.Y.Offset ~= h then
+				wrap.Size = UDim2.new(1, 0, 0, h)
+			end
+		end
 		task.defer(function()
-			wrap.Size = UDim2.new(1, 0, 0, card.AbsoluteSize.Y / notifyScale.Scale)
+			fitWrap()
 			card:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-				if not closed then
-					wrap.Size = UDim2.new(1, 0, 0, card.AbsoluteSize.Y / notifyScale.Scale)
-				end
+				task.defer(fitWrap)
 			end)
 			Tween.Play(card, { Position = UDim2.fromOffset(0, 0) }, 0.35, Enum.EasingStyle.Back)
 		end)
@@ -374,7 +378,9 @@ return function(Lib)
 			return Lib.KeybindListWidget
 		end
 		local frame = panel("Keybinds")
-		Util.New("UISizeConstraint", { MinSize = Vector2.new(200, 0), Parent = frame })
+		-- fixed width: rows are 100% wide, so the panel must not size to them
+		frame.AutomaticSize = Enum.AutomaticSize.Y
+		frame.Size = UDim2.fromOffset(options.Width or 230, 0)
 		Util.Padding(frame, 8, 10, 8, 10)
 		Util.List(frame, 3)
 		local head = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), LayoutOrder = 0, Parent = frame })

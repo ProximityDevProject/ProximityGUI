@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1 — first in-game test pass
+
+- Popups, context menus, window drag and widget docking no longer shift by the Roblox topbar height
+- `element:Options()` works (an internal field shadowed the method)
+- Range slider value label, loading task progress and notification sizing fixed
+- Unloading no longer switches off settings toggles (rim, watermark, keybind list)
+- Keybind list has a fixed width; search ranks real matches first and shows full paths
+- Theme dropdown and accent picker follow theme changes made from code
+
 ## 1.0.0 — first release
 
 - Window with sidebar, categories, tabs, sub tabs, hidden sub pages with back navigation

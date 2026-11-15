@@ -216,8 +216,9 @@ return function(Window)
 				end
 			end
 			for _, el in Lib.AllElements do
-				if el.Window == self and el.Section and not el.Parent and el.Name and el.Name ~= "" and el.Type ~= "Divider" and el.Type ~= "Spacer" then
-					local hay = el.Name .. " " .. (el.Description or "") .. " " .. (el.Section.Name or "")
+				if el.Window == self and el.Section and not el.Parent and el.Name and el.Name ~= "" and el.Type ~= "Divider" and el.Type ~= "Spacer" and el.Type ~= "Label" and el.Type ~= "Paragraph" then
+					local parent = el.Section.ParentSection
+					local hay = el.Name .. " " .. (el.Description or "") .. " " .. (el.Section.Name or "") .. " " .. (parent and parent.Name or "")
 					local s = Util.Fuzzy(q, hay)
 					if s then
 						local value = ""

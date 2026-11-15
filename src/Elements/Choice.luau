@@ -198,7 +198,7 @@ function Dropdown:_pick(v)
 			self:Select(v)
 		end
 	else
-		if self.Value == v and self.AllowNone and self.Options.Toggleable then
+		if self.Value == v and self.AllowNone and self.Opts.Toggleable then
 			self:Set(nil)
 		else
 			self:Set(v)
@@ -609,7 +609,7 @@ function Input:_build(parent)
 		TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
-		Size = UDim2.fromOffset(150, 24),
+		Size = UDim2.fromOffset(124, 24),
 		LayoutOrder = 100,
 		Parent = self._right,
 	})

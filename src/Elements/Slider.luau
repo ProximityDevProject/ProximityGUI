@@ -96,7 +96,7 @@ function Slider:GetText(): string
 end
 
 function Slider:_format(v)
-	if self.Range then
+	if self.Range and type(v) == "table" then
 		return self:_format(v.Min) .. " – " .. self:_format(v.Max)
 	end
 	if self.Labels then
@@ -380,6 +380,7 @@ function Slider:_render(animate)
 		Tween.Play(self._knobB, { Position = UDim2.fromScale(b, 0.5) }, t)
 	else
 		local p = (self.Value - self.Min) / span
+		self._fill.Visible = p > 0.015
 		Tween.Play(self._fill, { Size = UDim2.fromScale(p, 1) }, t)
 		Tween.Play(self._knobA, { Position = UDim2.fromScale(p, 0.5) }, t)
 	end

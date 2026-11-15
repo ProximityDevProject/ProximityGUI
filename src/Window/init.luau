@@ -625,7 +625,8 @@ function Window:_makeDraggable(handle)
 	local dragging, start, startPos = false, nil, nil
 	handle.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging, start, startPos = true, Vector2.new(input.Position.X, input.Position.Y), self.Holder.AbsolutePosition + self.Holder.AbsoluteSize / 2
+			dragging, start = true, Vector2.new(input.Position.X, input.Position.Y)
+			startPos = self.Holder.AbsolutePosition + self.Holder.AbsoluteSize / 2 - self.Holder.Parent.AbsolutePosition
 		end
 	end)
 	self.Maid:Connect(UIS.InputChanged, function(input)
@@ -685,7 +686,7 @@ function Window:_buildBubble()
 	local moved, start, startPos = false, nil, nil
 	bubble.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			moved, start, startPos = false, Vector2.new(input.Position.X, input.Position.Y), bubble.AbsolutePosition
+			moved, start, startPos = false, Vector2.new(input.Position.X, input.Position.Y), bubble.AbsolutePosition - bubble.Parent.AbsolutePosition
 		end
 	end)
 	self.Maid:Connect(UIS.InputChanged, function(input)
@@ -924,9 +925,13 @@ function Window:GetLoadProgress(): number
 		total += tab._total
 		done += tab._done
 	end
+	-- developer tasks together weigh at least as much as the element work,
+	-- otherwise a slow download hides behind hundreds of instant toggles
+	local elements = total
 	for _, t in self._tasks do
-		total += t.Weight
-		done += t.Weight * (t.Finished and 1 or t.Progress)
+		local weight = math.max(t.Weight, elements / #self._tasks)
+		total += weight
+		done += weight * (t.Finished and 1 or t.Amount)
 	end
 	if total == 0 then
 		return 0
@@ -1067,11 +1072,11 @@ end
 ]]
 function Window:Task(name, weight)
 	local window = self
-	local t = { Name = name, Weight = weight or 10, Progress = 0, Finished = false }
+	local t = { Name = name, Weight = weight or 10, Amount = 0, Finished = false }
 	function t:Progress(p)
-		self.Progress = math.clamp(p, 0, 1)
+		self.Amount = math.clamp(p, 0, 1)
 		if window.Skeleton then
-			window.Skeleton:Update(self.Name .. " · " .. math.floor(self.Progress * 100) .. "%")
+			window.Skeleton:Update(self.Name .. " · " .. math.floor(self.Amount * 100) .. "%")
 		end
 		return self
 	end
@@ -1084,7 +1089,7 @@ function Window:Task(name, weight)
 		return self
 	end
 	function t:Done()
-		self.Finished, self.Progress = true, 1
+		self.Finished, self.Amount = true, 1
 		if window.Skeleton then
 			window.Skeleton:Update()
 		end

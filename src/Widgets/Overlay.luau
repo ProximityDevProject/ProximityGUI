@@ -175,8 +175,11 @@ function Popup:Reposition()
 		return
 	end
 	local s = scale.Scale
-	local view = workspace.CurrentCamera.ViewportSize
-	local apos, asize = self.Anchor.AbsolutePosition, self.Anchor.AbsoluteSize
+	-- work in the overlay's own space: AbsolutePosition excludes the topbar
+	-- inset while this layer ignores it, so subtract the root's origin.
+	local origin = root.AbsolutePosition
+	local view = root.AbsoluteSize
+	local apos, asize = self.Anchor.AbsolutePosition - origin, self.Anchor.AbsoluteSize
 	local w, h = self.Width * s, (self.Height or 40) * s
 	local gap = self.Gap * s
 	local x, y
@@ -318,7 +321,7 @@ function Overlay.Menu(items: { { [string]: any } }, options: { [string]: any })
 		anchor = Util.New("Frame", {
 			BackgroundTransparency = 1,
 			Size = UDim2.fromOffset(1, 1),
-			Position = UDim2.fromOffset(options.At.X / scale.Scale, options.At.Y / scale.Scale),
+			Position = UDim2.fromOffset((options.At.X - root.AbsolutePosition.X) / scale.Scale, (options.At.Y - root.AbsolutePosition.Y) / scale.Scale),
 			Parent = root,
 		})
 	end

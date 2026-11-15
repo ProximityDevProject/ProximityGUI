@@ -32,7 +32,7 @@ if shared.Library and shared.Library.Unload then
 end
 
 local Library = {
-	Version = "1.0.0",
+	Version = "1.0.1",
 	Flags = {},
 	Elements = {},
 	AllElements = {},
@@ -663,7 +663,7 @@ function Library:Unload()
 	end
 	self.Unloading:Fire()
 	for _, el in table.clone(self.AllElements) do
-		if el.Type == "Toggle" and el.Value == true then
+		if el.Type == "Toggle" and el.Value == true and el.Save ~= false then
 			pcall(el.Set, el, false)
 		end
 	end

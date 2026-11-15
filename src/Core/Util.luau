@@ -333,12 +333,15 @@ function Util.Fuzzy(query: string, text: string): number?
 	if direct then
 		return 1000 - direct * 2 - #text * 0.1
 	end
-	local score, ti, streak = 0, 1, 0
+	local score, ti, streak, skipped = 0, 1, 0, 0
 	for qi = 1, #query do
 		local ch = string.sub(query, qi, qi)
 		local found = string.find(text, ch, ti, true)
 		if not found then
 			return nil
+		end
+		if qi > 1 then
+			skipped += found - ti
 		end
 		if found == ti then
 			streak += 1
@@ -352,7 +355,11 @@ function Util.Fuzzy(query: string, text: string): number?
 		end
 		ti = found + 1
 	end
-	return score - #text * 0.1
+	-- letters scattered across the whole text are not a match
+	if skipped > #query * 3 then
+		return nil
+	end
+	return score - skipped * 2 - #text * 0.1
 end
 
 function Util.Uid(): string

@@ -98,7 +98,7 @@ return function(Window)
 
 		-- Appearance
 		local look = tab:LeftSection({ Name = T("Appearance"), Icon = "palette" })
-		look:Dropdown({
+		local themeDropdown = look:Dropdown({
 			Name = T("Theme"),
 			Values = Theme.List(),
 			Default = Lib:GetSetting("Theme", Theme.Current),
@@ -109,7 +109,7 @@ return function(Window)
 				end
 			end,
 		})
-		look:ColorPicker({
+		local accentPicker = look:ColorPicker({
 			Name = T("Accent"),
 			Default = Util.FromHex(Lib:GetSetting("Accent", "")) or Theme.Get("Accent"),
 			Save = false,
@@ -127,6 +127,13 @@ return function(Window)
 				Lib:SetAccent(c)
 			end,
 		})
+		-- keep the controls in sync when the theme changes from code
+		Theme.Changed:Connect(function(name)
+			if Theme.Presets[name] then
+				themeDropdown:Set(name, true)
+			end
+			accentPicker:Set(Theme.Get("Accent"), true)
+		end)
 		look:Slider({
 			Name = T("Transparency"),
 			Min = 0,
