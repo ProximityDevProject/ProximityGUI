@@ -5,9 +5,9 @@
 # Proximity UI
 
 **A black & white interface library for Roblox scripts.**
-Calm surfaces, one white accent, and a loading skeleton that turns into your finished UI.
+Calm surfaces, one white accent, and a planet that builds your menu while the script loads.
 
-[![version](https://img.shields.io/badge/version-1.1.0-ffffff?style=flat-square&labelColor=0b0b0c)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.2.0-ffffff?style=flat-square&labelColor=0b0b0c)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-ffffff?style=flat-square&labelColor=0b0b0c)](LICENSE)
 [![luau](https://img.shields.io/badge/luau-strict%20friendly-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md)
 [![icons](https://img.shields.io/badge/icons-818%20lucide-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md#icons)
@@ -15,8 +15,11 @@ Calm surfaces, one white accent, and a loading skeleton that turns into your fin
 </div>
 
 ```lua
-local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau"))()
+local Proximity = loadstring(game:HttpGet("https://proximitydevproject.github.io/ProximityGUI/Proximity.lua"))()
 ```
+
+**Docs, a code generator and live executor status: https://proximitydevproject.github.io/ProximityGUI/**
+Fixed version: `https://proximitydevproject.github.io/ProximityGUI/v/1.2.0.lua` · straight from the repo: `https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau`
 
 <table>
 <tr>
@@ -30,6 +33,16 @@ local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pro
 </table>
 
 ---
+
+## New in 1.2
+
+- **Planet intro**: the screen dims, a 3D planet assembles from points, turns into the Proximity artwork while the script loads with real progress and time left, then bursts and the window grows out of it
+- **Key system** with one option, `KeySystem = true / false`
+- **Window**: opens from and folds into a planet button next to the Roblox menu, icons-only navigation, mini mode, custom background, keyboard and gamepad control, remembered scroll
+- **Look**: 9 toggle styles, about 50 fonts including Monocraft, density from compact to touch, chips in multi dropdowns, glow on active things, red stripe on risky sections
+- **Elements and widgets**: player list, range filters in tables, key combos like Ctrl+Shift+X, player panel with a 3D model, FPS graph, stopwatch, your own HUD panels, a watermark with 16 items
+- **Configs**: protected files, backups, undo delete, short share codes
+- **Care**: notification center, what's new dialog, update check, `OnError`, clear option warnings, debug overlay, automatic FPS saving
 
 ## Why Proximity
 
