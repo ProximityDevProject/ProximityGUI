@@ -289,7 +289,7 @@ function Keybind:_chip(holder, order)
 		end
 	end)
 	Shared.Overlay.Hover(chip, function()
-		return Locale.T("Mode") .. ": " .. Locale.T(self.Mode) .. "  ·  RMB"
+		return Locale.T("Mode") .. ": " .. Locale.T(self.Mode == "Press" and "Press_" or self.Mode) .. "  ·  RMB"
 	end)
 	return chip
 end
@@ -299,7 +299,7 @@ function Keybind:OpenModeMenu()
 	local items = {}
 	for _, mode in self.Modes do
 		table.insert(items, {
-			Text = (self.Mode == mode and "● " or "   ") .. Locale.T(mode),
+			Text = (self.Mode == mode and "● " or "   ") .. Locale.T(mode == "Press" and "Press_" or mode),
 			Callback = function()
 				self:SetMode(mode)
 			end,

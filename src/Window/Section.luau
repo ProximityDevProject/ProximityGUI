@@ -2,12 +2,12 @@
 --[[
 	Proximity · Window/Section
 	A card on a page that holds elements. Extras taken from the best hubs:
-	  • Toggle header  – Section{ Toggle = true, Flag = "aim" }: a checkbox in the
+	  • Toggle header  - Section{ Toggle = true, Flag = "aim" }: a checkbox in the
 	    header switches the whole section; disabled content is dimmed and locked.
-	  • Tabs inside    – section:Tabs({ "Silent", "Lock", "Rage" }) → sub-sections
+	  • Tabs inside    - section:Tabs({ "Silent", "Lock", "Rage" }) → sub-sections
 	    with their own elements and a sliding indicator.
-	  • Collapsible    – click the header (Collapsible = true, Collapsed = false).
-	  • Floating       – the options panel of an element (element:Options()).
+	  • Collapsible    - click the header (Collapsible = true, Collapsed = false).
+	  • Floating       - the options panel of an element (element:Options()).
 
 	Every element constructor exists in two spellings: Section:Toggle{} and
 	Section:AddToggle{} (drop-in for Compkiller / Neverlose style scripts).
@@ -125,6 +125,14 @@ function Section:_add(element)
 	self._counter += 1
 	element._order = self._counter
 	table.insert(self.Elements, element)
+	if element.Type == "Toggle" then
+		element.Changed:Connect(function()
+			self:_updateCount()
+		end)
+		task.defer(function()
+			self:_updateCount()
+		end)
+	end
 	if self.Floating then
 		if self._mounted then
 			element:_mount(self.Body, element._order)
@@ -227,6 +235,10 @@ function Section:_build(parent)
 	})
 	Theme.Paint(title, { TextColor3 = "TextDim" })
 	self._title = title
+	-- how many toggles in this section are on, e.g. "2/5"
+	local count = Util.Label({ Text = "", FontFace = Theme.Fonts.Mono, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.new(0, 0, 1, 0), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, (self.HasToggle and -36 or -12) - (self.Collapsible and 22 or 0), 0, 0), Parent = header })
+	Theme.Paint(count, { TextColor3 = "TextMute" })
+	self._count = count
 	local line = Util.New("Frame", { BorderSizePixel = 0, Size = UDim2.new(1, -16, 0, 1), Position = UDim2.new(0, 8, 1, -1), Parent = header })
 	Theme.Paint(line, { BackgroundColor3 = "Stroke" })
 
@@ -292,6 +304,7 @@ function Section:_build(parent)
 	self._dim = dim
 
 	self:_paintState(false)
+	self:_updateCount()
 	if self.Collapsed then
 		self:SetCollapsed(true, true)
 	end
@@ -337,6 +350,26 @@ function Section:SetEnabled(enabled: boolean, silent: boolean?)
 		Lib:_onElementChanged(self._proxy, enabled, not enabled)
 	end
 	return self
+end
+
+function Section:_updateCount()
+	if self.ParentSection then
+		return self.ParentSection:_updateCount()
+	end
+	if not self._count then
+		return
+	end
+	local on, total = 0, 0
+	for _, el in self:AllElements() do
+		if el.Type == "Toggle" then
+			total += 1
+			if el.Value then
+				on += 1
+			end
+		end
+	end
+	self._count.Text = total >= 2 and (on .. "/" .. total) or ""
+	Theme.Paint(self._count, { TextColor3 = on > 0 and "TextDim" or "TextMute" })
 end
 
 function Section:IsEnabled(): boolean

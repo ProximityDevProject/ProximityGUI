@@ -40,7 +40,7 @@ local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pro
 | `:IsFavorite(el)` · `:ToggleFavorite(el)` · `:GetFavorites()` · `.FavoritesChanged` | favorites |
 | `:GetIdentity()` | `{ Name, DisplayName, UserId, Avatar, Anonymous? }`, respects anonymous mode |
 | `:SetAnonymous(on, { Name })` · `.IdentityChanged` | hide name, avatar and IDs everywhere |
-| `Proximity.Providers.*` | `FPS, Ping, Session, Players, Device, Resolution, AccountAge, UserId, Executor, PlaceId, JobId, ServerUptime, GameName` — functions returning display values |
+| `Proximity.Providers.*` | `FPS, Ping, Session, Players, Device, Resolution, AccountAge, UserId, Executor, PlaceId, JobId, ServerUptime, GameName` - functions returning display values |
 | `:SetTheme(name)` · `:GetTheme()` · `:GetThemes()` · `:AddTheme(name, tokens)` · `:SetAccent(color)` · `:OnThemeChanged(fn)` | themes |
 | `:SetLanguage(code)` · `:AddLanguage(code, strings, displayName)` · `:T(key, ...)` | locale |
 | `:SetReducedMotion(on)` | disable animations |
@@ -59,11 +59,12 @@ local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pro
 local Window = Proximity:Window({
 	Title = "Proximity",               -- sidebar title, also the config key for window state
 	Subtitle = "v1.0",
-	Logo = nil,                        -- nil = drawn eclipse mark; or icon name / rbxassetid / image URL
+	Logo = nil,                        -- nil = Proximity planet, false = vector planet only, or icon name / rbxassetid / image URL
+	Decoration = true,                 -- faint planet in the bottom-right corner
 	Keybind = Enum.KeyCode.RightShift, -- KeyCode, "RightShift", "MB3"…
 	Size = Vector2.new(740, 500),      -- or UDim2.fromOffset; mobile default 600×380
 	MinSize = Vector2.new(560, 360),
-	Scale = "Auto",                    -- or 0.5 – 2
+	Scale = "Auto",                    -- or 0.5 - 2
 	Folder = "Proximity",              -- where configs and settings live
 	Theme = "Eclipse", Accent = Color3.new(1, 1, 1),
 	Language = "en",
@@ -92,9 +93,10 @@ local Window = Proximity:Window({
 | `:SetSize(v2)` · `:GetSize()` · `:SetPosition(udim2 \| v2)` · `:Center()` | geometry (size and position are remembered) |
 | `:SetTitle(text)` · `:SetSubtitle(text)` | header text |
 | `:SetKeybind(key)` · `:GetKeybind()` | menu key (`SetMenuKey`) |
-| `:SetTransparency(0 – 0.4)` | glass |
+| `:SetTransparency(0 - 0.4)` | glass |
 | `:SetRim(bool)` | animated eclipse rim |
 | `:SetBackdrop("Stars" \| "Grid" \| "Dots" \| "None")` | background pattern |
+| `:SetDecoration(bool)` | planet in the corner |
 | `:SetDraggable(bool)` | |
 | `:Command({ Name, Icon, Hint, Callback })` | action in the `Ctrl+K` palette |
 | `:OpenSearch(query?)` | open the palette |
@@ -118,11 +120,11 @@ The window becomes **Ready** when the queue is empty, every task is done, declar
 
 | Method | Description |
 |---|---|
-| `:Task(name, weight = 10)` | returns `{ :Progress(0–1), :SetText(text), :Done(), :Fail(reason) }` |
+| `:Task(name, weight = 10)` | returns `{ :Progress(0-1), :SetText(text), :Done(), :Fail(reason) }` |
 | `:Step(name, fn(task), weight?)` | runs `fn` in its own thread as a task, finishes it automatically |
 | `:SetReady()` | explicit "I'm done declaring" (use with `AutoReady = false`). Aliases `Finish`, `Init` |
 | `:IsReady()` · `:OnReady(fn)` · `:WaitUntilReady(timeout?)` | lifecycle |
-| `:GetLoadProgress()` | 0–1 |
+| `:GetLoadProgress()` | 0-1 |
 
 ## Tabs, pages, sections
 
@@ -152,7 +154,7 @@ Every element (except pure layout ones where noted) supports:
 
 | Member | Description |
 |---|---|
-| `Name`, `Description`, `Tooltip`, `Flag`, `Default`, `Callback`, `Risky`, `Badge`, `Visible`, `Locked` (`true` or reason string), `Save = false` | common options |
+| `Name`, `Icon`, `Description`, `Tooltip`, `Flag`, `Default`, `Callback`, `Risky`, `Badge`, `Visible`, `Locked` (`true` or reason string), `Save = false` | common options. `Icon` puts an icon before the title of any row |
 | `:Get()` · `:Set(value, silent?)` · `:Reset()` · `:GetDefault()` · `:SetDefault(v)` · `:IsDefault()` | value (`GetValue`, `SetValue`) |
 | `.Changed` · `:OnChanged(fn(new, old))` | fires on every change, also silent ones |
 | `:SetCallback(fn)` · `:AddCallback(fn)` · `:Fire()` | callbacks run only for non-silent changes; errors never break the UI |
@@ -177,7 +179,7 @@ Methods `:Toggle()`, `:On()`, `:Off()`, `:IsOn()`, `:SetStyle()`. `Section:Check
 Methods `:Press()` (`Click`), `:SetStyle`, `:SetIcon`, `:SetHint`, `:SetCooldown`. A keybind attached to a button presses it.
 
 ### ButtonGroup
-`Section:ButtonGroup({ { Name, Callback, Style }, ... })` — buttons side by side.
+`Section:ButtonGroup({ { Name, Callback, Style }, ... })` - buttons side by side.
 
 ### Slider · RangeSlider · TextSlider
 ```lua
@@ -206,16 +208,16 @@ Methods `:Focus()`, `:Blur()`, `:Clear()`, `:SetPlaceholder()`. Aliases `TextBox
 Methods `:SetKey`, `:GetKey`, `:GetKeyCode`, `:SetMode`, `:GetMode`, `:IsActive`, `:Listen()`, `:Clear()`, `:Press()`, `:OpenModeMenu()`, signal `.StateChanged(active)`. Click the chip to rebind (Backspace clears, Esc cancels), right click to change the mode. Attached to a toggle, the key drives the toggle according to the mode.
 
 ### ColorPicker
-`Section:ColorPicker({ Name, Default = Color3 | "#hex" | {r,g,b}, Alpha = nil | 0–1, Presets = { Color3 … } })` — callback `(color, alpha)`.
+`Section:ColorPicker({ Name, Default = Color3 | "#hex" | {r,g,b}, Alpha = nil | 0-1, Presets = { Color3 … } })` - callback `(color, alpha)`.
 Methods `:SetColor`, `:GetColor`, `:SetAlpha`, `:GetAlpha`, `:GetHex`, `:SetHex`, `:Open`, `:Close`, `:SetRainbow(on, speed?)`. The popup has saturation/value, hue, alpha, hex, old/new compare (click old to revert), presets and recent colors.
 
 ### Label · Paragraph · Divider · Spacer
-`Section:Label("text" | { Text, Color = token | Color3, Icon, Center, RichText })` — hosts links like any row. `:SetColor()`.
-`Section:Paragraph({ Title, Content, RichText = true })` — `:SetContent` (`Set`), `:SetTitle`.
+`Section:Label("text" | { Text, Color = token | Color3, Icon, Center, RichText })` - hosts links like any row. `:SetColor()`.
+`Section:Paragraph({ Title, Content, RichText = true })` - `:SetContent` (`Set`), `:SetTitle`.
 `Section:Divider("Advanced"?)` (`Separator`) · `Section:Spacer(8)`.
 
 ### Navigate
-`Section:Navigate({ Name, Page = subPage, Value = "right text", Icon, Callback })` — row with a chevron; opens a hidden sub page (with back arrow) and/or runs the callback. `:SetValue(text)`.
+`Section:Navigate({ Name, Page = subPage, Value = "right text", Icon, Callback })` - row with a chevron; opens a hidden sub page (with back arrow) and/or runs the callback. `:SetValue(text)`.
 
 ### Progress · Stat · StatGrid · Graph
 ```lua
@@ -293,7 +295,7 @@ Signals: `ConfigsChanged`, `ConfigLoaded(name, applied, total)`, `ConfigSaved(na
 
 ## Themes
 
-Presets: `Eclipse` (default), `OLED`, `Graphite`, `Moon`, `Ash`, `Steel` — all black-based with a near-white accent.
+Presets: `Eclipse` (default), `OLED`, `Graphite`, `Moon`, `Ash`, `Steel` - all black-based with a near-white accent.
 Tokens: `Bg, Bg2, Surface, Surface2, Surface3, Elevated, Stroke, StrokeHi, Text, TextDim, TextMute, Accent, AccentInk, Risky, Success, Warning, Error, Info, Shadow`.
 
 ```lua
@@ -335,7 +337,7 @@ Proximity:SetLanguage("de")
 
 ## Icons
 
-818 [Lucide](https://lucide.dev/icons) icons by name (`"crosshair"`, `"lucide-crosshair"`), plus aliases (`gear`, `combat`, `esp`, `config`…). Anything else works too: `rbxassetid://…`, a number, `rbxthumb://…`, or an image URL (downloaded once, cached, needs `getcustomasset`). `Proximity:RegisterIcon("logo", "https://…/logo.png")`.
+818 [Lucide](https://lucide.dev/icons) icons by name (`"crosshair"`, `"lucide-crosshair"`), plus 130+ names for typical script features: `aimbot`, `silent`, `triggerbot`, `esp`, `chams`, `tracer`, `fly`, `noclip`, `speed`, `teleport`, `farm`, `loot`, `quest`, `boss`, `shop`, `server`, `rejoin`, `serverhop`, `webhook`, `premium`, `anonymous`, `planet` and more (see `src/Icons/init.luau`). Anything else works too: `rbxassetid://…`, a number, `rbxthumb://…`, or an image URL (downloaded once, cached, needs `getcustomasset`). `Proximity:RegisterIcon("logo", "https://…/logo.png")`.
 
 ## Extending
 

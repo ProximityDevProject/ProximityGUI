@@ -90,34 +90,124 @@ end
 
 -- ═══ Chrome ═══════════════════════════════════════════════════════════════
 
+local LOGO_URL = "https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-256.png"
+local PLANET_URL = "https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-512.png"
+Window.LogoUrl, Window.PlanetUrl = LOGO_URL, PLANET_URL
+
+-- Loads an image source in the background and calls back with the asset
+-- (downloads and caches URLs once, so the window never waits for the net).
+local function loadImage(source, callback)
+	task.spawn(function()
+		local ok, image = pcall(Icons.Get, source)
+		if ok and image then
+			callback(image)
+		end
+	end)
+end
+
+--[[
+	The Proximity mark: a dark planet lit from the top right, a thin ring that
+	passes behind the planet and in front of it, and a small flare where the
+	light hits the rim. Drawn with frames so it appears instantly; when the
+	real artwork can be loaded (getcustomasset) it fades in on top.
+	Logo = nil -> planet artwork, false -> vector only, anything else -> custom icon.
+]]
 function Window:_drawLogo(parent, size)
-	local logo = Icons.Get(self.Logo)
-	if logo then
-		local img = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = logo, Size = UDim2.fromOffset(size, size), ScaleType = Enum.ScaleType.Crop, Parent = parent })
-		Util.Round(img)
-		return img
+	local holder = Util.New("Frame", { Name = "Logo", BackgroundTransparency = 1, Size = UDim2.fromOffset(size, size), Parent = parent })
+	local custom = self.Logo
+	if custom and custom ~= true then
+		local id = Icons.Get(custom)
+		if id then
+			local img = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = id, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Crop, Parent = holder })
+			Util.Round(img)
+			return holder
+		end
 	end
-	-- vector "eclipse": dark disc, white rim brightest at the top-right,
-	-- a thin ring and a small flare — the Proximity mark.
-	local holder = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(size, size), Parent = parent })
-	local disc = Util.New("Frame", { Size = UDim2.fromScale(0.78, 0.78), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = holder })
+
+	local vector = Util.New("Frame", { Name = "Vector", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Parent = holder })
+	local ringW, ringH = 1.36, 0.3
+	-- back half of the ring (the planet covers its middle)
+	local back = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(ringW, ringH), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.56), Rotation = -16, ZIndex = 1, Parent = vector })
+	Util.Round(back)
+	local backStroke = Util.Stroke(back, nil, math.max(1, size / 26))
+	Theme.Paint(backStroke, { Color = "Accent" })
+	Util.Gradient(backStroke, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.85), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 0.15) }))
+	-- planet
+	local disc = Util.New("Frame", { Size = UDim2.fromScale(0.72, 0.72), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ZIndex = 2, Parent = vector })
 	Util.Round(disc)
 	Theme.Paint(disc, { BackgroundColor3 = "Bg" })
-	local rim = Util.Stroke(disc, nil, math.max(1.2, size / 18))
+	local rim = Util.Stroke(disc, nil, math.max(1.2, size / 20))
 	Theme.Paint(rim, { Color = "Accent" })
 	Util.Gradient(rim, nil, NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.45, 0.15),
-		NumberSequenceKeypoint.new(0.75, 0.85),
+		NumberSequenceKeypoint.new(0.35, 0.1),
+		NumberSequenceKeypoint.new(0.62, 0.8),
 		NumberSequenceKeypoint.new(1, 1),
-	}), -45)
-	local ring = Util.New("Frame", { Size = UDim2.new(1.25, 0, 0, 1), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.56), Rotation = -14, BorderSizePixel = 0, Parent = holder })
-	Theme.Paint(ring, { BackgroundColor3 = "Accent" })
-	Util.Gradient(ring, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.7), NumberSequenceKeypoint.new(0.5, 0.95), NumberSequenceKeypoint.new(0.8, 0.3), NumberSequenceKeypoint.new(1, 1) }))
-	local flare = Util.New("Frame", { Size = UDim2.fromOffset(math.max(3, size / 7), math.max(3, size / 7)), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.77, 0.2), Parent = holder })
+	}), -50)
+	-- front half of the ring: only the lower part crosses in front
+	local front = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(ringW, ringH), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.56), Rotation = -16, ZIndex = 3, Parent = vector })
+	Util.Round(front)
+	local frontStroke = Util.Stroke(front, nil, math.max(1, size / 26))
+	Theme.Paint(frontStroke, { Color = "Accent" })
+	Util.Gradient(frontStroke, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.52, 1), NumberSequenceKeypoint.new(0.6, 0.35), NumberSequenceKeypoint.new(1, 0.1) }), 90)
+	-- flare where the light hits the rim
+	local flare = Util.New("Frame", { Size = UDim2.fromScale(0.16, 0.16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.74, 0.23), ZIndex = 4, Parent = vector })
 	Util.Round(flare)
 	Theme.Paint(flare, { BackgroundColor3 = "Accent" })
+	Util.Gradient(flare, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.6) }), 45)
+	local streak = Util.New("Frame", { Size = UDim2.new(0.55, 0, 0, 1), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0.74, 0.23), BorderSizePixel = 0, ZIndex = 4, Parent = vector })
+	Theme.Paint(streak, { BackgroundColor3 = "Accent" })
+	Util.Gradient(streak, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) }))
+
+	if custom ~= false then
+		loadImage(LOGO_URL, function(image)
+			if not holder.Parent then
+				return
+			end
+			local img = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = image, ImageTransparency = 1, Size = UDim2.fromScale(1.18, 1.18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), ScaleType = Enum.ScaleType.Crop, ZIndex = 5, Parent = holder })
+			Util.Round(img)
+			Tween.Play(img, { ImageTransparency = 0 }, 0.4)
+			task.delay(0.4, function()
+				vector.Visible = false
+			end)
+		end)
+	end
 	return holder
+end
+
+-- The planet artwork resting in the bottom-right corner of the window, half
+-- outside the edge, as on the Proximity cover. Purely decorative.
+function Window:_buildDecor()
+	local decor = Util.New("ImageLabel", {
+		Name = "Planet",
+		BackgroundTransparency = 1,
+		ImageTransparency = 1,
+		Size = UDim2.fromOffset(420, 420),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -40, 1, -30),
+		ScaleType = Enum.ScaleType.Fit,
+		ZIndex = 1,
+		Parent = self.Canvas,
+	})
+	self._decor = decor
+	self.DecorEnabled = self.Options.Decoration ~= false and self.Library:GetSetting("Decoration", true)
+	if self.Logo == false then
+		return
+	end
+	loadImage(PLANET_URL, function(image)
+		decor.Image = image
+		if self.DecorEnabled then
+			Tween.Play(decor, { ImageTransparency = 0.72 }, 0.8)
+		end
+	end)
+end
+
+function Window:SetDecoration(enabled)
+	self.DecorEnabled = enabled and true or false
+	if self._decor then
+		Tween.Play(self._decor, { ImageTransparency = enabled and self._decor.Image ~= "" and 0.72 or 1 }, 0.4)
+	end
+	return self
 end
 
 function Window:_build()
@@ -185,6 +275,7 @@ function Window:_build()
 	Util.Gradient(top, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.55), NumberSequenceKeypoint.new(1, 1) }))
 
 	self:_buildBackdrop()
+	self:_buildDecor()
 	self:_buildSidebar()
 	self:_buildMain()
 	self:_buildResize()
@@ -471,17 +562,17 @@ function Window:_buildMain()
 		if self.HomeTab then
 			self.HomeTab:Select()
 		end
-	end)
+	end, "Home")
 	self._homeButton.Visible = false
 	self._settingsButton = self:_headerButton("settings", 11, function()
 		if self.SettingsTabRef then
 			self.SettingsTabRef:Select()
 		end
-	end)
+	end, "Settings")
 	self._settingsButton.Visible = false
 	self:_headerButton("minus", 20, function()
 		self:Close()
-	end)
+	end, "Hide")
 
 	local line = Util.New("Frame", { Size = UDim2.new(1, -24, 0, 1), Position = UDim2.new(0, 12, 1, -1), BorderSizePixel = 0, ZIndex = 3, Parent = header })
 	Theme.Paint(line, { BackgroundColor3 = "Stroke" })
@@ -502,7 +593,7 @@ function Window:_buildMain()
 	end)
 end
 
-function Window:_headerButton(icon, order, callback)
+function Window:_headerButton(icon, order, callback, tooltip)
 	local b = Util.New("ImageButton", { BackgroundTransparency = 1, Size = UDim2.fromOffset(30, 30), LayoutOrder = order, ZIndex = 4, Parent = self._actions })
 	Util.Corner(6, b)
 	Theme.Paint(b, { BackgroundColor3 = "Surface2" })
@@ -522,6 +613,11 @@ function Window:_headerButton(icon, order, callback)
 		Theme.Paint(img, { ImageColor3 = "TextDim" }, 0.15)
 	end)
 	b.Activated:Connect(callback)
+	if tooltip then
+		Shared.Overlay.Hover(b, function()
+			return Locale.T(tooltip)
+		end)
+	end
 	return b
 end
 

@@ -110,6 +110,9 @@ function Toggle:_render(animate)
 	if self._title and not self.Risky and not self:IsLocked() then
 		Theme.Paint(self._title, { TextColor3 = self._titleToken }, t)
 	end
+	if self._icon then
+		Theme.Paint(self._icon, { ImageColor3 = on and "Accent" or "TextMute" }, t)
+	end
 	if self._track then
 		Theme.Paint(self._track, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
 		Theme.Paint(self._trackStroke, { Color = on and "Accent" or "StrokeHi" }, t)
@@ -444,12 +447,6 @@ function Label:_build(parent)
 	if self.Center then
 		self._title.TextXAlignment = Enum.TextXAlignment.Center
 		self._textBox.Size = UDim2.new(1, -16, 1, 0)
-	end
-	local icon = Icons.Get(self.Icon)
-	if icon then
-		local img = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = icon, Size = UDim2.fromOffset(14, 14), Position = UDim2.new(0, 0, 0.5, -7), Parent = self._textBox })
-		Theme.Paint(img, { ImageColor3 = "TextDim" })
-		self._title.Position = UDim2.new(0, 20, 0.5, -8)
 	end
 	self._titleToken = type(self.Color) == "string" and self.Color or "TextDim"
 	if typeof(self.Color) == "Color3" then

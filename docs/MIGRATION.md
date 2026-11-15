@@ -8,7 +8,7 @@ Proximity accepts the most common names from other libraries, so many scripts mo
 |---|---|
 | `Compkiller.new({ Name, Keybind, Logo })` | `Proximity:Window({ Title, Keybind, Logo })` (`Name` also works) |
 | `Window:DrawCategory({ Name })` | same (`Window:Category(name)`) |
-| `Window:DrawTab({ Name, Icon, Type = "Single" })` | `Window:Tab({ Name, Icon })` — sections pick `Side`; one column with `Side = "Full"` |
+| `Window:DrawTab({ Name, Icon, Type = "Single" })` | `Window:Tab({ Name, Icon })` - sections pick `Side`; one column with `Side = "Full"` |
 | `Window:DrawContainerTab` + `:DrawTab` | `Window:Tab` + `Tab:SubTab` |
 | `Tab:DrawSection({ Name, Position = "left" })` | same (`Position` → `Side`) |
 | `Section:AddToggle/AddSlider/AddDropdown/AddKeybind/AddColorPicker/AddButton/AddParagraph/AddTextBox` | same names work |
@@ -34,7 +34,7 @@ Proximity accepts the most common names from other libraries, so many scripts mo
 | `Section:TextSlider({ TextProps })` | same (`Labels` preferred) |
 | `Section:RangedSlider` | same (`RangeSlider`) |
 | `Toggle:Colorpicker` / `Toggle:Keybind` / `Toggle:Settings()` | same |
-| `IsFirstElement / IsLastElement` | not needed — rounding is automatic |
+| `IsFirstElement / IsLastElement` | not needed - rounding is automatic |
 | `Library:Notification(text, icon, color, time)` | `Proximity:Notify({ Content, Duration })` |
 | `Library:CreateSettingsPage(Window, …)` | `Window:SettingsTab()` |
 

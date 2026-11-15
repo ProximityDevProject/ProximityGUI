@@ -91,7 +91,7 @@ end
 
 -- Accepts Enum.KeyCode, Enum.UserInputType, "E", "LeftShift", "LShift", "MB2", nil.
 function Keys.Normalize(value: any): string
-	if value == nil or value == false or value == "" or value == "None" or value == "—" then
+	if value == nil or value == false or value == "" or value == "None" or value == "-" then
 		return "None"
 	end
 	if typeof(value) == "EnumItem" then

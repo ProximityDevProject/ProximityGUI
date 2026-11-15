@@ -62,6 +62,7 @@ function Base.new(class, section, options: { [string]: any })
 	self.Locked = options.Locked ~= nil and options.Locked ~= false
 	self.LockReason = type(options.Locked) == "string" and options.Locked or options.LockReason
 	self.BadgeText = options.Badge
+	self.Icon = options.Icon
 	self.Changed = Signal.new()
 	self.Destroyed = Signal.new()
 	self.Maid = Maid.new()
@@ -82,7 +83,7 @@ function Base:_register()
 	local Lib = self.Library
 	if self.Flag then
 		if Lib.Elements[self.Flag] and Lib.Debug then
-			warn("[Proximity] duplicate flag '" .. self.Flag .. "' — the newest element wins")
+			warn("[Proximity] duplicate flag '" .. self.Flag .. "' - the newest element wins")
 		end
 		Lib.Elements[self.Flag] = self
 		Lib.Flags[self.Flag] = self.Value
@@ -393,6 +394,20 @@ function Base:_row(parent: Instance, height: number?)
 	})
 	Theme.Paint(title, { TextColor3 = "Text" })
 	self._title = title
+
+	-- optional icon before the title; follows the title if a subclass moves it
+	local iconId = self.Icon and Icons.Get(self.Icon)
+	if iconId then
+		Util.New("UIPadding", { PaddingLeft = UDim.new(0, 22), Parent = textBox })
+		local icon = Util.New("ImageLabel", { Name = "Icon", BackgroundTransparency = 1, Image = iconId, Size = UDim2.fromOffset(15, 15), Parent = textBox })
+		Theme.Paint(icon, { ImageColor3 = "TextDim" })
+		local function follow()
+			icon.Position = UDim2.new(0, -22, title.Position.Y.Scale, title.Position.Y.Offset + 1)
+		end
+		title:GetPropertyChangedSignal("Position"):Connect(follow)
+		follow()
+		self._icon = icon
+	end
 
 	if self.Description and self.Description ~= "" then
 		title.Position = UDim2.new(0, 0, 0.5, -15)

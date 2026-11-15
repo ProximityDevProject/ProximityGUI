@@ -1,7 +1,7 @@
 --!nocheck
 --[[
 	Proximity · Window/Skeleton
-	The loading shell shown the moment a window is created — before a single
+	The loading shell shown the moment a window is created - before a single
 	element is built. It mirrors the real layout (sidebar + two columns), so
 	the reveal feels like the UI "developing" rather than popping in.
 

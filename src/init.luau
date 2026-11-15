@@ -32,7 +32,7 @@ if shared.Library and shared.Library.Unload then
 end
 
 local Library = {
-	Version = "1.0.1",
+	Version = "1.1.0",
 	Flags = {},
 	Elements = {},
 	AllElements = {},
@@ -231,7 +231,7 @@ function Library:GetFavorites()
 	return out
 end
 
--- Window:Favorites() — a tab with shortcuts to starred features.
+-- Window:Favorites() - a tab with shortcuts to starred features.
 function Window:Favorites(options)
 	options = options or {}
 	local Lib = self.Library
@@ -245,7 +245,7 @@ function Window:Favorites(options)
 		rows = {}
 		local favs = Lib:GetFavorites()
 		if #favs == 0 then
-			table.insert(rows, section:Label({ Text = "RMB on any feature → ☆ " .. Locale.T("Favorites"), Color = "TextMute" }))
+			table.insert(rows, section:Label({ Text = Locale.T("FavoritesHint"), Color = "TextMute", Icon = "star" }))
 		end
 		for _, el in favs do
 			table.insert(rows, section:Navigate({ Name = el.Name, Value = el:GetPath(), Callback = function()
@@ -328,7 +328,7 @@ do
 					return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue() + 0.5)
 				end)
 			end
-			return ok and (ping .. " ms") or "—"
+			return ok and (ping .. " ms") or "-"
 		end,
 		Session = function()
 			return duration(os.clock() - started)
@@ -350,7 +350,7 @@ do
 		end,
 		AccountAge = function()
 			if Library.Anonymous then
-				return "—"
+				return "-"
 			end
 			return Players.LocalPlayer.AccountAge .. " d"
 		end,
@@ -613,7 +613,7 @@ function Library:RegisterIcon(name, source)
 end
 
 --[[
-	Library:RegisterElement("Rating", MyClass)  — MyClass = Library.Base.extend("Rating")
+	Library:RegisterElement("Rating", MyClass)  - MyClass = Library.Base.extend("Rating")
 	with MyClass.new(section, options) calling Base.new(...) and :_register().
 	Afterwards: Section:Rating({...}) and Section:Custom("Rating", {...}).
 ]]

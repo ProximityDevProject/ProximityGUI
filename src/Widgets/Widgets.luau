@@ -132,7 +132,7 @@ return function(Lib)
 		end
 		notifyScale.Scale = Shared.Scale or 1
 
-		local wrap = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), ClipsDescendants = false, LayoutOrder = -os.clock() * 1000, Parent = holder })
+		local wrap = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 0), ClipsDescendants = false, LayoutOrder = math.floor((Lib.NotifyPosition:find("Bottom") and 1 or -1) * (os.clock() * 100 % 1e7)), Parent = holder })
 		local card = Util.New("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.fromOffset(Lib.NotifyPosition:find("Left") and -320 or 320, 0), Parent = wrap })
 		Util.Corner(8, card)
 		Theme.Paint(card, { BackgroundColor3 = "Elevated" })
@@ -408,7 +408,7 @@ return function(Lib)
 				local row = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), LayoutOrder = i, Parent = frame })
 				local name = Util.Label({ Text = kb.Name, FontFace = Theme.Fonts.Medium, TextSize = 12, Size = UDim2.new(1, -96, 1, 0), TextTruncate = Enum.TextTruncate.AtEnd, Parent = row })
 				Theme.Paint(name, { TextColor3 = kb.Active and "Text" or "TextMute" })
-				local mode = Util.Label({ Text = Locale.T(kb.Mode), FontFace = Theme.Fonts.Regular, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -96, 0, 0), Parent = row })
+				local mode = Util.Label({ Text = Locale.T(kb.Mode == "Press" and "Press_" or kb.Mode), FontFace = Theme.Fonts.Regular, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(0, 56, 1, 0), Position = UDim2.new(1, -96, 0, 0), Parent = row })
 				Theme.Paint(mode, { TextColor3 = "TextMute" })
 				local key = Util.Label({ Text = Keys.Display(kb.Value), FontFace = Theme.Fonts.MonoBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(0, 36, 1, 0), Position = UDim2.new(1, -36, 0, 0), Parent = row })
 				Theme.Paint(key, { TextColor3 = kb.Active and "Accent" or "TextDim" })

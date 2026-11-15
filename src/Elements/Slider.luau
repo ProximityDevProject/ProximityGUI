@@ -42,7 +42,6 @@ function Slider.new(section, options)
 	self.Suffix = options.Suffix or ""
 	self.Prefix = options.Prefix or ""
 	self.Format = options.Format
-	self.Icon = options.Icon
 	self.Presets = options.Presets
 	local default = Util.Opt(options, "Default", "Value")
 	if self.Range then
@@ -97,7 +96,7 @@ end
 
 function Slider:_format(v)
 	if self.Range and type(v) == "table" then
-		return self:_format(v.Min) .. " – " .. self:_format(v.Max)
+		return self:_format(v.Min) .. " - " .. self:_format(v.Max)
 	end
 	if self.Labels then
 		return tostring(self.Labels[v] or v)
@@ -174,12 +173,6 @@ function Slider:_build(parent)
 	self._title.Position = UDim2.new(0, 0, 0, 4)
 	if self._desc then
 		self._desc.Position = UDim2.new(0, 0, 0, 20)
-	end
-	local iconId = Icons.Get(self.Icon)
-	if iconId then
-		local img = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = iconId, Size = UDim2.fromOffset(13, 13), Position = UDim2.fromOffset(0, 5), Parent = textBox })
-		Theme.Paint(img, { ImageColor3 = "TextDim" })
-		self._title.Position = UDim2.new(0, 18, 0, 4)
 	end
 	-- value label (top right). Becomes a TextBox on double click.
 	self._right.Size = UDim2.new(0, 0, 0, 26)

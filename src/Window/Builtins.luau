@@ -100,6 +100,7 @@ return function(Window)
 		local look = tab:LeftSection({ Name = T("Appearance"), Icon = "palette" })
 		local themeDropdown = look:Dropdown({
 			Name = T("Theme"),
+			Icon = "theme",
 			Values = Theme.List(),
 			Default = Lib:GetSetting("Theme", Theme.Current),
 			Save = false,
@@ -111,6 +112,7 @@ return function(Window)
 		})
 		local accentPicker = look:ColorPicker({
 			Name = T("Accent"),
+			Icon = "accent",
 			Default = Util.FromHex(Lib:GetSetting("Accent", "")) or Theme.Get("Accent"),
 			Save = false,
 			Presets = {
@@ -136,6 +138,7 @@ return function(Window)
 		end)
 		look:Slider({
 			Name = T("Transparency"),
+			Icon = "transparency",
 			Min = 0,
 			Max = 40,
 			Default = Lib:GetSetting("Glass", 0),
@@ -148,6 +151,7 @@ return function(Window)
 		})
 		look:Dropdown({
 			Name = T("Scale"),
+			Icon = "scale",
 			Values = { "Auto", "75%", "90%", "100%", "110%", "125%", "150%" },
 			Default = (function()
 				local s = Lib:GetSetting("Scale", "Auto")
@@ -164,7 +168,8 @@ return function(Window)
 			end,
 		})
 		look:Dropdown({
-			Name = "Backdrop",
+			Name = T("Backdrop"),
+			Icon = "backdrop",
 			Values = { "Stars", "Grid", "Dots", "None" },
 			Default = Lib:GetSetting("Backdrop", "Stars"),
 			Save = false,
@@ -175,6 +180,7 @@ return function(Window)
 		})
 		look:Toggle({
 			Name = T("EclipseRim"),
+			Icon = "rim",
 			Default = Lib:GetSetting("Rim", true),
 			Save = false,
 			Callback = function(v)
@@ -183,7 +189,18 @@ return function(Window)
 			end,
 		})
 		look:Toggle({
+			Name = T("Planet"),
+			Icon = "planet",
+			Default = Lib:GetSetting("Decoration", true),
+			Save = false,
+			Callback = function(v)
+				Lib:SetSetting("Decoration", v)
+				window:SetDecoration(v)
+			end,
+		})
+		look:Toggle({
 			Name = T("ReducedMotion"),
+			Icon = "motion",
 			Default = Lib:GetSetting("ReducedMotion", false),
 			Save = false,
 			Callback = function(v)
@@ -196,6 +213,7 @@ return function(Window)
 		local ui = tab:LeftSection({ Name = T("Interface"), Icon = "layout-dashboard" })
 		ui:Keybind({
 			Name = T("MenuKey"),
+			Icon = "keyboard",
 			Default = window.Keybind,
 			Modes = { "Press" },
 			Mode = "Press",
@@ -219,6 +237,7 @@ return function(Window)
 		end
 		ui:Dropdown({
 			Name = T("Language"),
+			Icon = "language",
 			Values = langs,
 			Prefixes = prefixes,
 			Default = Locale.Names[Locale.Current],
@@ -231,6 +250,7 @@ return function(Window)
 		})
 		ui:Toggle({
 			Name = T("Watermark"),
+			Icon = "watermark",
 			Default = Lib:GetSetting("Watermark", true),
 			Save = false,
 			Callback = function(v)
@@ -242,6 +262,7 @@ return function(Window)
 		})
 		ui:Toggle({
 			Name = T("KeybindList"),
+			Icon = "keybinds",
 			Default = Lib:GetSetting("KeybindList", true),
 			Save = false,
 			Callback = function(v)
@@ -253,6 +274,7 @@ return function(Window)
 		})
 		ui:Dropdown({
 			Name = T("NotifyPosition"),
+			Icon = "notifications",
 			Values = { "TopRight", "BottomRight", "TopLeft", "BottomLeft", "TopCenter" },
 			Default = Lib:GetSetting("NotifyPosition", "BottomRight"),
 			Save = false,
@@ -264,8 +286,9 @@ return function(Window)
 			end,
 		})
 		local anon = ui:Toggle({
-			Name = "Anonymous mode",
-			Description = "Hide name, avatar and IDs on screen",
+			Name = T("Anonymous"),
+			Icon = "anonymous",
+			Description = T("AnonymousHint"),
 			Default = Lib:GetSetting("Anonymous", false),
 			Save = false,
 			Callback = function(v)
@@ -275,7 +298,7 @@ return function(Window)
 		})
 		anon:Options(function(o)
 			o:Input({
-				Name = "Shown name",
+				Name = T("ShownName"),
 				Default = Lib:GetSetting("AnonymousName", "Hidden"),
 				Finished = true,
 				Save = false,
@@ -287,7 +310,7 @@ return function(Window)
 		end)
 
 		-- Theme editor
-		local editor = tab:RightSection({ Name = "Theme editor", Icon = "paintbrush", Collapsible = true, Collapsed = true })
+		local editor = tab:RightSection({ Name = T("ThemeEditor"), Icon = "editor", Collapsible = true, Collapsed = true })
 		for _, token in { "Bg", "Surface", "Surface2", "Stroke", "StrokeHi", "Text", "TextDim", "TextMute", "Accent", "AccentInk", "Risky" } do
 			editor:ColorPicker({
 				Name = token,
@@ -314,10 +337,11 @@ return function(Window)
 		})
 
 		-- Danger zone
-		local misc = tab:RightSection({ Name = "Proximity", Icon = "disc" })
-		misc:Paragraph({ Title = "Proximity " .. Lib.Version, Content = "Ctrl+K — search  ·  Ctrl+Z / Ctrl+Y — undo / redo  ·  Ctrl+S — save config  ·  RMB on any row — reset, copy, paste, favorite" })
+		local misc = tab:RightSection({ Name = T("About"), Icon = "planet" })
+		misc:Stat({ Name = "Proximity", Value = "v" .. Lib.Version, Icon = "info" })
+		misc:Stat({ Name = T("Executor"), Value = Env.ExecutorName(), Icon = "code" })
 		if options.Tour then
-			misc:Button({ Name = "Replay tour", Icon = "map", Callback = function()
+			misc:Button({ Name = T("ReplayTour"), Icon = "tour", Callback = function()
 				window:Tour(options.Tour, { Force = true })
 			end })
 		end
@@ -343,10 +367,11 @@ return function(Window)
 		local window = self
 		local tab = options.Tab or self:Tab({ Name = options.Name or T("Configs"), Icon = options.Icon or "folder", Order = 999 })
 		local section = tab:RightSection({ Name = T("Configs"), Icon = "folder" })
-		local nameInput = section:Input({ Name = T("ConfigName"), Placeholder = "legit", Save = false, Finished = true })
+		local nameInput = section:Input({ Name = T("ConfigName"), Icon = "edit-3", Placeholder = "legit", Save = false, Finished = true })
 		local list
 		list = section:Dropdown({
 			Name = T("ConfigList"),
+			Icon = "configs",
 			Values = Lib:ListConfigs(),
 			Save = false,
 			Deletable = true,
@@ -378,7 +403,7 @@ return function(Window)
 					return
 				end
 				task.spawn(function()
-					if Lib:ConfigExists(name) and not window:Confirm({ Title = T("Save"), Content = "Overwrite “" .. name .. "”?" }) then
+					if Lib:ConfigExists(name) and not window:Confirm({ Title = T("Save"), Content = T("Overwrite", name) }) then
 						return
 					end
 					local ok = Lib:SaveConfig(name)
@@ -405,7 +430,7 @@ return function(Window)
 						if #diff > 8 then
 							table.insert(lines, "… +" .. (#diff - 8))
 						end
-						if not window:Confirm({ Title = T("Load") .. " “" .. name .. "”", Content = #diff .. " changes:\n" .. table.concat(lines, "\n") }) then
+						if not window:Confirm({ Title = T("Load") .. " " .. name, Content = T("Changes", #diff) .. string.char(10) .. table.concat(lines, string.char(10)) }) then
 							return
 						end
 					end
@@ -437,6 +462,7 @@ return function(Window)
 		})
 		section:Toggle({
 			Name = T("AutoLoad"),
+			Icon = "load",
 			Default = Lib:GetAutoLoad() ~= nil,
 			Save = false,
 			Callback = function(v)
@@ -445,13 +471,14 @@ return function(Window)
 		})
 		section:Toggle({
 			Name = T("AutoSave"),
+			Icon = "save",
 			Default = Lib:GetAutoSave() ~= nil,
 			Save = false,
 			Callback = function(v)
 				Lib:SetAutoSave(v and (list:Get() or Lib.CurrentConfig) or nil)
 			end,
 		})
-		section:Label({ Text = "Folder: " .. Lib.Folder .. "/configs", Color = "TextMute" })
+		section:Label({ Text = T("Folder") .. ": " .. Lib.Folder .. "/configs", Color = "TextMute", Icon = "folder" })
 		return tab
 	end
 end

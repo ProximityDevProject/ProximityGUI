@@ -7,7 +7,7 @@
 **A black & white interface library for Roblox scripts.**
 Calm surfaces, one white accent, and a loading skeleton that turns into your finished UI.
 
-[![version](https://img.shields.io/badge/version-1.0.1-ffffff?style=flat-square&labelColor=0b0b0c)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.1.0-ffffff?style=flat-square&labelColor=0b0b0c)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-ffffff?style=flat-square&labelColor=0b0b0c)](LICENSE)
 [![luau](https://img.shields.io/badge/luau-strict%20friendly-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md)
 [![icons](https://img.shields.io/badge/icons-818%20lucide-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md#icons)
@@ -20,12 +20,12 @@ local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/Pro
 
 <table>
 <tr>
-<td width="50%"><img src="assets/screenshots/skeleton.png" alt="Loading skeleton with per-tab progress" /><br/><sub><b>Loading skeleton</b> — every tab builds with its own progress, your steps show as stages</sub></td>
-<td width="50%"><img src="assets/screenshots/combat.png" alt="Combat tab" /><br/><sub><b>Sections</b> — toggle headers, tabs inside a section, linked keybinds and colors</sub></td>
+<td width="50%"><img src="assets/screenshots/skeleton.png" alt="Loading skeleton with per-tab progress" /><br/><sub><b>Loading skeleton</b> - every tab builds with its own progress, your steps show as stages</sub></td>
+<td width="50%"><img src="assets/screenshots/combat.png" alt="Combat tab" /><br/><sub><b>Sections</b> - toggle headers, tabs inside a section, linked keybinds and colors</sub></td>
 </tr>
 <tr>
-<td><img src="assets/screenshots/palette.png" alt="Ctrl+K command palette" /><br/><sub><b>Ctrl + K</b> — jump to any feature, tab or action</sub></td>
-<td><img src="assets/screenshots/misc.png" alt="Data elements" /><br/><sub><b>Data</b> — live graphs, progress, sortable tables with row actions</sub></td>
+<td><img src="assets/screenshots/palette.png" alt="Ctrl+K command palette" /><br/><sub><b>Ctrl + K</b> - jump to any feature, tab or action</sub></td>
+<td><img src="assets/screenshots/misc.png" alt="Data elements" /><br/><sub><b>Data</b> - live graphs, progress, sortable tables with row actions</sub></td>
 </tr>
 </table>
 
@@ -151,7 +151,7 @@ Proximity is original code. Ideas were studied in CompKiller (MIT, 4lpaca), Neve
 
 <div align="center">
 
-**Русский:** Proximity — чёрно-белая GUI-библиотека для скриптов Roblox. Одна строка загрузки, скелет загрузки по вкладкам, конфиги, темы, поиск `Ctrl+K`, отмена действий, локализация RU/EN. Документация: [docs/API.md](docs/API.md).
+**Русский:** Proximity - чёрно-белая GUI-библиотека для скриптов Roblox. Одна строка загрузки, скелет загрузки по вкладкам, конфиги, темы, поиск `Ctrl+K`, отмена действий, локализация RU/EN. Документация: [docs/API.md](docs/API.md).
 
 <sub>MIT © Proximity</sub>
 

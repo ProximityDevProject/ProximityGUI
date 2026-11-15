@@ -124,12 +124,6 @@ function Stat:_build(parent)
 	self:_row(parent, 30)
 	self._titleToken = "TextDim"
 	Theme.Paint(self._title, { TextColor3 = "TextDim" })
-	local icon = Icons.Get(self.Icon)
-	if icon then
-		local img = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = icon, Size = UDim2.fromOffset(14, 14), Position = UDim2.new(0, 0, 0.5, -7), Parent = self._textBox })
-		Theme.Paint(img, { ImageColor3 = "TextMute" })
-		self._title.Position = UDim2.new(0, 20, 0.5, -8)
-	end
 	local value = Util.Label({ FontFace = Theme.Fonts.MonoBold, TextSize = 12, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 16), LayoutOrder = 100, Parent = self._right })
 	Theme.Paint(value, { TextColor3 = "Text" })
 	self._value = value
