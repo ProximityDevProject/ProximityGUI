@@ -1,0 +1,12 @@
+# local only
+.Tools/
+.Sources/
+.mcp.json
+.claude/
+*.log
+/build/
+/tmp/
+.Research/
+roblox.yml
+executor.yml
+ProximityIcon.png

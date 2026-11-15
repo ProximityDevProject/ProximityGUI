@@ -1,0 +1,15 @@
+{
+  "generator": "dense",
+  "bundle": {
+    "require_mode": { "name": "path", "module_folder_name": "init" },
+    "excludes": []
+  },
+  "rules": [
+    "remove_types",
+    "remove_comments",
+    "remove_spaces",
+    "remove_unused_variable",
+    "compute_expression",
+    "remove_empty_do"
+  ]
+}

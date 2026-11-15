@@ -1,0 +1,8 @@
+{
+  "generator": "readable",
+  "bundle": {
+    "require_mode": { "name": "path", "module_folder_name": "init" },
+    "excludes": []
+  },
+  "rules": ["remove_types"]
+}
