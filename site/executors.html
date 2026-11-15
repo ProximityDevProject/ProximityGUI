@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Executors - Proximity UI</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+.ex { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; margin-top: 28px }
+@media (max-width: 900px) { .ex { grid-template-columns: 1fr } }
+.big { font: 600 30px var(--display); margin: 6px 0 2px }
+.kv { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 16px }
+.kv div { background: var(--card); padding: 12px 14px }
+.kv span { display: block; color: var(--mute); font-size: 12px }
+.kv b { font-weight: 600 }
+.bar { height: 6px; border-radius: 6px; background: var(--card2); overflow: hidden; margin-top: 6px }
+.bar i { display: block; height: 100%; background: #fff }
+.feat { display: grid; gap: 8px; margin-top: 12px }
+.feat div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 8px 0; font-size: 14.5px }
+</style>
+</head>
+<body>
+<div class="wrap" style="padding-block:44px 80px">
+  <span class="eyebrow">Compatibility</span>
+  <h1 style="font:600 clamp(30px,5vw,46px)/1.1 var(--display);margin:10px 0 10px">Executors</h1>
+  <p style="color:var(--dim);max-width:66ch;margin:0">Live status from the <a href="https://weao.xyz">WEAO</a> tracker next to our own test results. Only executors we tested ourselves are listed; more will come as we test them.</p>
+
+  <div class="ex">
+    <div class="card" style="transform:none">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div><span class="eyebrow">Windows · paid</span><div class="big">Potassium</div><span id="ver" style="color:var(--dim);font-size:14px">loading live data...</span></div>
+        <span id="status" class="chip dim">checking</span>
+      </div>
+      <div class="kv">
+        <div><span>Works with current Roblox</span><b id="match">-</b></div>
+        <div><span>Last update</span><b id="updated">-</b></div>
+        <div><span>sUNC</span><b id="sunc">-</b><div class="bar"><i id="suncbar" style="width:0"></i></div></div>
+        <div><span>UNC</span><b id="unc">-</b><div class="bar"><i id="uncbar" style="width:0"></i></div></div>
+        <div><span>Decompiler</span><b id="dec">-</b></div>
+        <div><span>Multi instance</span><b id="multi">-</b></div>
+        <div><span>Price</span><b id="cost">-</b></div>
+        <div><span>Detected by Roblox (WEAO)</span><b id="det">-</b></div>
+      </div>
+      <p style="color:var(--mute);font-size:12.5px;margin-top:12px" id="src">Source: weao.xyz API</p>
+    </div>
+    <div class="card" style="transform:none">
+      <span class="eyebrow">Our tests</span>
+      <div class="big" style="font-size:22px">Proximity on Potassium</div>
+      <span class="chip ok" style="margin-top:8px">Supported · stable</span>
+      <div class="feat">
+        <div><span>Window, tabs, every element</span><b style="color:var(--ok)">works</b></div>
+        <div><span>Popups, dropdowns, color picker</span><b style="color:var(--ok)">works</b></div>
+        <div><span>Configs (writefile, listfiles)</span><b style="color:var(--ok)">works</b></div>
+        <div><span>Planet logo and fonts (getcustomasset)</span><b style="color:var(--ok)">works</b></div>
+        <div><span>Share codes (request)</span><b style="color:var(--ok)">available</b></div>
+        <div><span>Hidden GUI (gethui)</span><b style="color:var(--ok)">works</b></div>
+        <div><span>Clipboard (setclipboard)</span><b style="color:var(--ok)">works</b></div>
+        <div><span>protectgui</span><b style="color:var(--dim)">not needed</b></div>
+      </div>
+      <p style="color:var(--mute);font-size:12.5px;margin-top:12px">Tested in Project Delta and a baseplate, November 2026, Proximity 1.1 and 1.2.</p>
+    </div>
+  </div>
+
+  <h2 style="font:500 22px var(--display);margin:56px 0 12px">What the statuses mean</h2>
+  <div class="tablewrap"><table class="table">
+    <tr><th>Status</th><th>Meaning</th></tr>
+    <tr><td><span class="chip ok">Working</span></td><td>WEAO says the executor is updated for the current Roblox version.</td></tr>
+    <tr><td><span class="chip warn">Updating</span></td><td>Roblox updated and the executor has not caught up yet. Wait for its update.</td></tr>
+    <tr><td><span class="chip ok">Supported · stable</span></td><td>We ran every Proximity feature on it and nothing broke.</td></tr>
+  </table></div>
+</div>
+<script src="assets/app.js"></script>
+<script>
+(async () => {
+  const set = (id, v) => (document.getElementById(id).textContent = v);
+  const yes = v => (v ? "yes" : "no");
+  try {
+    const [ex, cur] = await Promise.all([
+      fetch("https://weao.xyz/api/status/exploits/potassium").then(r => r.json()),
+      fetch("https://weao.xyz/api/versions/current").then(r => r.json()).catch(() => null),
+    ]);
+    set("ver", "v" + ex.version + " · " + ex.platform);
+    const matches = cur ? ex.rbxversion === cur.Windows : ex.updateStatus;
+    const st = document.getElementById("status");
+    st.className = "chip " + (ex.updateStatus && matches ? "ok" : "warn");
+    st.textContent = ex.updateStatus && matches ? "Working" : "Updating";
+    set("match", matches ? "yes" : "not yet");
+    set("updated", ex.updatedDate || "-");
+    set("sunc", (ex.suncPercentage ?? "-") + "%"); document.getElementById("suncbar").style.width = (ex.suncPercentage || 0) + "%";
+    set("unc", (ex.uncPercentage ?? "-") + "%"); document.getElementById("uncbar").style.width = (ex.uncPercentage || 0) + "%";
+    set("dec", yes(ex.decompiler)); set("multi", yes(ex.multiInject)); set("cost", ex.cost || (ex.free ? "free" : "-")); set("det", yes(ex.detected));
+    set("src", "Source: weao.xyz API, fetched " + new Date().toLocaleString());
+  } catch (e) {
+    set("ver", "v2.6.2 · Windows (saved snapshot, live data did not load)");
+    const st = document.getElementById("status"); st.className = "chip ok"; st.textContent = "Working";
+    set("match", "yes"); set("updated", "11/11/2026"); set("sunc", "100%"); set("unc", "99%");
+    document.getElementById("suncbar").style.width = "100%"; document.getElementById("uncbar").style.width = "99%";
+    set("dec", "yes"); set("multi", "yes"); set("cost", "$22.99 Lifetime"); set("det", "yes");
+  }
+})();
+</script>
+</body>
+</html>

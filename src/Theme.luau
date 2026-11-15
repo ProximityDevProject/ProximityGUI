@@ -116,6 +116,144 @@ function Theme.SetFont(family: string)
 	end
 end
 
+-- ─── Font library ─────────────────────────────────────────────────────────
+-- Every family Roblox ships (read from Enum.Font, so the list is always
+-- valid) plus open-licence fonts hosted with Proximity and loaded through
+-- getcustomasset, including Monocraft for a Minecraft look.
+
+Theme.FontFolder = "Proximity/Fonts"
+Theme.FontBaseUrl = "https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/fonts/"
+Theme.CustomFonts = {
+	["Minecraft (Monocraft)"] = { "Monocraft.ttf", "Monocraft-Bold.ttf" },
+	["VT323 (terminal)"] = { "VT323-Regular.ttf" },
+	["Silkscreen (pixel)"] = { "Silkscreen-Regular.ttf" },
+	["Russo One"] = { "RussoOne-Regular.ttf" },
+	["Space Mono"] = { "SpaceMono-Regular.ttf" },
+	["Audiowide"] = { "Audiowide-Regular.ttf" },
+	["Rajdhani"] = { "Rajdhani-SemiBold.ttf" },
+	["Share Tech Mono"] = { "ShareTechMono-Regular.ttf" },
+	["Righteous"] = { "Righteous-Regular.ttf" },
+}
+
+local builtinFamilies = nil
+local function scanBuiltins()
+	if builtinFamilies then
+		return builtinFamilies
+	end
+	builtinFamilies = {}
+	-- families that ship with Roblox but have no Enum.Font item
+	for nice, file in { ["Press Start 2P"] = "PressStart2P", ["Builder Sans"] = "BuilderSans", ["Builder Mono"] = "BuilderMono" } do
+		builtinFamilies[nice] = "rbxasset://fonts/families/" .. file .. ".json"
+	end
+	for _, item in Enum.Font:GetEnumItems() do
+		local ok, font = pcall(Font.fromEnum, item)
+		if ok and font then
+			local family = font.Family
+			local file = string.match(family, "families/(.-)%.json$")
+			if file and not string.find(file, "Legacy") and file ~= "Unknown" then
+				-- "SourceSansPro" -> "Source Sans Pro"
+				local nice = string.gsub(file, "(%l)(%u)", "%1 %2")
+				builtinFamilies[nice] = family
+			end
+		end
+	end
+	return builtinFamilies
+end
+
+function Theme.FontList(): { string }
+	local out = {}
+	for name in scanBuiltins() do
+		table.insert(out, name)
+	end
+	for name in Theme.CustomFonts do
+		table.insert(out, name)
+	end
+	table.sort(out)
+	return out
+end
+
+local resolved = {}
+
+-- Returns a family path usable in Font.new, downloading custom fonts once.
+function Theme.ResolveFamily(name: string): string?
+	if resolved[name] then
+		return resolved[name]
+	end
+	local builtin = scanBuiltins()[name]
+	if builtin then
+		resolved[name] = builtin
+		return builtin
+	end
+	local files = Theme.CustomFonts[name]
+	local Env = require("./Core/Env")
+	if not files or not Env.Caps.CustomAsset then
+		return nil
+	end
+	local faces = {}
+	for i, file in files do
+		local path = Theme.FontFolder .. "/" .. file
+		if not Env.IsFile(path) then
+			local body
+			for attempt = 1, 3 do
+				body = Env.HttpGet(Theme.FontBaseUrl .. file)
+				if body and #body > 1000 then
+					break
+				end
+				task.wait(attempt)
+			end
+			if not body or #body < 1000 then
+				return nil
+			end
+			Env.Write(path, body)
+		end
+		local asset = Env.CustomAsset(path)
+		if not asset then
+			return nil
+		end
+		if i == 1 then
+			for _, w in { { "Regular", 400 }, { "Medium", 500 }, { "SemiBold", 600 } } do
+				table.insert(faces, { name = w[1], weight = w[2], style = "normal", assetId = asset })
+			end
+			if not files[2] then
+				table.insert(faces, { name = "Bold", weight = 700, style = "normal", assetId = asset })
+				table.insert(faces, { name = "ExtraBold", weight = 800, style = "normal", assetId = asset })
+			end
+		else
+			table.insert(faces, { name = "Bold", weight = 700, style = "normal", assetId = asset })
+			table.insert(faces, { name = "ExtraBold", weight = 800, style = "normal", assetId = asset })
+		end
+	end
+	local jsonPath = Theme.FontFolder .. "/" .. string.gsub(name, "[^%w]", "") .. ".json"
+	Env.Write(jsonPath, game:GetService("HttpService"):JSONEncode({ name = name, faces = faces }))
+	local family = Env.CustomAsset(jsonPath)
+	resolved[name] = family
+	return family
+end
+
+Theme.FontName = "Builder Sans"
+
+-- Swaps the interface font everywhere, live. Monospace numbers stay mono.
+function Theme.ApplyFont(name: string, root: Instance?): boolean
+	local family = Theme.ResolveFamily(name)
+	if not family then
+		return false
+	end
+	local old = Theme.Fonts.Regular.Family
+	Theme.SetFont(family)
+	Theme.FontName = name
+	if root then
+		for _, d in root:GetDescendants() do
+			if d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
+				local f = d.FontFace
+				if f.Family == old then
+					d.FontFace = Font.new(family, f.Weight, f.Style)
+				end
+			end
+		end
+	end
+	return true
+end
+
 -- Text sizes (px). Mobile bumps them in Window.
 Theme.Size = {
 	Tiny = 10,

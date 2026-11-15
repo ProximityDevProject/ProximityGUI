@@ -17,21 +17,25 @@ local classes = {}
 -- ═══ Toggle ═══════════════════════════════════════════════════════════════
 --[[
 	Section:Toggle({
-		Name, Default = false, Flag, Callback(bool),
-		Style = "Switch" | "Checkbox",
+		Name, Default = false, Flag, Callback(bool), Icon,
+		Style = nil (menu-wide style) | "Switch" | "Compact" | "Checkbox" | "Chip"
+		        | "Radio" | "Square" | "Pill" | "Dot" | "Orbit",
 		Risky = false, Confirm = false (ask before turning on),
 		Description, Tooltip, Badge, Locked,
 	})
-	Methods: :Toggle() :On() :Off() :IsOn()
+	Methods: :Toggle() :On() :Off() :IsOn() :SetStyle(name)
+	Library:SetToggleStyle(name) changes every toggle that has no own Style.
 ]]
 local Toggle = Base.extend("Toggle")
 classes.Toggle = Toggle
+
+Toggle.Styles = { "Switch", "Compact", "Checkbox", "Chip", "Radio", "Square", "Pill", "Dot", "Orbit" }
 
 function Toggle.new(section, options)
 	local self = Base.new(Toggle, section, options)
 	self.Default = Util.Opt(options, "Default", "Value", "State") == true
 	self.Value = self.Default
-	self.Style = options.Style or "Switch"
+	self.Style = options.Style
 	self.ConfirmText = options.Confirm
 	return self:_register()
 end
@@ -70,30 +74,193 @@ function Toggle:_request(value: boolean)
 	self:_userSet(value)
 end
 
+function Toggle:_navActivate()
+	self:_request(not self.Value)
+end
+function Toggle:_navAdjust(dir)
+	self:_request(dir > 0)
+end
+
+function Toggle:GetStyle(): string
+	return self.Style or Shared.Lib.ToggleStyle or "Switch"
+end
+
+-- Every style is a pair: build the control into `holder`, paint it for a state.
+local styles = {}
+
+local function track(holder, w, h, radius)
+	local f = Util.New("Frame", { Name = "Control", Size = UDim2.fromOffset(w, h), LayoutOrder = 100, Parent = holder })
+	if radius then
+		Util.Corner(radius, f)
+	else
+		Util.Round(f)
+	end
+	local stroke = Util.Stroke(f)
+	return f, stroke
+end
+
+local function knob(parent, size, radius)
+	local k = Util.New("Frame", { Name = "Knob", Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0, 0.5), Parent = parent })
+	if radius then
+		Util.Corner(radius, k)
+	else
+		Util.Round(k)
+	end
+	return k
+end
+
+styles.Switch = {
+	build = function(self, holder)
+		local f, stroke = track(holder, 32, 18)
+		return { Frame = f, Stroke = stroke, Knob = knob(f, 12) }
+	end,
+	paint = function(r, on, t)
+		Theme.Paint(r.Frame, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
+		Theme.Paint(r.Stroke, { Color = on and "Accent" or "StrokeHi" }, t)
+		Tween.Play(r.Stroke, { Thickness = on and 2.5 or 1, Transparency = on and 0.75 or 0 }, t)
+		Theme.Paint(r.Knob, { BackgroundColor3 = on and "AccentInk" or "TextDim" }, t)
+		Tween.Play(r.Knob, { Position = on and UDim2.new(1, -15, 0.5, 0) or UDim2.new(0, 3, 0.5, 0) }, t * 1.3, Enum.EasingStyle.Back)
+	end,
+}
+
+styles.Square = {
+	build = function(self, holder)
+		local f, stroke = track(holder, 32, 18, 4)
+		return { Frame = f, Stroke = stroke, Knob = knob(f, 12, 3) }
+	end,
+	paint = styles.Switch.paint,
+}
+
+styles.Compact = {
+	build = function(self, holder)
+		local f, stroke = track(holder, 16, 16)
+		local dot = Util.New("Frame", { Size = UDim2.fromOffset(0, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = f })
+		Util.Round(dot)
+		f.BackgroundTransparency = 1
+		return { Frame = f, Stroke = stroke, Dot = dot }
+	end,
+	paint = function(r, on, t)
+		Theme.Paint(r.Stroke, { Color = on and "Accent" or "StrokeHi" }, t)
+		Theme.Paint(r.Dot, { BackgroundColor3 = "Accent" })
+		Tween.Play(r.Dot, { Size = on and UDim2.fromOffset(10, 10) or UDim2.fromOffset(0, 0) }, t * 1.4, Enum.EasingStyle.Back)
+	end,
+}
+
+styles.Radio = {
+	build = function(self, holder)
+		local f, stroke = track(holder, 18, 18)
+		local dot = Util.New("Frame", { Size = UDim2.fromOffset(8, 8), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = f })
+		Util.Round(dot)
+		return { Frame = f, Stroke = stroke, Dot = dot }
+	end,
+	paint = function(r, on, t)
+		Theme.Paint(r.Frame, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
+		Theme.Paint(r.Stroke, { Color = on and "Accent" or "StrokeHi" }, t)
+		Theme.Paint(r.Dot, { BackgroundColor3 = "AccentInk" })
+		Tween.Play(r.Dot, { Size = on and UDim2.fromOffset(7, 7) or UDim2.fromOffset(0, 0) }, t, Enum.EasingStyle.Back)
+	end,
+}
+
+styles.Checkbox = {
+	build = function(self, holder)
+		local f, stroke = track(holder, 18, 18, 5)
+		local check = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = Icons.Get("check") or "", Size = UDim2.fromOffset(12, 12), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = f })
+		return { Frame = f, Stroke = stroke, Check = check }
+	end,
+	paint = function(r, on, t, animate)
+		Theme.Paint(r.Frame, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
+		Theme.Paint(r.Stroke, { Color = on and "Accent" or "StrokeHi" }, t)
+		Theme.Paint(r.Check, { ImageColor3 = "AccentInk" })
+		r.Check.ImageTransparency = on and 0 or 1
+		r.Check.Size = UDim2.fromOffset(on and 12 or 4, on and 12 or 4)
+		if animate and on then
+			r.Check.Size = UDim2.fromOffset(4, 4)
+			Tween.Play(r.Check, { Size = UDim2.fromOffset(12, 12) }, 0.22, Enum.EasingStyle.Back)
+		end
+	end,
+}
+
+styles.Chip = {
+	build = function(self, holder)
+		local f, stroke = track(holder, 40, 20, 5)
+		local label = Util.Label({ Text = "OFF", FontFace = Theme.Fonts.Bold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), Parent = f })
+		return { Frame = f, Stroke = stroke, Label = label }
+	end,
+	paint = function(r, on, t)
+		Theme.Paint(r.Frame, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
+		Theme.Paint(r.Stroke, { Color = on and "Accent" or "StrokeHi" }, t)
+		Theme.Paint(r.Label, { TextColor3 = on and "AccentInk" or "TextMute" }, t)
+		r.Label.Text = on and "ON" or "OFF"
+	end,
+}
+
+styles.Pill = {
+	build = function(self, holder)
+		local f, stroke = track(holder, 52, 20)
+		local k = Util.New("Frame", { Size = UDim2.fromOffset(24, 14), AnchorPoint = Vector2.new(0, 0.5), Parent = f })
+		Util.Round(k)
+		local label = Util.Label({ Text = "", FontFace = Theme.Fonts.Bold, TextSize = 9, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), Parent = k })
+		return { Frame = f, Stroke = stroke, Knob = k, Label = label }
+	end,
+	paint = function(r, on, t)
+		Theme.Paint(r.Frame, { BackgroundColor3 = "Surface3" }, t)
+		Theme.Paint(r.Stroke, { Color = on and "Accent" or "StrokeHi" }, t)
+		Theme.Paint(r.Knob, { BackgroundColor3 = on and "Accent" or "Surface2" }, t)
+		Theme.Paint(r.Label, { TextColor3 = on and "AccentInk" or "TextMute" }, t)
+		r.Label.Text = on and "ON" or "OFF"
+		Tween.Play(r.Knob, { Position = on and UDim2.new(1, -27, 0.5, 0) or UDim2.new(0, 3, 0.5, 0) }, t * 1.3, Enum.EasingStyle.Quint)
+	end,
+}
+
+styles.Dot = {
+	build = function(self, holder)
+		local f = Util.New("Frame", { Name = "Control", BackgroundTransparency = 1, Size = UDim2.fromOffset(18, 18), LayoutOrder = 100, Parent = holder })
+		local dot = Util.New("Frame", { Size = UDim2.fromOffset(8, 8), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = f })
+		Util.Round(dot)
+		local halo = Util.Stroke(dot, nil, 4, 1)
+		return { Frame = f, Dot = dot, Halo = halo }
+	end,
+	paint = function(r, on, t)
+		Theme.Paint(r.Dot, { BackgroundColor3 = on and "Accent" or "StrokeHi" }, t)
+		Theme.Paint(r.Halo, { Color = "Accent" })
+		Tween.Play(r.Halo, { Transparency = on and 0.75 or 1 }, t)
+	end,
+}
+
+styles.Orbit = {
+	build = function(self, holder)
+		local f = Util.New("Frame", { Name = "Control", BackgroundTransparency = 1, Size = UDim2.fromOffset(34, 20), LayoutOrder = 100, Parent = holder })
+		local ring = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(34, 12), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Rotation = -12, Parent = f })
+		Util.Round(ring)
+		local stroke = Util.Stroke(ring)
+		local planet = Util.New("Frame", { Size = UDim2.fromOffset(10, 10), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = f })
+		Util.Round(planet)
+		local moon = Util.New("Frame", { Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0.5, 0.5), Parent = f })
+		Util.Round(moon)
+		return { Frame = f, Stroke = stroke, Planet = planet, Moon = moon }
+	end,
+	paint = function(r, on, t)
+		Theme.Paint(r.Stroke, { Color = on and "Accent" or "StrokeHi" }, t)
+		Theme.Paint(r.Planet, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
+		Theme.Paint(r.Moon, { BackgroundColor3 = on and "Accent" or "TextMute" }, t)
+		Tween.Play(r.Moon, { Position = on and UDim2.new(1, -2, 0.32, 0) or UDim2.new(0, 2, 0.68, 0) }, t * 1.6, Enum.EasingStyle.Sine)
+	end,
+}
+
+Toggle._styleImpl = styles
+
+function Toggle:_buildControl()
+	if self._control and self._control.Frame then
+		self._control.Frame:Destroy()
+	end
+	local style = styles[self:GetStyle()] or styles.Switch
+	self._styleImpl = style
+	self._control = style.build(self, self._right)
+end
+
 function Toggle:_build(parent)
 	local row = self:_row(parent)
-	local holder = self._right
-	if self.Style == "Checkbox" then
-		local box = Util.New("Frame", { Name = "Checkbox", Size = UDim2.fromOffset(18, 18), LayoutOrder = 100, Parent = holder })
-		Util.Corner(5, box)
-		local stroke = Util.Stroke(box)
-		local check = Util.New("ImageLabel", {
-			BackgroundTransparency = 1,
-			Image = Icons.Get("check") or "",
-			Size = UDim2.fromOffset(12, 12),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.fromScale(0.5, 0.5),
-			Parent = box,
-		})
-		self._box, self._boxStroke, self._check = box, stroke, check
-	else
-		local track = Util.New("Frame", { Name = "Switch", Size = UDim2.fromOffset(32, 18), LayoutOrder = 100, Parent = holder })
-		Util.Round(track)
-		local stroke = Util.Stroke(track)
-		local knob = Util.New("Frame", { Name = "Knob", Size = UDim2.fromOffset(12, 12), AnchorPoint = Vector2.new(0, 0.5), Parent = track })
-		Util.Round(knob)
-		self._track, self._trackStroke, self._knob = track, stroke, knob
-	end
+	self:_buildControl()
 	local hit = Util.Hitbox(row, 0)
 	hit.Activated:Connect(function()
 		if not self:IsLocked() then
@@ -113,26 +280,17 @@ function Toggle:_render(animate)
 	if self._icon then
 		Theme.Paint(self._icon, { ImageColor3 = on and "Accent" or "TextMute" }, t)
 	end
-	if self._track then
-		Theme.Paint(self._track, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
-		Theme.Paint(self._trackStroke, { Color = on and "Accent" or "StrokeHi" }, t)
-		Theme.Paint(self._knob, { BackgroundColor3 = on and "AccentInk" or "TextDim" }, t)
-		Tween.Play(self._knob, { Position = on and UDim2.new(1, -15, 0.5, 0) or UDim2.new(0, 3, 0.5, 0) }, t * 1.3, Enum.EasingStyle.Back)
-	elseif self._box then
-		Theme.Paint(self._box, { BackgroundColor3 = on and "Accent" or "Surface3" }, t)
-		Theme.Paint(self._boxStroke, { Color = on and "Accent" or "StrokeHi" }, t)
-		Theme.Paint(self._check, { ImageColor3 = "AccentInk" })
-		self._check.ImageTransparency = on and 0 or 1
-		self._check.Size = on and UDim2.fromOffset(12, 12) or UDim2.fromOffset(4, 4)
-		if animate and on then
-			self._check.Size = UDim2.fromOffset(4, 4)
-			Tween.Play(self._check, { Size = UDim2.fromOffset(12, 12) }, 0.22, Enum.EasingStyle.Back)
-		end
+	if self._control and self._styleImpl then
+		self._styleImpl.paint(self._control, on, t, animate)
 	end
 end
 
-function Toggle:SetStyle(style: string)
+function Toggle:SetStyle(style: string?)
 	self.Style = style
+	if self._mounted then
+		self:_buildControl()
+		self:_render(false)
+	end
 	return self
 end
 
@@ -164,6 +322,10 @@ end
 
 function Button:_callbackArgs()
 	return nil
+end
+
+function Button:_navActivate()
+	self:_activate()
 end
 
 function Button:Press()
@@ -590,6 +752,13 @@ end
 
 function Navigate:_callbackArgs()
 	return nil
+end
+
+function Navigate:_navActivate()
+	if self.Target and self.Target.Select then
+		self.Target:Select()
+	end
+	self:_fireCallbacks()
 end
 
 function Navigate:_build(parent)

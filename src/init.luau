@@ -27,12 +27,17 @@ local Overlay = require("./Widgets/Overlay")
 
 -- Re-running the script replaces the previous instance cleanly.
 local shared = Env.Shared()
+local previousVersion = nil
 if shared.Library and shared.Library.Unload then
-	pcall(shared.Library.Unload, shared.Library)
+	previousVersion = shared.Library.Version
+	pcall(shared.Library.Unload, shared.Library, true)
 end
 
 local Library = {
-	Version = "1.1.0",
+	Version = "1.2.0",
+	VersionUrl = "https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/VERSION",
+	ToggleStyle = "Switch",
+	DensityName = "Normal",
 	Flags = {},
 	Elements = {},
 	AllElements = {},
@@ -51,6 +56,8 @@ local Library = {
 	DirtyChanged = Signal.new(),
 	Unloading = Signal.new(),
 	FavoritesChanged = Signal.new(),
+	NotificationsChanged = Signal.new(),
+	ErrorOccurred = Signal.new(),
 	-- toolkit for script authors
 	Util = Util,
 	Signal = Signal,
@@ -97,6 +104,7 @@ for _, module in {
 	require("./Elements/Choice"),
 	require("./Elements/Pickers"),
 	require("./Elements/Data"),
+	require("./Elements/PlayerList"),
 } do
 	for name, class in module do
 		Library._classes[name] = class
@@ -110,6 +118,9 @@ local Window = require("./Window")
 require("./Window/Dialogs")(Window)
 require("./Window/Builtins")(Window)
 require("./Widgets/Widgets")(Library)
+require("./Widgets/Extras")(Library)
+require("./Widgets/KeySystem")(Library)
+Library._drawLogo = Window._drawLogo
 
 -- ═══ Element bookkeeping ═════════════════════════════════════════════════
 
@@ -375,6 +386,27 @@ do
 		ServerUptime = function()
 			return duration(workspace.DistributedGameTime)
 		end,
+		Memory = function()
+			local ok, mb = pcall(function()
+				return Stats:GetTotalMemoryUsageMb()
+			end)
+			return ok and (math.floor(mb) .. " MB") or (math.floor(gcinfo() / 1024) .. " MB")
+		end,
+		Position = function()
+			if Library.Anonymous then
+				return "hidden"
+			end
+			local root = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if not root then
+				return "-"
+			end
+			local p = root.Position
+			return string.format("%d %d %d", p.X, p.Y, p.Z)
+		end,
+		Speed = function()
+			local root = Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			return root and string.format("%.1f st/s", root.AssemblyLinearVelocity.Magnitude) or "-"
+		end,
 		GameName = function()
 			if not gameName then
 				local ok, info = pcall(function()
@@ -521,8 +553,32 @@ function Library:Window(options)
 	if savedKey then
 		options.Keybind = savedKey
 	end
+	-- key gate first: nothing is built until the key is accepted
+	local key = options.KeySystem
+	if key and key ~= false then
+		local spec = type(key) == "table" and key or {}
+		spec.Title = spec.Title or options.Title
+		spec.Logo = spec.Logo or options.Logo
+		if not self:KeySystem(spec) then
+			return nil
+		end
+	end
+	Shared.Density = self.Densities[self:GetSetting("Density", options.Density or "Normal")] or 1
+	self.DensityName = self:GetSetting("Density", options.Density or "Normal")
+	self.ToggleStyle = self:GetSetting("ToggleStyle", options.ToggleStyle or "Switch")
+	local font = self:GetSetting("Font", options.Font)
+	if font then
+		task.spawn(function()
+			self:SetFont(font)
+		end)
+	end
 	local window = Window.new(self, options)
 	table.insert(self.Windows, window)
+	if previousVersion and previousVersion ~= self.Version then
+		window:OnReady(function()
+			self:Notify({ Title = "Proximity", Content = Locale.T("Replaced", previousVersion, self.Version), Type = "info", Duration = 5 })
+		end)
+	end
 	window:SetTransparency((self:GetSetting("Glass", 0) or 0) / 100)
 	if options.Watermark ~= false then
 		self:Watermark(type(options.Watermark) == "table" and options.Watermark or nil)
@@ -657,9 +713,21 @@ function Library:OnUnload(fn)
 end
 
 -- Switches every toggle off (so feature callbacks clean up), then removes all UI.
-function Library:Unload()
+function Library:Unload(silent)
 	if self.Unloaded then
 		return
+	end
+	if not silent and self.Dirty and self.CurrentConfig and self.Windows[1] and coroutine.isyieldable() then
+		local index = self.Windows[1]:Dialog({
+			Title = Locale.T("Unsaved"),
+			Content = Locale.T("SaveBeforeUnload", self.CurrentConfig),
+			Buttons = { { Text = Locale.T("Cancel") }, { Text = Locale.T("DontSave") }, { Text = Locale.T("Save"), Style = "Primary" } },
+		})
+		if index == 0 or index == 1 then
+			return
+		elseif index == 3 then
+			self:SaveConfig(self.CurrentConfig)
+		end
 	end
 	self.Unloading:Fire()
 	for _, el in table.clone(self.AllElements) do
@@ -683,13 +751,70 @@ function Library:GetVersion()
 	return self.Version
 end
 
-function Library:SetDebug(on)
-	self.Debug = on and true or false
-	return self
-end
 
 Util.ErrorHandler = function(message, trace)
 	warn("[Proximity] callback error: " .. tostring(message) .. (Library.Debug and ("\n" .. trace) or ""))
+	Library.ErrorOccurred:Fire(tostring(message), trace)
+end
+
+--[[
+	Library:OnError(function(message, trace) ... end)
+	Every error thrown inside your callbacks lands here (the UI keeps working).
+]]
+function Library:OnError(fn)
+	return self.ErrorOccurred:Connect(fn)
+end
+
+-- Clear messages about wrong options instead of silent breakage.
+function Library:_optionWarning(kind, name, message)
+	warn(string.format("[Proximity] %s \"%s\": %s", tostring(kind), tostring(name), message))
+end
+
+-- ═══ Density, toggle style, font ═════════════════════════════════════════
+Library.Densities = { Compact = 0.86, Normal = 1, Comfortable = 1.14, Touch = 1.32 }
+
+function Library:SetDensity(name)
+	local factor = self.Densities[name] or 1
+	self.DensityName = self.Densities[name] and name or "Normal"
+	Shared.Density = factor
+	self:SetSetting("Density", self.DensityName)
+	for _, el in self.AllElements do
+		local frame = el.Frame
+		local base = frame and frame:GetAttribute("BaseH")
+		if base then
+			frame.Size = UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset, 0, math.floor(base * factor + 0.5))
+		end
+	end
+	for _, d in Shared.Gui.Root:GetDescendants() do
+		if d:IsA("UIListLayout") and d:GetAttribute("BaseGap") then
+			d.Padding = UDim.new(0, math.floor(d:GetAttribute("BaseGap") * factor * 2 + 0.5))
+		end
+	end
+	return self
+end
+
+function Library:SetToggleStyle(name)
+	self.ToggleStyle = name
+	self:SetSetting("ToggleStyle", name)
+	for _, el in self.AllElements do
+		if el.Type == "Toggle" and not el.Style and el._mounted then
+			el:_buildControl()
+			el:_render(false)
+		end
+	end
+	return self
+end
+
+function Library:SetFont(name)
+	local ok = Theme.ApplyFont(name, Shared.Gui.Root)
+	if ok then
+		self:SetSetting("Font", name)
+	end
+	return ok
+end
+
+function Library:GetFonts()
+	return Theme.FontList()
 end
 
 return Library

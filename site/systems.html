@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Systems - Proximity UI</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap page">
+<aside class="toc">
+  <b>Systems</b>
+  <a href="#configs">Configs</a>
+  <a href="#share">Share codes</a>
+  <a href="#themes">Themes</a>
+  <a href="#fonts">Fonts</a>
+  <a href="#density">Density and styles</a>
+  <a href="#icons">Icons</a>
+  <a href="#notify">Notifications</a>
+  <a href="#errors">Errors and debug</a>
+  <a href="#economy">Saving FPS</a>
+  <a href="#locale">Languages</a>
+  <a href="#identity">Anonymous mode</a>
+</aside>
+<article>
+  <span class="eyebrow">Reference</span>
+  <h1>Systems</h1>
+  <p class="lead">Everything around the elements: how settings are stored, how the menu looks, and what happens when something goes wrong.</p>
+
+  <h2 id="configs">Configs</h2>
+<pre><code class="lua">Proximity:SaveConfig("legit", { Author = "me" })
+Proximity:LoadConfig("legit")
+Proximity:DeleteConfig("legit")          -- a notification lets you bring it back for 5 seconds
+Proximity:RestoreBackup("legit")         -- the version before the last overwrite
+Proximity:DiffConfig("legit")            -- what would change if you load it
+Proximity:SetAutoLoad("legit")  Proximity:SetAutoSave("legit")
+print(Proximity:ListConfigs())</code></pre>
+  <p>Files are stored scrambled with a checksum, so a file edited by hand is noticed instead of loading broken values. Old plain JSON files still load. A backup of the previous version is kept on every save. Without file functions everything works in memory.</p>
+
+  <h2 id="share">Share codes</h2>
+<pre><code class="lua">local code = Proximity:ShareConfig("legit")   -- for example "aB3xY"
+Proximity:ImportCode("aB3xY", "from-friend")</code></pre>
+  <p>The config is uploaded as text to paste.rs and only the short id is shared. It needs the executor's <code>request</code> function. The long export string still works without the internet: <code>Proximity:ExportConfig()</code> and <code>Proximity:ImportConfig(text)</code>.</p>
+
+  <h2 id="themes">Themes</h2>
+<pre><code class="lua">Proximity:SetTheme("Moon")         -- Eclipse, OLED, Graphite, Moon, Ash, Steel
+Proximity:SetAccent(Color3.fromRGB(255, 244, 230))
+Proximity:AddTheme("Paper Moon", { Accent = "#E8F0FF", Stroke = "#20242C" })
+Proximity.Theme.Paint(myFrame, { BackgroundColor3 = "Surface" })   -- your own frames follow the theme</code></pre>
+
+  <h2 id="fonts">Fonts</h2>
+  <p>About 50 fonts: every family Roblox ships (read live from <code>Enum.Font</code>, so the list is always valid) plus open-licence fonts hosted with Proximity and loaded through <code>getcustomasset</code>.</p>
+<pre><code class="lua">print(Proximity:GetFonts())
+Proximity:SetFont("Minecraft (Monocraft)")   -- also "VT323 (terminal)", "Silkscreen (pixel)", "Russo One", "Press Start 2P"...</code></pre>
+  <div class="note"><b>Hosted fonts</b>: Monocraft, VT323, Silkscreen, Russo One, Space Mono, Audiowide, Rajdhani, Share Tech Mono, Righteous. All under the SIL Open Font License.</div>
+
+  <h2 id="density">Density and styles</h2>
+<pre><code class="lua">Proximity:SetDensity("Compact")      -- Compact, Normal, Comfortable, Touch
+Proximity:SetToggleStyle("Orbit")    -- Switch, Compact, Checkbox, Chip, Radio, Square, Pill, Dot, Orbit</code></pre>
+  <p><code>Touch</code> makes rows taller for fingers without making the window fullscreen.</p>
+
+  <h2 id="icons">Icons</h2>
+  <p>818 Lucide icons by name plus 130 readable names for script features. A few of them:</p>
+  <div class="tablewrap"><table class="table">
+    <tr><th>Name</th><th>Name</th><th>Name</th><th>Name</th></tr>
+    <tr><td><code>aimbot</code></td><td><code>esp</code></td><td><code>fly</code></td><td><code>farm</code></td></tr>
+    <tr><td><code>silent</code></td><td><code>chams</code></td><td><code>noclip</code></td><td><code>loot</code></td></tr>
+    <tr><td><code>triggerbot</code></td><td><code>tracer</code></td><td><code>speed</code></td><td><code>quest</code></td></tr>
+    <tr><td><code>fov</code></td><td><code>skeleton</code></td><td><code>teleport</code></td><td><code>boss</code></td></tr>
+    <tr><td><code>weapon</code></td><td><code>radar</code></td><td><code>spectate</code></td><td><code>shop</code></td></tr>
+    <tr><td><code>server</code></td><td><code>rejoin</code></td><td><code>serverhop</code></td><td><code>webhook</code></td></tr>
+    <tr><td><code>premium</code></td><td><code>anonymous</code></td><td><code>keybinds</code></td><td><code>planet</code></td></tr>
+  </table></div>
+  <p>Anything else works too: <code>rbxassetid://</code>, a number, <code>rbxthumb://</code>, or an image URL (downloaded once, retried if the network blinks, cached).</p>
+
+  <h2 id="notify">Notifications</h2>
+<pre><code class="lua">Proximity:Notify({ Title = "Saved", Content = "legit", Type = "success", Duration = 4,
+    Actions = { { Text = "Undo", Callback = function() Proximity:Undo() end } } })
+Proximity:SetNotifyPosition("TopRight")</code></pre>
+  <p>Hovering pauses the timer. Everything lands in the bell in the header, with a counter of unread ones.</p>
+
+  <h2 id="errors">Errors and debug</h2>
+<pre><code class="lua">Proximity:OnError(function(message, trace)
+    -- send it to your own log
+end)
+Proximity:SetDebug(true)    -- overlay: elements, flags, instances, memory, build time per tab</code></pre>
+  <p>Wrong options produce a readable message instead of silent breakage, for example <code>Slider "FOV": Min (500) is bigger than Max (10), swapped them</code>. With debug on, every tooltip also shows the element type and flag.</p>
+
+  <h2 id="economy">Saving FPS</h2>
+  <p>If FPS stays under 30 for six seconds, Proximity turns off the stars and the corner planet and tells the player once. Turn it off in Settings or call <code>Proximity:SetEconomy(true)</code> yourself.</p>
+
+  <h2 id="locale">Languages</h2>
+<pre><code class="lua">Proximity:SetLanguage("ru")
+Proximity:AddLanguage("de", { Search = "Suchen" }, "Deutsch")</code></pre>
+
+  <h2 id="identity">Anonymous mode</h2>
+<pre><code class="lua">Proximity:SetAnonymous(true, { Name = "Player" })   -- hides name, avatar, IDs and position everywhere</code></pre>
+</article>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

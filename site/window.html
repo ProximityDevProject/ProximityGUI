@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Window - Proximity UI</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap page">
+<aside class="toc">
+  <b>Window</b>
+  <a href="#options">Options</a>
+  <a href="#loading">Loading screen</a>
+  <a href="#key">Key system</a>
+  <a href="#tabs">Tabs and pages</a>
+  <a href="#sections">Sections</a>
+  <a href="#navigation">Navigation styles</a>
+  <a href="#open">Open and close</a>
+  <a href="#mini">Mini mode</a>
+  <a href="#background">Background</a>
+  <a href="#keyboard">Keyboard and gamepad</a>
+  <a href="#news">What's new and updates</a>
+  <a href="#methods">All methods</a>
+</aside>
+<article>
+  <span class="eyebrow">Reference</span>
+  <h1>Window</h1>
+  <p class="lead">The window holds tabs, loads itself through the planet screen and remembers where you left it: position, size, tab and scroll of every page.</p>
+
+  <h2 id="options">Options</h2>
+<pre><code class="lua">local Window = Proximity:Window({
+    Title = "My Hub", Subtitle = "v1.0",
+    Logo = nil,                    -- nil: Proximity planet, false: vector planet, or an icon / asset / URL
+    Keybind = "RightShift",        -- also "Ctrl+M", Enum.KeyCode.Insert
+    Size = Vector2.new(740, 500),  -- mobile default is 600 x 380
+    Scale = "Auto",                -- or 0.5 to 2
+    Folder = "MyHub",              -- where configs and settings live
+    Theme = "Eclipse", Accent = Color3.new(1, 1, 1),
+    Font = "Builder Sans", Density = "Normal", ToggleStyle = "Switch",
+    Navigation = "Sidebar",        -- or "Rail"
+    Loading = { Style = "Planet", MinTime = 0.6 },   -- Style = "Skeleton" for the in-window shell, false to skip
+    KeySystem = false,             -- see below
+    ToggleButton = "Topbar",       -- "Bubble", or false
+    Decoration = true,             -- faint planet in the corner
+    Backdrop = "Stars",            -- "Grid", "Dots", "None"
+    Background = nil,              -- { Image = "...", Dim = 0.6 } or { Gradient = { c1, c2 } }
+    Changelog = { Version = "1.2", Notes = { "New aim", "Faster ESP" } },
+    Version = "1.2", VersionUrl = "https://example.com/version.txt",
+    Watermark = true, KeybindList = true, Profile = true, Status = "Premium",
+    AutoReady = true, AutoLoad = true, CheckUpdates = true, UnlockMouse = true,
+})</code></pre>
+
+  <h2 id="loading">Loading screen</h2>
+  <p>While your script declares tabs and elements, nothing is drawn yet: elements are stored instantly and built in small pieces each frame, so the game never freezes. Meanwhile the player sees the planet screen.</p>
+  <ul>
+    <li>The planet is a 3D cloud of white, grey and black points lit from the top right, with a ring that passes behind and in front of it.</li>
+    <li>The bar under it shows real progress: built elements plus your steps, with an estimate of the time left.</li>
+    <li>When everything is ready, including the auto-load config, the planet bursts with a shock wave and the window grows out of it.</li>
+  </ul>
+<pre><code class="lua">local step = Window:Task("Downloading assets", 20)    -- weight, default 10
+step:Progress(0.5)
+step:Done()
+
+Window:Step("Warming up ESP", function(t)              -- runs in its own thread
+    t:Progress(1)
+end)
+
+Window:OnReady(function() print("menu is ready") end)</code></pre>
+  <p>Prefer the old in-window shell? <code>Loading = { Style = "Skeleton" }</code>. No loading at all: <code>Loading = false</code>.</p>
+
+  <h2 id="key">Key system</h2>
+  <p>One option turns it on or off. While the key is not accepted, nothing else of your script runs.</p>
+<pre><code class="lua">Proximity:Window({
+    Title = "My Hub",
+    KeySystem = {
+        Keys = { "alpha-2026", "beta-2026" },              -- a fixed list, or
+        Check = function(key) return key == "x" end,        -- your own check (can call HttpGet), or
+        Url = "https://my.site/check?key=%s",              -- "true", "valid" or "ok" in the reply means valid
+        GetKey = "https://my.site/getkey",                 -- copied by the "Get a key" button
+        Discord = "https://discord.gg/invite",
+        Attempts = 5, Cooldown = 30,                        -- lock for 30 s after 5 wrong keys
+        Remember = true,                                    -- remember a good key on this device
+        Note = "Keys reset every 24 hours",
+    },
+})
+
+Proximity:Window({ KeySystem = true, ... })    -- turned on with the defaults
+Proximity:Window({ KeySystem = false, ... })   -- off</code></pre>
+
+  <h2 id="tabs">Tabs and pages</h2>
+<pre><code class="lua">Window:Category("Main")
+local Visuals = Window:Tab({ Name = "Visuals", Icon = "esp", Badge = "NEW" })
+local Players = Visuals:SubTab({ Name = "Players", Icon = "players" })     -- pill under the title
+local Tuning = Visuals:SubPage({ Name = "Tuning", Hidden = true })         -- opened by a Navigate row
+Players:Section({ Name = "ESP" }):Navigate({ Name = "Fine tuning", Page = Tuning })</code></pre>
+
+  <h2 id="sections">Sections</h2>
+<pre><code class="lua">local Aim = Combat:Section({
+    Name = "Aim", Icon = "aimbot", Side = "Left",     -- "Right", "Full"
+    Toggle = true, Flag = "aim", Enabled = true,      -- checkbox in the header turns the whole section on or off
+    Collapsible = true, Risky = false,                -- risky sections get a thin red stripe
+})
+local Silent, Lock = Aim:Tabs({ "Silent", "Lock" }, { Flag = "aim.mode", Icons = { "silent", "lock" } })
+Silent:Toggle({ Name = "Hit chance" })</code></pre>
+  <p>The header shows how many toggles are on, for example <code>2/5</code>.</p>
+
+  <h2 id="navigation">Navigation styles</h2>
+<pre><code class="lua">Window:SetNavigation("Rail")      -- icons only, names on hover, the window gets narrower
+Window:SetNavigation("Sidebar")   -- full names</code></pre>
+
+  <h2 id="open">Open and close</h2>
+  <p>The window grows out of the planet button next to the Roblox menu and folds back into it when hidden. With <code>ToggleButton = "Bubble"</code> it uses a draggable round button instead.</p>
+<pre><code class="lua">Window:Open()  Window:Close()  Window:Toggle()  print(Window:IsOpen())</code></pre>
+
+  <h2 id="mini">Mini mode</h2>
+  <p>The button next to "hide" folds the window into a slim bar with the logo, FPS, ping and time. Click the bar to unfold.</p>
+<pre><code class="lua">Window:SetMini(true)</code></pre>
+
+  <h2 id="background">Background</h2>
+<pre><code class="lua">Window:SetBackground({ Image = "rbxassetid://1234567", Dim = 0.6 })
+Window:SetBackground({ Gradient = { Color3.fromRGB(18, 18, 22), Color3.new(0, 0, 0) }, Rotation = 90 })
+Window:SetBackdrop("Stars")       -- "Grid", "Dots", "None"
+Window:SetDecoration(false)       -- hide the planet in the corner</code></pre>
+
+  <h2 id="keyboard">Keyboard and gamepad</h2>
+  <p>Arrow keys move a white focus ring between rows of the open page, Left and Right change the value, Enter or Space activates, Tab and Shift + Tab switch tabs. On a gamepad: D-pad, A, B to go back, LB and RB for tabs. Moving the mouse hides the ring.</p>
+
+  <h2 id="news">What's new and updates</h2>
+  <p><code>Changelog</code> shows a short list of changes once per version. <code>Version</code> plus <code>VersionUrl</code> quietly tells the player when your script has a newer version. Proximity checks its own updates the same way, turn it off with <code>CheckUpdates = false</code>.</p>
+
+  <h2 id="methods">All methods</h2>
+  <div class="tablewrap"><table class="table">
+    <tr><th>Method</th><th>What it does</th></tr>
+    <tr><td><code>:Tab(opts)</code> <code>:Category(name)</code></td><td>add tabs and labels</td></tr>
+    <tr><td><code>:SelectTab(x)</code> <code>:GetTab(name)</code> <code>:Back()</code></td><td>navigate</td></tr>
+    <tr><td><code>:Open()</code> <code>:Close()</code> <code>:Toggle()</code> <code>:SetMini(b)</code></td><td>visibility</td></tr>
+    <tr><td><code>:SetNavigation(m)</code> <code>:SetScale(n)</code> <code>:SetSize(v2)</code> <code>:Center()</code></td><td>layout</td></tr>
+    <tr><td><code>:SetBackground(spec)</code> <code>:SetBackdrop(p)</code> <code>:SetDecoration(b)</code> <code>:SetRim(b)</code> <code>:SetTransparency(n)</code></td><td>look</td></tr>
+    <tr><td><code>:Task()</code> <code>:Step()</code> <code>:SetReady()</code> <code>:OnReady(fn)</code> <code>:WaitUntilReady()</code></td><td>loading</td></tr>
+    <tr><td><code>:Dialog()</code> <code>:Confirm()</code> <code>:Prompt()</code> <code>:Tour()</code> <code>:OpenSearch()</code> <code>:Command()</code></td><td>dialogs and search</td></tr>
+    <tr><td><code>:Home()</code> <code>:SettingsTab()</code> <code>:ConfigTab()</code> <code>:Favorites()</code></td><td>ready-made tabs</td></tr>
+    <tr><td><code>:OpenNotifications()</code> <code>:SetKeybind(k)</code> <code>:Destroy()</code></td><td>misc</td></tr>
+  </table></div>
+</article>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

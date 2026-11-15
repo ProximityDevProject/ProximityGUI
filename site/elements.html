@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elements - Proximity UI</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap page">
+<aside class="toc">
+  <b>Elements</b>
+  <a href="#shared">Shared API</a>
+  <a href="#toggle">Toggle</a>
+  <a href="#button">Button</a>
+  <a href="#slider">Slider</a>
+  <a href="#dropdown">Dropdown</a>
+  <a href="#input">Input</a>
+  <a href="#keybind">Keybind</a>
+  <a href="#color">Color picker</a>
+  <a href="#text">Label and paragraph</a>
+  <a href="#navigate">Navigate</a>
+  <a href="#data">Progress and stats</a>
+  <a href="#graph">Graph</a>
+  <a href="#table">Table</a>
+  <a href="#players">Player list</a>
+  <a href="#card">Card, image, console, code</a>
+  <a href="#custom">Your own element</a>
+</aside>
+<article>
+  <span class="eyebrow">Reference</span>
+  <h1>Elements</h1>
+  <p class="lead">Every element is created from a section, works before it is drawn, and saves itself into configs when it has a <code>Flag</code>. Constructors also exist as <code>AddToggle</code>, <code>CreateToggle</code> and so on.</p>
+
+  <h2 id="shared">Shared API</h2>
+  <div class="tablewrap"><table class="table">
+    <tr><th>Option or method</th><th>What it does</th></tr>
+    <tr><td><code>Name</code> <code>Icon</code> <code>Description</code> <code>Tooltip</code> <code>Badge</code></td><td>text and decoration; <code>Icon</code> goes before the title of any row</td></tr>
+    <tr><td><code>Flag</code> <code>Default</code> <code>Callback</code> <code>Save = false</code></td><td>value, configs and the change callback</td></tr>
+    <tr><td><code>Risky</code> <code>Locked = "reason"</code> <code>Visible</code></td><td>state</td></tr>
+    <tr><td><code>:Get()</code> <code>:Set(v, silent)</code> <code>:Reset()</code> <code>.Changed</code></td><td>read, write, listen</td></tr>
+    <tr><td><code>:Lock(reason)</code> <code>:Unlock()</code> <code>:Show()</code> <code>:Hide()</code></td><td>lock with a reason in the tooltip, hide</td></tr>
+    <tr><td><code>:DependsOn(flag, fn, "Hide" | "Lock")</code></td><td>show only while another element allows it</td></tr>
+    <tr><td><code>:Keybind{}</code> <code>:ColorPicker{}</code> <code>:Options(fn)</code></td><td>attach a key chip, a color swatch or a gear panel to the row</td></tr>
+    <tr><td><code>:Focus()</code> <code>:Highlight()</code> <code>:Copy()</code> <code>:Paste()</code> <code>:Destroy()</code></td><td>misc</td></tr>
+  </table></div>
+
+  <h2 id="toggle">Toggle</h2>
+<pre><code class="lua">local fly = Section:Toggle({ Name = "Fly", Icon = "fly", Flag = "fly", Risky = false, Callback = function(on) end })
+fly:Keybind({ Default = "F", Mode = "Toggle" })
+fly:Options(function(o)
+    o:Slider({ Name = "Speed", Min = 1, Max = 200, Default = 50, Flag = "fly.speed" })
+end)</code></pre>
+  <p>Styles: <code>Switch</code>, <code>Compact</code> (a circle that fills), <code>Checkbox</code>, <code>Chip</code> (ON / OFF), <code>Radio</code>, <code>Square</code>, <code>Pill</code>, <code>Dot</code>, <code>Orbit</code>. Set one for the whole menu with <code>Proximity:SetToggleStyle("Orbit")</code> or per toggle with <code>Style</code>. Risky toggles ask before turning on.</p>
+
+  <h2 id="button">Button</h2>
+<pre><code class="lua">Section:Button({ Name = "Rejoin", Icon = "rejoin", Style = "Primary", Callback = function() end })
+Section:Button({ Name = "Reset stats", Style = "Danger", Confirm = "This clears your stats." })
+Section:ButtonGroup({ { Name = "Save" }, { Name = "Load", Style = "Primary" } })</code></pre>
+  <p>Styles: <code>Secondary</code>, <code>Primary</code>, <code>Ghost</code>, <code>Danger</code>. Also <code>DoubleClick</code>, <code>Cooldown</code>, <code>Hint</code>.</p>
+
+  <h2 id="slider">Slider</h2>
+<pre><code class="lua">Section:Slider({ Name = "FOV", Min = 10, Max = 500, Default = 135, Step = 5, Suffix = " px", Icon = "fov",
+    Presets = { Small = 60, Big = 300 } })
+Section:RangeSlider({ Name = "Distance", Min = 0, Max = 1000, Default = { 10, 250 } })
+Section:TextSlider({ Name = "Smooth", Labels = { "Instant", "Fast", "Slow" }, Default = "Fast" })</code></pre>
+  <p>Double click the number to type an exact value. Arrow keys nudge it while hovered, Shift moves by 10.</p>
+
+  <h2 id="dropdown">Dropdown</h2>
+<pre><code class="lua">Section:Dropdown({ Name = "Part", Values = { "Head", "Torso" }, Default = "Head" })
+Section:MultiDropdown({ Name = "Parts", Values = { "Head", "Torso", "Arms" }, Default = { "Head" }, Max = 2 })
+Section:PlayerDropdown({ Name = "Target", Multi = false })</code></pre>
+  <p>Multi selections show as chips with a cross. Search appears by itself above 7 values. <code>Deletable</code>, <code>Icons</code>, <code>Prefixes</code>, <code>Display</code> are optional.</p>
+
+  <h2 id="input">Input</h2>
+<pre><code class="lua">Section:Input({ Name = "Webhook", Placeholder = "https://...", Finished = true })
+Section:Input({ Name = "Amount", Numeric = true, Min = 1, Max = 100, Default = 10 })</code></pre>
+
+  <h2 id="keybind">Keybind</h2>
+<pre><code class="lua">Section:Keybind({ Name = "Panic", Default = "Ctrl+Shift+P", Mode = "Press", OnPress = function() end })
+Section:Keybind({ Name = "Zoom", Default = "LeftShift", Mode = "Hold" })   -- a modifier on its own works too</code></pre>
+  <p>Click the chip and press keys: holding Ctrl, Shift or Alt makes a combo. Right click the chip to change the mode: <code>Toggle</code>, <code>Hold</code>, <code>Always</code>, <code>Release</code>, <code>Press</code>. Backspace clears, Esc cancels. Roblox does not pass side mouse buttons to scripts, so <code>MB4</code> and <code>MB5</code> cannot be bound.</p>
+
+  <h2 id="color">Color picker</h2>
+<pre><code class="lua">Section:ColorPicker({ Name = "Chams", Default = "#FFFFFF", Alpha = 0.3, Callback = function(color, alpha) end })</code></pre>
+
+  <h2 id="text">Label and paragraph</h2>
+<pre><code class="lua">Section:Label({ Text = "Status: ready", Icon = "info" }):ColorPicker({ Default = Color3.new(1, 1, 1) })
+Section:Paragraph({ Title = "How it works", Content = "Rich text is &lt;b&gt;supported&lt;/b&gt;." })
+Section:Divider("Advanced")</code></pre>
+
+  <h2 id="navigate">Navigate</h2>
+<pre><code class="lua">Section:Navigate({ Name = "Weapon tuning", Value = "12 weapons", Page = TuningPage })</code></pre>
+
+  <h2 id="data">Progress and stats</h2>
+<pre><code class="lua">Section:Progress({ Name = "Quest", Value = 62 })
+Section:Stat({ Name = "Uptime", Value = Proximity.Providers.ServerUptime, Interval = 1 })
+Section:StatGrid({ Columns = 2, Items = { { Name = "FPS", Value = Proximity.Providers.FPS, Sparkline = true } } })</code></pre>
+
+  <h2 id="graph">Graph</h2>
+<pre><code class="lua">Section:Graph({ Name = "FPS", Source = Proximity.Providers.FPS, Interval = 0.25, Points = 50 })</code></pre>
+
+  <h2 id="table">Table</h2>
+<pre><code class="lua">Section:Table({
+    Columns = { { Key = "name", Name = "Map", Width = 0.5 }, { Key = "players", Name = "Players", Width = 0.25 } },
+    Rows = rows, SortBy = "players", Descending = true,
+    Filters = {
+        { Key = "players", Name = "Players", Type = "Range" },                  -- from and to
+        { Key = "name", Name = "Map", Type = "Select", Values = { "Border" } },
+        { Key = "full", Name = "Hide full", Type = "Switch", Test = function(row) return row.players &lt; 30 end },
+    },
+    Actions = { { Icon = "log-in", Tooltip = "Join", Callback = function(row) end } },
+})</code></pre>
+  <p>Only visible rows exist, so thousands of rows stay smooth. A badge on the filter button shows how many filters are active.</p>
+
+  <h2 id="players">Player list</h2>
+<pre><code class="lua">Section:PlayerList({
+    Height = 260,
+    Actions = { "Spectate", "Teleport", "Copy", { Icon = "user-x", Tooltip = "Ignore", Callback = function(player) end } },
+    OnSelect = function(player) end,
+})</code></pre>
+  <p>Avatars, display names, live distance, search. Spectate again to stop, or call <code>:StopSpectating()</code>.</p>
+
+  <h2 id="card">Card, image, console, code</h2>
+<pre><code class="lua">Section:Card({ Title = "Boss", Subtitle = "In progress", Body = "Occupation forces", Model = workspace.Boss, Progress = { 3, 13 } })
+Section:Image({ Image = "rbxassetid://123", Height = 120, Caption = "Map" })
+local log = Section:Console({ Height = 140 })  log:Info("Loaded")  log:Error("Oops")
+Section:Code({ Title = "Loader", Code = "print('hi')" })</code></pre>
+
+  <h2 id="custom">Your own element</h2>
+<pre><code class="lua">local Rating = Proximity.Base.extend("Rating")
+function Rating.new(section, options)
+    local self = Proximity.Base.new(Rating, section, options)
+    self.Default = options.Default or 3
+    self.Value = self.Default
+    return self:_register()
+end
+function Rating:_build(parent) self:_row(parent) end
+Proximity:RegisterElement("Rating", Rating)
+Section:Rating({ Name = "Quality", Flag = "quality" })</code></pre>
+  <p>Your element gets flags, configs, search, tooltips, locking, keyboard focus and undo for free.</p>
+</article>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proximity UI</title>
+<meta name="description" content="A black and white interface library for Roblox scripts. One loadstring, a planet that loads your menu, 40+ elements, configs, themes and widgets.">
+<meta property="og:title" content="Proximity UI">
+<meta property="og:description" content="A black and white interface library for Roblox scripts.">
+<meta property="og:image" content="assets/logo.png">
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<section class="hero">
+  <canvas id="planet3d" aria-hidden="true"></canvas>
+  <canvas id="planet" aria-hidden="true"></canvas>
+  <svg class="orbit-badge" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="c" d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs><text font-family="Manrope" font-size="10.5" letter-spacing="3.2" fill="#fff"><textPath href="#c">PROXIMITY · UI LIBRARY · FOR ROBLOX ·</textPath></text><circle cx="60" cy="60" r="18" fill="none" stroke="#fff" stroke-opacity=".35"/><circle cx="68" cy="52" r="2.2" fill="#fff"/></svg>
+  <div class="in">
+    <span class="pill"><i></i>v1.2.0 · tested on Potassium</span>
+    <h1>Menus that <em>orbit</em> your script</h1>
+    <p>Proximity is a black and white interface library for Roblox. One line to load it, a planet that builds your menu while the script loads, and everything a hub needs out of the box.</p>
+    <div class="cta">
+      <a class="btn primary" href="start.html">Get started <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn" href="generator.html">Build a menu with the mouse</a>
+    </div>
+    <div class="loader"><code data-loader></code><button class="btn primary" data-copy-loader style="padding:10px 18px">Copy</button></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="stats">
+      <div><b>40+</b><span>elements and widgets</span></div>
+      <div><b>818</b><span>icons, plus 130 readable names</span></div>
+      <div><b>9</b><span>toggle styles, one setting</span></div>
+      <div><b>50</b><span>fonts, Minecraft one included</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap split">
+    <div>
+      <span class="eyebrow">Loading</span>
+      <h2 style="font:500 clamp(26px,4vw,40px)/1.15 var(--display);margin:12px 0 16px">The menu is built while a planet spins</h2>
+      <p style="color:var(--dim);max-width:52ch">The screen dims and a planet assembles itself from hundreds of white, grey and black points. Below it a progress bar shows real numbers: elements already built and your own loading steps, with the time left. When everything is ready the planet bursts and the window grows out of the explosion.</p>
+      <pre><code class="lua">Window:Step("Loading item database", function(step)
+    for i, chunk in chunks do
+        load(chunk)
+        step:Progress(i / #chunks)
+    end
+end)</code></pre>
+    </div>
+    <img class="shot" src="assets/shots/skeleton.png" alt="Proximity loading a window with progress for every tab" loading="lazy">
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <span class="eyebrow">What you get</span>
+    <h2 style="font:500 clamp(26px,4vw,40px)/1.15 var(--display);margin:12px 0 28px">Everything a hub needs, already done</h2>
+    <div class="grid">
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg></div><h3>Planet intro</h3><p>3D point cloud, real progress and time left, a burst when ready.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><h3>Key system</h3><p><code>KeySystem = true</code> and it is on. Keys, your own check or a URL.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><h3>Ctrl + K</h3><p>Jump to any feature, tab or action from anywhere in the menu.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg></div><h3>Configs that travel</h3><p>Save, load, backups, undo delete, and a short code for friends.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="16" cy="12" r="2.5"/></svg></div><h3>9 toggle styles</h3><p>Switch, dot, checkbox, chip, radio, pill, orbit and more.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 20h16M7 16l5-12 5 12M9 12h6"/></svg></div><h3>50 fonts</h3><p>Every Roblox family plus open fonts like Monocraft and VT323.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div><h3>Widgets</h3><p>Watermark, binds, player panel, FPS graph, stopwatch, your own HUD.</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/><path d="M4 4h16"/></svg></div><h3>Keyboard and gamepad</h3><p>Arrows, Enter, Tab and the gamepad move through the whole menu.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap split">
+    <img class="shot" src="assets/shots/combat.png" alt="Combat tab with a section toggle and tabs inside a section" loading="lazy">
+    <div>
+      <span class="eyebrow">Write less</span>
+      <h2 style="font:500 clamp(26px,4vw,40px)/1.15 var(--display);margin:12px 0 16px">Ten lines for a real menu</h2>
+<pre><code class="lua">local Proximity = loadstring(game:HttpGet(URL))()
+local Window = Proximity:Window({ Title = "My Hub" })
+
+local Aim = Window:Tab({ Name = "Combat", Icon = "aimbot" })
+    :Section({ Name = "Aim", Toggle = true, Flag = "aim" })
+
+Aim:Slider({ Name = "FOV", Min = 10, Max = 500, Default = 135 })
+Aim:Toggle({ Name = "Triggerbot", Icon = "triggerbot" })
+    :Keybind({ Default = "Ctrl+X", Mode = "Hold" })
+
+Window:SettingsTab()</code></pre>
+      <a class="btn" href="start.html">Read the guide</a>
+    </div>
+  </div>
+</section>
+
+<script src="assets/app.js"></script>
+<script src="assets/planet.js"></script>
+<script>
+  // points assemble the planet, then the real 3D render takes over
+  const solid = proximityPlanet3D(document.getElementById("planet3d"), { cy: 0.44, radius: 0.27, delay: 1.3 });
+  proximityPlanet(document.getElementById("planet"), { scale: 0.27 * (innerHeight / Math.min(innerWidth, innerHeight)), cy: 0.44, solid });
+</script>
+</body>
+</html>

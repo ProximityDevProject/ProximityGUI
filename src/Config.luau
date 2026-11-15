@@ -14,6 +14,7 @@ local HttpService = game:GetService("HttpService")
 local Util = require("./Core/Util")
 local Env = require("./Core/Env")
 local Signal = require("./Core/Signal")
+local Locale = require("./Locale")
 
 return function(Lib)
 	Lib.Folder = "Proximity"
@@ -38,7 +39,48 @@ return function(Lib)
 		return HttpService:JSONEncode(t)
 	end
 
+	-- Config files are stored scrambled with a checksum ("PRXC1.") so a
+	-- hand-edited file is detected instead of silently loading garbage.
+	-- Plain JSON files from older versions still load.
+	Lib.EncryptConfigs = true
+	local SECRET = "proximity-planet"
+
+	local function xor(data)
+		local out = table.create(#data)
+		local n = #SECRET
+		for i = 1, #data do
+			out[i] = string.char(bit32.bxor(string.byte(data, i), string.byte(SECRET, (i - 1) % n + 1)))
+		end
+		return table.concat(out)
+	end
+
+	local function protect(json)
+		if not Lib.EncryptConfigs then
+			return json
+		end
+		local body = Util.Base64Encode(xor(json))
+		return "PRXC1." .. body .. "." .. Util.Checksum(body)
+	end
+
+	local function unprotect(raw)
+		local body, sum = string.match(raw, "^PRXC1%.([%w%+/=]+)%.(%x+)%s*$")
+		if not body then
+			return raw
+		end
+		if Util.Checksum(body) ~= sum then
+			return nil
+		end
+		return xor(Util.Base64Decode(body))
+	end
+
 	local function decode(s)
+		if type(s) ~= "string" then
+			return nil
+		end
+		s = unprotect(s)
+		if not s then
+			return nil
+		end
 		local ok, result = pcall(HttpService.JSONDecode, HttpService, s)
 		if ok and type(result) == "table" then
 			return result
@@ -159,7 +201,11 @@ return function(Lib)
 			Note = meta and meta.Note or nil,
 			Flags = Lib:GetState(),
 		}
-		local ok = Env.Write(path, encode(data))
+		if previous then
+			-- keep one backup of what we are about to overwrite
+			Env.Write(path .. ".bak", previous)
+		end
+		local ok = Env.Write(path, protect(encode(data)))
 		if ok then
 			Lib.ConfigSaved:Fire(name)
 			Lib.ConfigsChanged:Fire()
@@ -206,8 +252,27 @@ return function(Lib)
 		return true, string.format("%d/%d", applied, total)
 	end
 
-	function Lib:DeleteConfig(name: string): boolean
+	-- Restores the version saved before the last overwrite.
+	function Lib:RestoreBackup(name: string): boolean
+		local raw = Env.Read(configPath(name) .. ".bak")
+		if not raw then
+			return false
+		end
+		Env.Write(configPath(name), raw)
+		Lib.ConfigsChanged:Fire()
+		return true
+	end
+
+	function Lib:DeleteConfig(name: string, quiet: boolean?): boolean
+		local raw = Env.Read(configPath(name))
 		local ok = Env.Delete(configPath(name))
+		if ok and raw and not quiet and Lib.Notify then
+			-- soft delete: five seconds to bring it back
+			Lib:Notify({ Title = Locale.T("Deleted"), Content = Locale.T("DeletedHint", name), Type = "info", Duration = 5, Actions = { { Text = Locale.T("Restore"), Callback = function()
+				Env.Write(configPath(name), raw)
+				Lib.ConfigsChanged:Fire()
+			end } } })
+		end
 		if ok then
 			if Lib:GetAutoLoad() == Util.SafeName(name) then
 				Lib:SetAutoLoad(nil)
@@ -340,6 +405,51 @@ return function(Lib)
 		end
 		Lib:ApplyState(data.Flags)
 		return true
+	end
+
+	-- ─── Short share codes ───────────────────────────────────────────────
+	-- The export string goes to a paste service and the friend only needs
+	-- the short id. Needs the executor's `request` function.
+	Lib.ShareService = {
+		Upload = function(text)
+			local req = Env.Global("request") or Env.Global("http_request")
+			if not req then
+				return nil
+			end
+			local ok, res = pcall(req, { Url = "https://paste.rs/", Method = "POST", Body = text, Headers = { ["Content-Type"] = "text/plain" } })
+			if ok and res and (res.StatusCode == 201 or res.StatusCode == 206 or res.StatusCode == 200) and res.Body then
+				return string.match(res.Body, "paste%.rs/([%w]+)")
+			end
+			return nil
+		end,
+		Download = function(code)
+			return Env.HttpGet("https://paste.rs/" .. code)
+		end,
+	}
+
+	function Lib:ShareConfig(name: string?): (string?, string?)
+		local text = Lib:ExportConfig(name)
+		if not text then
+			return nil, "export"
+		end
+		local code = Lib.ShareService.Upload(text)
+		if not code then
+			return nil, "upload"
+		end
+		return code
+	end
+
+	function Lib:ImportCode(code: string, saveAs: string?): (boolean, string?)
+		code = Util.Trim(tostring(code or ""))
+		code = string.match(code, "([%w]+)$") or code
+		if code == "" then
+			return false, "empty"
+		end
+		local text = Lib.ShareService.Download(code)
+		if not text then
+			return false, "download"
+		end
+		return Lib:ImportConfig(text, saveAs)
 	end
 
 	-- ─── Auto load / auto save ───────────────────────────────────────────

@@ -209,6 +209,96 @@ return function(Window)
 			end,
 		})
 
+		look:Dropdown({
+			Name = T("Navigation"),
+			Icon = "sidebar",
+			Values = { "Sidebar", "Rail" },
+			Display = function(v)
+				return T(v)
+			end,
+			Default = window.Navigation,
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetSetting("Navigation", v)
+					window:SetNavigation(v)
+				end
+			end,
+		})
+		look:Dropdown({
+			Name = T("Font"),
+			Icon = "type",
+			Values = Lib:GetFonts(),
+			Default = Lib:GetSetting("Font", "Builder Sans"),
+			Search = true,
+			Save = false,
+			Callback = function(v)
+				if v then
+					task.spawn(function()
+						if not Lib:SetFont(v) then
+							Lib:Notify({ Content = T("FontFailed"), Type = "warning", Duration = 4 })
+						end
+					end)
+				end
+			end,
+		})
+		look:Dropdown({
+			Name = T("Density"),
+			Icon = "align-justify",
+			Values = { "Compact", "Normal", "Comfortable", "Touch" },
+			Display = function(v)
+				return T(v)
+			end,
+			Default = Lib.DensityName,
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetDensity(v)
+				end
+			end,
+		})
+		look:Dropdown({
+			Name = T("ToggleStyle"),
+			Icon = "toggle-right",
+			Values = Lib._classes.Toggle.Styles,
+			Default = Lib.ToggleStyle,
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetToggleStyle(v)
+				end
+			end,
+		})
+		local bgSaved = Lib:GetSetting("Background")
+		local bgInput = look:Input({
+			Name = T("BackgroundImage"),
+			Icon = "image",
+			Placeholder = "rbxassetid:// or https://",
+			Default = type(bgSaved) == "table" and bgSaved.Image or "",
+			Finished = true,
+			Save = false,
+		})
+		local bgDim = look:Slider({
+			Name = T("BackgroundDim"),
+			Icon = "moon",
+			Min = 0,
+			Max = 90,
+			Default = type(bgSaved) == "table" and math.floor((bgSaved.Dim or 0.55) * 100) or 55,
+			Suffix = "%",
+			Save = false,
+		})
+		local function applyBg()
+			local image = Util.Trim(bgInput:Get() or "")
+			local spec = image ~= "" and { Image = image, Dim = bgDim:Get() / 100 } or nil
+			Lib:SetSetting("Background", spec or false)
+			window:SetBackground(spec)
+		end
+		bgInput:AddCallback(applyBg)
+		bgDim:AddCallback(Util.Debounce(0.3, applyBg))
+		bgDim:DependsOn(bgInput, function(v)
+			return v ~= nil and v ~= ""
+		end)
+
 		-- Interface
 		local ui = tab:LeftSection({ Name = T("Interface"), Icon = "layout-dashboard" })
 		ui:Keybind({
@@ -272,6 +362,49 @@ return function(Window)
 				end
 			end,
 		})
+		ui:MultiDropdown({
+			Name = T("WatermarkItems"),
+			Icon = "list-checks",
+			Values = Lib.WatermarkItemNames,
+			Default = Lib:GetSetting("WatermarkItems", { "FPS", "Ping", "Time" }),
+			Save = false,
+			Callback = function(list)
+				Lib:SetSetting("WatermarkItems", list)
+				if Lib.WatermarkWidget then
+					Lib.WatermarkWidget:SetItems(list)
+				end
+			end,
+		})
+		ui:Toggle({
+			Name = T("ShowInactive"),
+			Icon = "eye",
+			Default = Lib:GetSetting("BindsInactive", false),
+			Save = false,
+			Callback = function(v)
+				Lib:SetSetting("BindsInactive", v)
+				if Lib.KeybindListWidget then
+					Lib.KeybindListWidget:ShowInactive(v)
+				end
+			end,
+		})
+		ui:Dropdown({
+			Name = T("SortBinds"),
+			Icon = "arrow-up-down",
+			Values = { "Active", "Name", "Key" },
+			Display = function(v)
+				return T("Sort" .. v)
+			end,
+			Default = Lib:GetSetting("BindsSort", "Active"),
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetSetting("BindsSort", v)
+					if Lib.KeybindListWidget then
+						Lib.KeybindListWidget.Refresh()
+					end
+				end
+			end,
+		})
 		ui:Dropdown({
 			Name = T("NotifyPosition"),
 			Icon = "notifications",
@@ -308,6 +441,51 @@ return function(Window)
 				end,
 			})
 		end)
+
+		-- Widgets
+		local widgets = tab:RightSection({ Name = T("Widgets"), Icon = "layout-grid" })
+		local function widgetToggle(name, icon, key, make)
+			widgets:Toggle({
+				Name = T(name),
+				Icon = icon,
+				Default = Lib:GetSetting(key, false),
+				Save = false,
+				Callback = function(v)
+					Lib:SetSetting(key, v)
+					local w = make()
+					if w then
+						w:SetVisible(v)
+					end
+				end,
+			})
+			if Lib:GetSetting(key, false) then
+				task.defer(function()
+					make():SetVisible(true)
+				end)
+			end
+		end
+		widgetToggle("PlayerPanel", "user", "Widget.PlayerPanel", function()
+			return Lib:PlayerPanel()
+		end)
+		widgetToggle("Performance", "activity", "Widget.Perf", function()
+			return Lib:PerfGraph()
+		end)
+		widgetToggle("Stopwatch", "timer", "Widget.Stopwatch", function()
+			return Lib:Stopwatch()
+		end)
+		widgets:Toggle({
+			Name = T("AutoEconomy"),
+			Icon = "leaf",
+			Description = T("AutoEconomyHint"),
+			Default = Lib:GetSetting("AutoEconomy", true),
+			Save = false,
+			Callback = function(v)
+				Lib:SetSetting("AutoEconomy", v)
+				if not v and Lib.Economy then
+					Lib:SetEconomy(false)
+				end
+			end,
+		})
 
 		-- Theme editor
 		local editor = tab:RightSection({ Name = T("ThemeEditor"), Icon = "editor", Collapsible = true, Collapsed = true })
@@ -378,7 +556,6 @@ return function(Window)
 			Search = true,
 			OnDelete = function(name)
 				Lib:DeleteConfig(name)
-				Lib:Notify({ Title = T("Deleted"), Content = name, Type = "info", Duration = 2 })
 			end,
 			Callback = function(v)
 				if v then
@@ -457,6 +634,29 @@ return function(Window)
 					end
 					local ok = Lib:ImportConfig(text, selected() ~= "" and selected() or nil)
 					Lib:Notify({ Content = ok and T("Imported") or T("InvalidConfig"), Type = ok and "success" or "error", Duration = 3 })
+				end)
+			end },
+		})
+		section:ButtonGroup({
+			{ Name = T("ShareCode"), Callback = function()
+				task.spawn(function()
+					local code, err = Lib:ShareConfig(list:Get())
+					if code then
+						Env.Clipboard(code)
+						Lib:Notify({ Title = T("ShareCode"), Content = T("CodeCopied", code), Type = "success", Duration = 6 })
+					else
+						Lib:Notify({ Content = T("CodeFailed"), Type = "error", Duration = 4 })
+					end
+				end)
+			end },
+			{ Name = T("ImportCode"), Callback = function()
+				task.spawn(function()
+					local code = window:Prompt({ Title = T("ImportCode"), Placeholder = "AbC12" })
+					if not code then
+						return
+					end
+					local ok = Lib:ImportCode(code, selected() ~= "" and selected() or nil)
+					Lib:Notify({ Content = ok and T("Imported") or T("CodeInvalid"), Type = ok and "success" or "error", Duration = 3 })
 				end)
 			end },
 		})

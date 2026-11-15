@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Start - Proximity UI</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap page">
+<aside class="toc">
+  <b>On this page</b>
+  <a href="#load">Load it</a>
+  <a href="#window">First window</a>
+  <a href="#tabs">Tabs and sections</a>
+  <a href="#elements">Elements</a>
+  <a href="#flags">Flags and configs</a>
+  <a href="#settings">Settings in one line</a>
+  <a href="#loading">Your loading steps</a>
+  <a href="#keys">Shortcuts</a>
+  <a href="#next">Next</a>
+</aside>
+<article>
+  <span class="eyebrow">Guide</span>
+  <h1>Your first Proximity menu</h1>
+  <p class="lead">Five minutes from an empty file to a menu with tabs, a config system and settings. Everything below works as is, copy the blocks one after another.</p>
+
+  <h2 id="load">Load it</h2>
+  <p>One line. It always points to the latest build in the repository.</p>
+  <pre><code class="lua" data-loader></code></pre>
+  <div class="note"><b>Tip.</b> Put <code>local Proximity = </code> in front of the line, the library returns itself.</div>
+  <p>Three addresses serve the same file, use whichever you like:</p>
+  <div class="tablewrap"><table class="table">
+    <tr><th>Address</th><th>When to use it</th></tr>
+    <tr><td><code>https://proximitydevproject.github.io/ProximityGUI/Proximity.lua</code></td><td>this site, always the latest version</td></tr>
+    <tr><td><code>https://proximitydevproject.github.io/ProximityGUI/v/1.2.0.lua</code></td><td>a fixed version, updates never change your script</td></tr>
+    <tr><td><code>https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau</code></td><td>straight from the repository</td></tr>
+  </table></div>
+
+  <h2 id="window">First window</h2>
+<pre><code class="lua">local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau"))()
+
+local Window = Proximity:Window({
+    Title = "My Hub",
+    Subtitle = "v1.0",
+    Keybind = Enum.KeyCode.RightShift,   -- shows and hides the menu
+})</code></pre>
+  <p>The screen dims, the planet assembles, the menu is built behind it and then the window grows out of the burst. A planet button appears next to the Roblox menu: click it or press the menu key to hide and show the window.</p>
+
+  <h2 id="tabs">Tabs and sections</h2>
+<pre><code class="lua">Window:Category("Main")
+local Combat = Window:Tab({ Name = "Combat", Icon = "aimbot", Description = "Aim and weapons" })
+
+local Aim = Combat:Section({ Name = "Aim", Icon = "target" })               -- left column
+local Weapon = Combat:Section({ Name = "Weapon", Side = "Right" })          -- right column
+local Info = Combat:Section({ Name = "Info", Side = "Full" })               -- full width</code></pre>
+  <p>Icons accept readable names like <code>aimbot</code>, <code>esp</code>, <code>fly</code>, <code>farm</code> or any of the 818 Lucide icons. See <a href="systems.html#icons">icons</a>.</p>
+
+  <h2 id="elements">Elements</h2>
+<pre><code class="lua">Aim:Toggle({ Name = "Enabled", Flag = "aim.on", Callback = function(on)
+    print("aim", on)
+end })
+
+Aim:Slider({ Name = "FOV", Min = 10, Max = 500, Default = 135, Suffix = " px", Flag = "aim.fov" })
+Aim:Dropdown({ Name = "Part", Values = { "Head", "Torso" }, Default = "Head", Flag = "aim.part" })
+Aim:Keybind({ Name = "Aim key", Default = "MB2", Mode = "Hold", Flag = "aim.key" })
+Weapon:ColorPicker({ Name = "Tracer color", Default = Color3.new(1, 1, 1), Flag = "weapon.tracer" })
+Weapon:Button({ Name = "Reload", Icon = "rotate-ccw", Callback = function() end })</code></pre>
+  <p>Every element has the same core: <code>:Get()</code>, <code>:Set(value)</code>, <code>.Changed</code>, <code>:Lock(reason)</code>, <code>:DependsOn(flag)</code>, <code>:Destroy()</code>. All of them are listed on the <a href="elements.html">elements page</a>.</p>
+
+  <h2 id="flags">Flags and configs</h2>
+  <p>Give an element a <code>Flag</code> and it is saved in configs automatically. Read live values from <code>Proximity.Flags</code>.</p>
+<pre><code class="lua">print(Proximity.Flags["aim.fov"])          -- 135
+Proximity:OnFlag("aim.on", function(on) end)
+Proximity:SaveConfig("legit")
+Proximity:LoadConfig("legit")</code></pre>
+
+  <h2 id="settings">Settings in one line</h2>
+<pre><code class="lua">Window:Home()          -- dashboard: profile, live FPS and ping, server
+Window:Favorites()     -- starred features
+Window:SettingsTab()   -- theme, font, density, widgets, configs, unload</code></pre>
+
+  <h2 id="loading">Your loading steps</h2>
+  <p>If your script downloads something at start, show it as a step. The progress bar under the planet counts it, and the time left is calculated from the real speed.</p>
+<pre><code class="lua">Window:Step("Fetching player data", function(step)
+    for i = 1, 10 do
+        step:Progress(i / 10)
+        task.wait(0.1)
+    end
+end)</code></pre>
+
+  <h2 id="keys">Shortcuts</h2>
+  <div class="tablewrap"><table class="table">
+    <tr><th>Keys</th><th>What happens</th></tr>
+    <tr><td>Menu key</td><td>show or hide the window</td></tr>
+    <tr><td>Ctrl + K</td><td>search features, tabs and actions</td></tr>
+    <tr><td>Ctrl + Z / Ctrl + Y</td><td>undo and redo the last change</td></tr>
+    <tr><td>Ctrl + S</td><td>save the current config</td></tr>
+    <tr><td>Arrows, Enter, Tab</td><td>move through the menu without a mouse</td></tr>
+    <tr><td>Gamepad D-pad, A, B, LB, RB</td><td>the same on a controller</td></tr>
+    <tr><td>Right click a row</td><td>reset, copy, paste, favorite</td></tr>
+  </table></div>
+
+  <h2 id="next">Next</h2>
+  <div class="grid">
+    <a class="card" href="window.html"><h3>Window</h3><p>Loading, key system, navigation, mini mode, background.</p></a>
+    <a class="card" href="elements.html"><h3>Elements</h3><p>Every element with options and methods.</p></a>
+    <a class="card" href="generator.html"><h3>Generator</h3><p>Click a menu together and copy the Lua.</p></a>
+  </div>
+</article>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

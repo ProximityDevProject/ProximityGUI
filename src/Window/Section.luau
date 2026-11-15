@@ -45,6 +45,7 @@ function Section.new(page, options)
 	self.Changed = Signal.new()
 	self._counter = 0
 	self.Visible = options.Visible ~= false
+	self.Risky = options.Risky == true
 	if self.HasToggle then
 		Section._registerToggle(self)
 	end
@@ -125,6 +126,9 @@ function Section:_add(element)
 	self._counter += 1
 	element._order = self._counter
 	table.insert(self.Elements, element)
+	if element.Risky then
+		self:_markRisky()
+	end
 	if element.Type == "Toggle" then
 		element.Changed:Connect(function()
 			self:_updateCount()
@@ -286,7 +290,8 @@ function Section:_build(parent)
 		Parent = wrap,
 	})
 	Util.Padding(body, 6, 6, 8, 6)
-	Util.List(body, 2)
+	local list = Util.List(body, 2)
+	list:SetAttribute("BaseGap", 2)
 	self.Body, self.Wrap = body, wrap
 
 	local dim = Util.New("TextButton", {
@@ -305,6 +310,9 @@ function Section:_build(parent)
 
 	self:_paintState(false)
 	self:_updateCount()
+	if self.Risky then
+		self:_markRisky()
+	end
 	if self.Collapsed then
 		self:SetCollapsed(true, true)
 	end
@@ -350,6 +358,20 @@ function Section:SetEnabled(enabled: boolean, silent: boolean?)
 		Lib:_onElementChanged(self._proxy, enabled, not enabled)
 	end
 	return self
+end
+
+-- A thin red stripe tells the player this section has risky features.
+function Section:_markRisky()
+	if self.ParentSection then
+		return self.ParentSection:_markRisky()
+	end
+	self.Risky = true
+	if self.Frame and not self._riskStripe and not self.Floating then
+		local stripe = Util.New("Frame", { Name = "Risky", Size = UDim2.new(0, 2, 1, -24), Position = UDim2.fromOffset(0, 12), BorderSizePixel = 0, ZIndex = 5, Parent = self.Frame })
+		Util.Round(stripe)
+		Theme.Paint(stripe, { BackgroundColor3 = "Risky" })
+		self._riskStripe = stripe
+	end
 end
 
 function Section:_updateCount()
@@ -737,6 +759,8 @@ local constructors = {
 	Console = "Console",
 	Log = "Console",
 	Code = "Code",
+	PlayerList = "PlayerList",
+	Players = "PlayerList",
 }
 
 for method, className in constructors do

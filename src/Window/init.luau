@@ -24,6 +24,7 @@ local Locale = require("../Locale")
 local Shared = require("../Shared")
 local PageModule = require("./Page")
 local Skeleton = require("./Skeleton")
+local Loader = require("../Widgets/Loader")
 
 local UIS = Env.Service("UserInputService")
 local RunService = Env.Service("RunService")
@@ -76,12 +77,26 @@ function Window.new(Lib, options)
 	self._commands = {}
 	self.Touch = touch
 	self:_build()
-	if self.Loading.Enabled then
-		self.Skeleton = Skeleton.new(self)
-	end
+	self.LoadingStyle = self.Loading.Style or "Planet"
 	self:SetScale(options.Scale or Lib:GetSetting("Scale", "Auto"))
-	self:Open()
+	self:_setupToggleButton()
+	if self.Loading.Enabled and self.LoadingStyle == "Planet" then
+		self.Loader = Loader.new(self, self.Loading)
+		self.Holder.Visible = false
+	else
+		if self.Loading.Enabled then
+			self.Skeleton = Skeleton.new(self)
+		end
+		self:Open()
+	end
+	self:SetNavigation(options.Navigation or Lib:GetSetting("Navigation", "Sidebar"))
+	self:_applyEconomy()
+	local bg = Lib:GetSetting("Background")
+	if options.Background or type(bg) == "table" then
+		self:SetBackground(options.Background or bg)
+	end
 	self:_bindInput()
+	self:_bindNavigation()
 	task.defer(function()
 		self:_pump()
 	end)
@@ -279,7 +294,6 @@ function Window:_build()
 	self:_buildSidebar()
 	self:_buildMain()
 	self:_buildResize()
-	self:_buildBubble()
 
 	-- mouse unlock while open (first-person games)
 	self._modal = Util.New("TextButton", { Text = "", BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 0), Modal = true, Visible = false, Parent = holder })
@@ -367,6 +381,7 @@ function Window:_buildSidebar()
 	local brand = Util.New("Frame", { Name = "Brand", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 62), ZIndex = 3, Parent = side })
 	local logo = self:_drawLogo(brand, 26)
 	logo.Position = UDim2.fromOffset(16, 18)
+	self._brandLogo = logo
 	local title = Util.Label({ Text = self.Title, FontFace = Theme.Fonts.Bold, TextSize = 15, Size = UDim2.new(1, -60, 0, 18), Position = UDim2.fromOffset(52, 16), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 3, Parent = brand })
 	Theme.Paint(title, { TextColor3 = "Text" })
 	local sub = Util.Label({ Text = self.Subtitle, FontFace = Theme.Fonts.Regular, TextSize = 11, Size = UDim2.new(1, -60, 0, 14), Position = UDim2.fromOffset(52, 34), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 3, Parent = brand })
@@ -395,7 +410,7 @@ function Window:_buildSidebar()
 	search.Activated:Connect(function()
 		self:OpenSearch()
 	end)
-	self._searchText = sText
+	self._searchText, self._searchIcon, self._searchKbd, self._searchButton = sText, sIcon, kbd, search
 
 	-- tab list
 	local profileH = self.Options.Profile == false and 0 or 56
@@ -438,6 +453,7 @@ function Window:_buildProfile(side)
 	Theme.Paint(name, { TextColor3 = "Text" })
 	local status = Util.Label({ FontFace = Theme.Fonts.Regular, TextSize = 10, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -52, 0, 13), Position = UDim2.fromOffset(44, 23), ZIndex = 3, Parent = card })
 	Theme.Paint(status, { TextColor3 = "TextMute" })
+	self._profile = { Card = card, Avatar = avatar, Name = name, Status = status }
 	local function refresh()
 		local id = Lib:GetIdentity()
 		name.Text = id.DisplayName
@@ -459,6 +475,13 @@ function Window:Category(name)
 	local label = Util.Label({ Text = string.upper(tostring(name)), FontFace = Theme.Fonts.Bold, TextSize = 10, Size = UDim2.new(1, 0, 0, 24), LayoutOrder = self._navOrder, ZIndex = 3, Parent = self.TabList })
 	Util.Padding(label, 8, 0, 0, 8)
 	Theme.Paint(label, { TextColor3 = "TextMute" })
+	label:SetAttribute("Text", string.upper(tostring(name)))
+	self._categories = self._categories or {}
+	table.insert(self._categories, label)
+	if self.Navigation == "Rail" then
+		label.Text = ""
+		label.Size = UDim2.new(1, 0, 0, 10)
+	end
 	return label
 end
 Window.Divider = Window.Category
@@ -500,7 +523,15 @@ function Window:_buildTabButton(tab)
 	Util.Padding(badge, 0, 5, 0, 5)
 	Util.Corner(4, badge)
 	Theme.Paint(badge, { BackgroundColor3 = "Accent", TextColor3 = "AccentInk" })
-	tab.Button, tab._icon, tab._label, tab._bar, tab._badge = button, icon, label, bar, badge
+	local glow = Util.Stroke(button, nil, 1, 1)
+	Theme.Paint(glow, { Color = "Accent" })
+	tab.Button, tab._icon, tab._label, tab._bar, tab._badge, tab._glow = button, icon, label, bar, badge, glow
+	Shared.Overlay.Hover(button, function()
+		return self.Navigation == "Rail" and tab.Name or nil
+	end)
+	if self.Navigation == "Rail" then
+		self:_railTab(tab)
+	end
 	button.MouseEnter:Connect(function()
 		if self.CurrentTab ~= tab then
 			Tween.Play(button, { BackgroundTransparency = 0.6 }, 0.12)
@@ -529,6 +560,9 @@ function Window:_paintTab(tab, animate)
 	Theme.Paint(tab._label, { TextColor3 = on and "Text" or "TextDim" }, t)
 	Theme.Paint(tab._icon, { ImageColor3 = on and "Accent" or "TextMute" }, t)
 	Tween.Play(tab._bar, { Size = UDim2.fromOffset(2, on and 16 or 0) }, on and 0.3 or 0.15, on and Enum.EasingStyle.Back or Enum.EasingStyle.Quint)
+	if tab._glow then
+		Tween.Play(tab._glow, { Transparency = on and 0.82 or 1 }, t)
+	end
 end
 
 -- ─── Main area ───────────────────────────────────────────────────────────
@@ -570,6 +604,21 @@ function Window:_buildMain()
 		end
 	end, "Settings")
 	self._settingsButton.Visible = false
+	self._bell = self:_headerButton("bell", 12, function()
+		self:OpenNotifications()
+	end, "NotificationCenter")
+	local badge = Util.Label({ Text = "", FontFace = Theme.Fonts.Bold, TextSize = 9, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 2, 0, -2), BackgroundTransparency = 0, Visible = false, ZIndex = 6, Parent = self._bell })
+	Util.Round(badge)
+	Theme.Paint(badge, { BackgroundColor3 = "Accent", TextColor3 = "AccentInk" })
+	self._bellBadge = badge
+	self.Library.NotificationsChanged:Connect(function()
+		local n = self.Library.Unread or 0
+		badge.Visible = n > 0
+		badge.Text = n > 9 and "9+" or tostring(n)
+	end)
+	self:_headerButton("minimize-2", 19, function()
+		self:SetMini(true)
+	end, "MiniMode")
 	self:_headerButton("minus", 20, function()
 		self:Close()
 	end, "Hide")
@@ -764,12 +813,8 @@ function Window:_saveState()
 end
 
 -- Mobile: floating round button with the logo. Tap toggles the window.
-function Window:_buildBubble()
-	local want = self.Options.ToggleButton
-	if want == nil then
-		want = UIS.TouchEnabled
-	end
-	if not want then
+function Window:_buildBubble(force)
+	if not force then
 		return
 	end
 	local bubble = Util.New("TextButton", { Name = "Bubble", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(46, 46), Position = UDim2.new(0, 20, 0.3, 0), Parent = Shared.Gui.Widgets })
@@ -807,6 +852,346 @@ function Window:_buildBubble()
 	end)
 	self.Bubble = bubble
 	self.Maid:Give(bubble)
+end
+
+-- ═══ Rail navigation, mini mode, background, toggle button ═══════════════
+
+function Window:_railTab(tab)
+	local rail = self.Navigation == "Rail"
+	tab._label.Visible = not rail
+	tab._icon.Position = rail and UDim2.new(0.5, -8, 0.5, -8) or UDim2.new(0, 10, 0.5, -8)
+	tab._badge.Visible = not rail and tab.Badge ~= nil
+end
+
+--[[
+	Window:SetNavigation("Sidebar")   full sidebar with labels (default)
+	Window:SetNavigation("Rail")      a slim column of icons; names show on hover
+]]
+function Window:SetNavigation(mode)
+	mode = mode == "Rail" and "Rail" or "Sidebar"
+	self.Navigation = mode
+	local rail = mode == "Rail"
+	local width = rail and 64 or self.SidebarWidth
+	local t = self.State == "Ready" and 0.25 or 0
+	Tween.Play(self.Sidebar, { Size = UDim2.new(0, width, 1, 0) }, t)
+	Tween.Play(self.Main, { Size = UDim2.new(1, -width, 1, 0), Position = UDim2.fromOffset(width, 0) }, t)
+	self._titleLabel.Visible = not rail
+	self._subLabel.Visible = not rail
+	if self._brandLogo then
+		Tween.Play(self._brandLogo, { Position = UDim2.fromOffset(rail and 19 or 16, 18) }, t)
+	end
+	self._searchText.Visible = not rail
+	self._searchKbd.Visible = not rail
+	self._searchIcon.Position = rail and UDim2.new(0.5, -6, 0.5, -6) or UDim2.new(0, 10, 0.5, -6)
+	for _, label in self._categories or {} do
+		label.Text = rail and "" or (label:GetAttribute("Text") or label.Text)
+		label.Size = UDim2.new(1, 0, 0, rail and 10 or 24)
+	end
+	for _, tab in self.Tabs do
+		self:_railTab(tab)
+	end
+	if self._profile then
+		self._profile.Name.Visible = not rail
+		self._profile.Status.Visible = not rail
+		self._profile.Avatar.Position = rail and UDim2.new(0.5, -14, 0.5, -14) or UDim2.new(0, 8, 0.5, -14)
+	end
+	return self
+end
+
+function Window:GetNavigation()
+	return self.Navigation
+end
+
+-- Mini mode: the window folds into a slim bar with the logo, title and live
+-- stats. Click the bar to unfold.
+function Window:SetMini(on)
+	on = on and true or false
+	if self.Mini == on then
+		return self
+	end
+	self.Mini = on
+	local holder = self.Holder
+	if not self._miniBar then
+		local bar = Util.New("TextButton", { Name = "MiniBar", Text = "", AutoButtonColor = false, Size = UDim2.fromScale(1, 1), Visible = false, ZIndex = 70, Parent = self.Canvas })
+		Theme.Paint(bar, { BackgroundColor3 = "Bg" })
+		local logo = self:_drawLogo(bar, 26)
+		logo.Position = UDim2.new(0, 14, 0.5, -13)
+		local title = Util.Label({ Text = self.Title, FontFace = Theme.Fonts.Bold, TextSize = 13, Position = UDim2.fromOffset(50, 9), Size = UDim2.new(1, -90, 0, 16), ZIndex = 71, Parent = bar })
+		Theme.Paint(title, { TextColor3 = "Text" })
+		local stats = Util.Label({ Text = "", FontFace = Theme.Fonts.Mono, TextSize = 11, Position = UDim2.fromOffset(50, 27), Size = UDim2.new(1, -90, 0, 14), ZIndex = 71, Parent = bar })
+		Theme.Paint(stats, { TextColor3 = "TextMute" })
+		local expand = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = Icons.Get("maximize-2") or "", Size = UDim2.fromOffset(15, 15), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), ZIndex = 71, Parent = bar })
+		Theme.Paint(expand, { ImageColor3 = "TextDim" })
+		bar.Activated:Connect(function()
+			self:SetMini(false)
+		end)
+		self:_makeDraggable(bar)
+		task.spawn(function()
+			while bar.Parent do
+				if bar.Visible then
+					stats.Text = self.Library.Providers.FPS() .. " fps  ·  " .. self.Library.Providers.Ping() .. "  ·  " .. os.date("%H:%M")
+				end
+				task.wait(0.5)
+			end
+		end)
+		self._miniBar = bar
+	end
+	if on then
+		self._fullSize = self.Size
+		self._miniBar.Visible = true
+		self._miniBar.BackgroundTransparency = 1
+		Tween.Play(self._miniBar, { BackgroundTransparency = 0 }, 0.2)
+		Tween.Play(holder, { Size = UDim2.fromOffset(250, 52) }, 0.35, Enum.EasingStyle.Quint)
+		Shared.Overlay.CloseAll()
+	else
+		local size = self._fullSize or self.Size
+		Tween.Play(holder, { Size = UDim2.fromOffset(size.X, size.Y) }, 0.35, Enum.EasingStyle.Quint)
+		Tween.Play(self._miniBar, { BackgroundTransparency = 1 }, 0.2)
+		task.delay(0.2, function()
+			if not self.Mini then
+				self._miniBar.Visible = false
+			end
+		end)
+	end
+	return self
+end
+
+--[[
+	Window:SetBackground({ Image = "rbxassetid://… | https://…", Dim = 0.6 })
+	Window:SetBackground({ Gradient = { Color3.fromRGB(20, 20, 24), Color3.fromRGB(0, 0, 0) }, Rotation = 90 })
+	Window:SetBackground(nil)   back to plain
+]]
+function Window:SetBackground(spec)
+	if self._bgLayer then
+		self._bgLayer:Destroy()
+		self._bgLayer = nil
+	end
+	if type(spec) ~= "table" or (not spec.Image and not spec.Gradient) then
+		return self
+	end
+	local layer = Util.New("Frame", { Name = "Background", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 0, Parent = self.Canvas })
+	self._bgLayer = layer
+	if spec.Gradient then
+		local a, b = Util.ToColor(spec.Gradient[1]) or Color3.new(0, 0, 0), Util.ToColor(spec.Gradient[2]) or Color3.new(0, 0, 0)
+		local g = Util.New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = 0, Parent = layer })
+		Util.Gradient(g, ColorSequence.new(a, b), nil, spec.Rotation or 90)
+	end
+	if spec.Image then
+		local img = Util.New("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Crop, ImageTransparency = 1, ZIndex = 0, Parent = layer })
+		loadImage(spec.Image, function(id)
+			img.Image = id
+			Tween.Play(img, { ImageTransparency = 0 }, 0.5)
+		end)
+	end
+	Util.New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1 - (spec.Dim or 0.55), ZIndex = 0, Parent = layer })
+	return self
+end
+
+-- Topbar planet button (default), floating bubble, or nothing.
+function Window:_setupToggleButton()
+	local mode = self.Options.ToggleButton
+	if mode == false then
+		return
+	end
+	if mode == "Bubble" then
+		self:_buildBubble(true)
+	else
+		local ok, button = pcall(self.Library._topbarButton, self.Library, self)
+		if ok and button then
+			self.TopbarButton = button
+		else
+			self:_buildBubble(true)
+		end
+	end
+end
+
+function Window:_applyEconomy()
+	local eco = self.Library.Economy
+	self._economy = eco
+	if eco then
+		self:SetBackdrop("None")
+		if self._decor then
+			self._decor.Visible = false
+		end
+	elseif self.BackdropPattern == "None" and self.Library:GetSetting("Backdrop", "Stars") ~= "None" then
+		self:SetBackdrop(self.Library:GetSetting("Backdrop", "Stars"))
+		if self._decor then
+			self._decor.Visible = true
+		end
+	end
+end
+
+-- Scroll positions are remembered per page across sessions.
+function Window:_scrollKey(page)
+	return "Scroll." .. self.Title .. "/" .. page.Tab.Name .. "/" .. page.Name
+end
+
+function Window:_restoreScroll()
+	for _, tab in self.Tabs do
+		for _, page in tab.Pages do
+			local y = self.Library:GetSetting(self:_scrollKey(page))
+			if y and page.Frame then
+				task.delay(0.15, function()
+					page.Frame.CanvasPosition = Vector2.new(0, y)
+				end)
+			end
+		end
+	end
+end
+
+function Window:_afterReady()
+	local Lib = self.Library
+	local log = self.Options.Changelog
+	if type(log) == "table" and log.Version and Lib:GetSetting("Seen." .. self.Title) ~= log.Version then
+		Lib:SetSetting("Seen." .. self.Title, log.Version)
+		local notes = {}
+		for _, line in log.Notes or log do
+			if type(line) == "string" then
+				table.insert(notes, "•  " .. line)
+			end
+		end
+		task.spawn(function()
+			self:Dialog({ Title = Locale.T("WhatsNew", log.Version), Content = table.concat(notes, string.char(10)), Buttons = { { Text = Locale.T("Ok"), Style = "Primary" } } })
+		end)
+	end
+	if self.Options.CheckUpdates ~= false and Lib.VersionUrl then
+		Lib:CheckForUpdates()
+	end
+	if self.Options.Version and self.Options.VersionUrl then
+		Lib:CheckForUpdates(self.Options.VersionUrl, self.Options.Version, self.Title)
+	end
+end
+
+-- Notification center: the bell in the header.
+function Window:OpenNotifications()
+	local Lib = self.Library
+	Lib.Unread = 0
+	Lib.NotificationsChanged:Fire()
+	local items = {}
+	local history = Lib.NotificationHistory
+	for i = #history, math.max(1, #history - 14), -1 do
+		local n = history[i]
+		local ago = os.time() - n.Time
+		local when = ago < 60 and (ago .. "s") or (ago < 3600 and (ago // 60 .. "m") or (ago // 3600 .. "h"))
+		table.insert(items, { Text = (n.Title and (n.Title .. ": ") or "") .. (n.Content or ""), Hint = when, Icon = ({ success = "check-circle", warning = "alert-triangle", error = "x-circle" })[n.Type] or "info" })
+	end
+	if #items == 0 then
+		table.insert(items, { Text = Locale.T("NoNotifications"), Icon = "bell" })
+	else
+		table.insert(items, { Separator = true })
+		table.insert(items, { Text = Locale.T("ClearAll"), Icon = "trash-2", Callback = function()
+			table.clear(Lib.NotificationHistory)
+		end })
+	end
+	Shared.Overlay.Menu(items, { Anchor = self._bell, Align = "End", Width = 300 })
+end
+
+-- ═══ Keyboard and gamepad navigation ═════════════════════════════════════
+
+function Window:_focusables()
+	local page = self.CurrentPage
+	local list = {}
+	if not page then
+		return list
+	end
+	for _, section in page.Sections do
+		if not section.Collapsed then
+			for _, el in section:AllElements() do
+				local sec = el.Section
+				local tabOk = not sec.ParentSection or sec.ParentSection._activeTab == sec
+				if el.Frame and el.Frame.Parent and el._navActivate and tabOk and el:IsVisible() and not el:IsLocked() and el.Frame.AbsoluteSize.Y > 0 then
+					table.insert(list, el)
+				end
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		local ax, bx = a.Frame.AbsolutePosition.X, b.Frame.AbsolutePosition.X
+		if math.abs(ax - bx) > 40 then
+			return ax < bx
+		end
+		return a.Frame.AbsolutePosition.Y < b.Frame.AbsolutePosition.Y
+	end)
+	return list
+end
+
+function Window:_setFocus(el)
+	if self._focusRing then
+		self._focusRing:Destroy()
+		self._focusRing = nil
+	end
+	self._focused = el
+	if not el or not el.Frame then
+		return
+	end
+	local ring = Util.New("Frame", { Name = "Focus", BackgroundTransparency = 1, Size = UDim2.new(1, 4, 1, 4), Position = UDim2.fromOffset(-2, -2), ZIndex = 40, Parent = el.Frame })
+	Util.Corner(7, ring)
+	local stroke = Util.Stroke(ring, nil, 1.5)
+	Theme.Paint(stroke, { Color = "Accent" })
+	self._focusRing = ring
+	if el.Section and el.Section.Page then
+		el.Section.Page:ScrollTo(el.Frame)
+	end
+end
+
+function Window:_bindNavigation()
+	local up = { [Enum.KeyCode.Up] = -1, [Enum.KeyCode.DPadUp] = -1, [Enum.KeyCode.Down] = 1, [Enum.KeyCode.DPadDown] = 1 }
+	local side = { [Enum.KeyCode.Left] = -1, [Enum.KeyCode.DPadLeft] = -1, [Enum.KeyCode.Right] = 1, [Enum.KeyCode.DPadRight] = 1 }
+	local activate = { [Enum.KeyCode.Return] = true, [Enum.KeyCode.Space] = true, [Enum.KeyCode.ButtonA] = true }
+	self.Maid:Connect(UIS.InputBegan, function(input)
+		if not self._isOpen or self.Mini or UIS:GetFocusedTextBox() or Shared.KeybindListening or self._palette then
+			return
+		end
+		local key = input.KeyCode
+		local list
+		if up[key] then
+			list = self:_focusables()
+			if #list == 0 then
+				return
+			end
+			local i = table.find(list, self._focused) or (up[key] > 0 and 0 or #list + 1)
+			i = math.clamp(i + up[key], 1, #list)
+			self:_setFocus(list[i])
+		elseif side[key] and self._focused then
+			if self._focused._navAdjust then
+				self._focused:_navAdjust(side[key])
+			end
+		elseif activate[key] and self._focused and self._focused.Frame and self._focused.Frame.Parent then
+			if key == Enum.KeyCode.Space and not self._focused.Frame then
+				return
+			end
+			self._focused:_navActivate()
+		elseif key == Enum.KeyCode.Tab or key == Enum.KeyCode.ButtonR1 or key == Enum.KeyCode.ButtonL1 then
+			local back = key == Enum.KeyCode.ButtonL1 or UIS:IsKeyDown(Enum.KeyCode.LeftShift)
+			local visible = {}
+			for _, tab in self.Tabs do
+				if tab.Visible then
+					table.insert(visible, tab)
+				end
+			end
+			table.sort(visible, function(a, b)
+				return (a.Order or 0) < (b.Order or 0)
+			end)
+			local i = table.find(visible, self.CurrentTab) or 1
+			i = (i - 1 + (back and -1 or 1)) % #visible + 1
+			self:SelectTab(visible[i])
+			self:_setFocus(nil)
+		elseif key == Enum.KeyCode.ButtonB then
+			if #Shared.Overlay.Stack > 0 then
+				Shared.Overlay.Stack[#Shared.Overlay.Stack]:Close()
+			else
+				self:Close()
+			end
+		end
+	end)
+	self.Maid:Connect(UIS.InputChanged, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement and self._focusRing then
+			self:_setFocus(nil)
+		end
+	end)
+	self.PageChanged:Connect(function()
+		self:_setFocus(nil)
+	end)
 end
 
 -- ═══ Navigation ═══════════════════════════════════════════════════════════
@@ -1009,10 +1394,17 @@ function Window:_pump()
 	end
 	self._buildingTab = nil
 	self._pumping = false
-	if self.Skeleton then
-		self.Skeleton:Update()
-	end
+	self:_setStage()
 	self:_checkReady()
+end
+
+function Window:_setStage(text)
+	if self.Skeleton then
+		self.Skeleton:Update(text)
+	end
+	if self.Loader and text then
+		self.Loader:SetStage(text)
+	end
 end
 
 function Window:GetLoadProgress(): number
@@ -1080,13 +1472,12 @@ function Window:_finishLoading()
 		-- apply the auto-load config while the skeleton still covers the UI
 		if self.Options.AutoLoad ~= false and Lib:GetAutoLoad() and not Lib._autoLoaded then
 			Lib._autoLoaded = true
-			if self.Skeleton then
-				self.Skeleton:Update(Locale.T("ApplyingConfig") .. " · " .. Lib:GetAutoLoad())
-			end
+			self:_setStage(Locale.T("ApplyingConfig") .. " · " .. Lib:GetAutoLoad())
 			Lib:LoadAutoConfig()
 			Lib.CurrentConfig = Lib:GetAutoLoad()
 		end
-		local elapsed = self.Skeleton and (os.clock() - self.Skeleton.Started) or 0
+		local started = (self.Skeleton and self.Skeleton.Started) or (self.Loader and self.Loader.Started)
+		local elapsed = started and (os.clock() - started) or 0
 		local wait = (self.Loading.MinTime or 0) - elapsed
 		if wait > 0 and Tween.Speed > 0 then
 			task.wait(wait)
@@ -1119,7 +1510,14 @@ function Window:_reveal(force)
 			Tween.Play(page.Frame, { Position = UDim2.fromOffset(0, 0) }, 0.45)
 		end
 	end
-	if self.Skeleton then
+	if self.Loader then
+		local loader = self.Loader
+		self.Loader = nil
+		loader:Finish(function(point)
+			self:Open({ From = point })
+			rise()
+		end)
+	elseif self.Skeleton then
 		local skeleton = self.Skeleton
 		self.Skeleton = nil
 		if force then
@@ -1129,8 +1527,12 @@ function Window:_reveal(force)
 	else
 		rise()
 	end
+	self:_restoreScroll()
 	self.Ready:Fire()
 	Lib.WindowReady:Fire(self)
+	task.delay(1.4, function()
+		self:_afterReady()
+	end)
 end
 
 -- Explicit "everything is declared" (use with AutoReady = false).
@@ -1171,24 +1573,18 @@ function Window:Task(name, weight)
 	local t = { Name = name, Weight = weight or 10, Amount = 0, Finished = false }
 	function t:Progress(p)
 		self.Amount = math.clamp(p, 0, 1)
-		if window.Skeleton then
-			window.Skeleton:Update(self.Name .. " · " .. math.floor(self.Amount * 100) .. "%")
-		end
+		window:_setStage(self.Name .. " · " .. math.floor(self.Amount * 100) .. "%")
 		return self
 	end
 	t.SetProgress = t.Progress
 	function t:SetText(text)
 		self.Name = text
-		if window.Skeleton then
-			window.Skeleton:Update(text)
-		end
+		window:_setStage(text)
 		return self
 	end
 	function t:Done()
 		self.Finished, self.Amount = true, 1
-		if window.Skeleton then
-			window.Skeleton:Update()
-		end
+		window:_setStage()
 		window:_checkReady()
 		return self
 	end
@@ -1199,9 +1595,7 @@ function Window:Task(name, weight)
 		return self:Done()
 	end
 	table.insert(self._tasks, t)
-	if self.Skeleton then
-		self.Skeleton:Update(name)
-	end
+	self:_setStage(name)
 	return t
 end
 
@@ -1221,8 +1615,22 @@ end
 
 -- ═══ Open / close / scale / size ═════════════════════════════════════════
 
-function Window:Open()
-	if self._isOpen then
+-- Where the window lives when it is hidden: the topbar planet button, the
+-- floating bubble, or nowhere (then it just fades in place).
+function Window:_anchorPoint()
+	local target = self.TopbarButton or self.Bubble
+	if target and target.Parent then
+		return target.AbsolutePosition + target.AbsoluteSize / 2 - Shared.Gui.Windows.AbsolutePosition
+	end
+	return nil
+end
+
+--[[
+	Window:Open()                     grows out of the topbar planet (or fades in)
+	Window:Open({ From = Vector2 })   grows out of a point (the loader burst uses this)
+]]
+function Window:Open(options)
+	if self._isOpen or self._destroyed then
 		return self
 	end
 	self._isOpen = true
@@ -1231,18 +1639,29 @@ function Window:Open()
 	self._modal.Visible = self.Options.UnlockMouse ~= false
 	local canvas = self.Canvas
 	canvas.GroupTransparency = 1
-	self._openScale.Scale = 1
 	local s = self:GetScale()
-	self._uiScale.Scale = s * 0.96
-	Tween.Play(canvas, { GroupTransparency = self.GlassTransparency or 0 }, 0.25)
-	Tween.Play(self._uiScale, { Scale = s }, 0.3, Enum.EasingStyle.Back)
-	Tween.Play(self._borderStroke, { Transparency = 0 }, 0.25)
-	Tween.Play(self._rim, { Transparency = self.RimEnabled and 0 or 1 }, 0.4)
-	Tween.Play(self.Plate, { BackgroundTransparency = self.GlassTransparency or 0 }, 0.25)
+	local rest = self._restPosition or holder.Position
+	self._restPosition = rest
+	local from = options and options.From or self:_anchorPoint()
+	if from and Tween.Speed > 0 then
+		holder.Position = UDim2.fromOffset(from.X, from.Y)
+		self._uiScale.Scale = s * 0.05
+		Tween.Play(holder, { Position = rest }, 0.5, Enum.EasingStyle.Quint)
+		Tween.Play(self._uiScale, { Scale = s }, 0.55, Enum.EasingStyle.Back)
+	else
+		holder.Position = rest
+		self._uiScale.Scale = s * 0.96
+		Tween.Play(self._uiScale, { Scale = s }, 0.3, Enum.EasingStyle.Back)
+	end
+	Tween.Play(canvas, { GroupTransparency = self.GlassTransparency or 0 }, 0.3)
+	Tween.Play(self._borderStroke, { Transparency = 0 }, 0.3)
+	Tween.Play(self._rim, { Transparency = self.RimEnabled and 0 or 1 }, 0.5)
+	Tween.Play(self.Plate, { BackgroundTransparency = self.GlassTransparency or 0 }, 0.3)
 	self.Opened:Fire()
 	return self
 end
 
+-- Folds back into the place it came from (topbar planet / bubble).
 function Window:Close()
 	if not self._isOpen then
 		return self
@@ -1251,21 +1670,41 @@ function Window:Close()
 	self._modal.Visible = false
 	Shared.Overlay.CloseAll()
 	Shared.Overlay.HideTooltip()
+	local holder = self.Holder
 	local s = self:GetScale()
-	Tween.Play(self.Canvas, { GroupTransparency = 1 }, 0.18)
-	Tween.Play(self._uiScale, { Scale = s * 0.97 }, 0.18)
-	Tween.Play(self._borderStroke, { Transparency = 1 }, 0.18)
-	Tween.Play(self._rim, { Transparency = 1 }, 0.18)
-	Tween.Play(self.Plate, { BackgroundTransparency = 1 }, 0.18)
-	task.delay(Tween.Speed > 0 and 0.19 or 0, function()
-		if not self._isOpen and self.Holder then
-			self.Holder.Visible = false
+	if not self._animating then
+		self._restPosition = holder.Position
+	end
+	local to = self:_anchorPoint()
+	local time = Tween.Speed > 0 and (to and 0.38 or 0.2) or 0
+	if to then
+		Tween.Play(holder, { Position = UDim2.fromOffset(to.X, to.Y) }, time, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+		Tween.Play(self._uiScale, { Scale = s * 0.05 }, time, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+	else
+		Tween.Play(self._uiScale, { Scale = s * 0.97 }, time)
+	end
+	Tween.Play(self.Canvas, { GroupTransparency = 1 }, time * 0.9)
+	Tween.Play(self._borderStroke, { Transparency = 1 }, time * 0.8)
+	Tween.Play(self._rim, { Transparency = 1 }, time * 0.6)
+	Tween.Play(self.Plate, { BackgroundTransparency = 1 }, time * 0.9)
+	self._animating = true
+	task.delay(time + 0.02, function()
+		self._animating = false
+		if not self._isOpen and holder.Parent then
+			holder.Visible = false
+			holder.Position = self._restPosition or holder.Position
 		end
 	end)
 	self.Closed:Fire()
-	if self.Options.HiddenHint ~= false and not self._hintShown then
+	local Lib = self.Library
+	if Lib.Dirty and Lib.CurrentConfig and not self._dirtyNoticed then
+		self._dirtyNoticed = true
+		Lib:Notify({ Title = Locale.T("Unsaved"), Content = Locale.T("UnsavedHint", Lib.CurrentConfig), Type = "warning", Duration = 6, Actions = { { Text = Locale.T("Save"), Callback = function()
+			Lib:QuickSave(self)
+		end } } })
+	elseif self.Options.HiddenHint ~= false and not self._hintShown then
 		self._hintShown = true
-		self.Library:Notify({ Content = Locale.T("Hidden", Keys.Display(self.Keybind)), Duration = 3 })
+		Lib:Notify({ Content = Locale.T("Hidden", Keys.Display(self.Keybind)), Duration = 3 })
 	end
 	return self
 end
@@ -1390,7 +1829,7 @@ function Window:_bindInput()
 			return
 		end
 		local name = Keys.FromInput(input)
-		if name and name == self.Keybind and string.sub(name, 1, 2) ~= "MB" then
+		if name and Keys.MatchesCombo(self.Keybind, name) and string.sub(name, 1, 2) ~= "MB" then
 			self:Toggle()
 			return
 		end

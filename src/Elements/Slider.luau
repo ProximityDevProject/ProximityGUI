@@ -29,6 +29,7 @@ function Slider.new(section, options)
 	self.Min = options.Min or 0
 	self.Max = options.Max or 100
 	if self.Min > self.Max then
+		Shared.Lib:_optionWarning("Slider", self.Name, string.format("Min (%s) is bigger than Max (%s), swapped them", tostring(self.Min), tostring(self.Max)))
 		self.Min, self.Max = self.Max, self.Min
 	end
 	self.Labels = options.Labels or options.TextProps
@@ -155,6 +156,13 @@ function Slider:Increment(n: number?)
 end
 function Slider:Decrement(n: number?)
 	return self:Increment(-(n or 1))
+end
+
+function Slider:_navActivate() end
+function Slider:_navAdjust(dir)
+	if not self.Range then
+		self:_userSet(self.Value + dir * self.Step)
+	end
 end
 
 function Slider:_serialize()

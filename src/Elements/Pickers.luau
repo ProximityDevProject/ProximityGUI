@@ -49,6 +49,7 @@ local function startDispatcher()
 		return
 	end
 	dispatcherReady = true
+	local pendingModifier = nil
 	Shared.Maid:Connect(UIS.InputBegan, function(input, processed)
 		local name = Keys.FromInput(input)
 		if listening then
@@ -58,13 +59,17 @@ local function startDispatcher()
 			elseif input.KeyCode == Enum.KeyCode.Backspace then
 				kb:_stopListening()
 				kb:_userSet("None")
+			elseif name and Keys.IsModifier(name) and kb.AllowCombos ~= false then
+				-- wait: either another key follows (combo) or the modifier itself is the bind
+				pendingModifier = name
 			elseif name and not (kb.Blacklist and table.find(kb.Blacklist, name)) then
 				-- the click that started listening must not bind MB1 right away
 				if name == "MB1" and os.clock() - kb._listenAt < 0.2 then
 					return
 				end
+				pendingModifier = nil
 				kb:_stopListening()
-				kb:_userSet(name)
+				kb:_userSet(kb.AllowCombos ~= false and Keys.Combo(name) or name)
 			end
 			return
 		end
@@ -75,7 +80,7 @@ local function startDispatcher()
 			return -- clicks on GUI never trigger mouse binds
 		end
 		for _, kb in table.clone(registry) do
-			if kb.Value == name and not kb:IsLocked() then
+			if Keys.MatchesCombo(kb.Value, name) and not kb:IsLocked() then
 				kb:_down()
 			end
 		end
@@ -85,8 +90,15 @@ local function startDispatcher()
 		if not name then
 			return
 		end
+		if listening and pendingModifier == name then
+			local kb = listening
+			pendingModifier = nil
+			kb:_stopListening()
+			kb:_userSet(name)
+			return
+		end
 		for _, kb in table.clone(registry) do
-			if kb.Value == name then
+			if Keys.MainKey(kb.Value) == name then
 				kb:_up()
 			end
 		end
@@ -210,6 +222,10 @@ function Keybind:Press()
 	return self
 end
 
+function Keybind:_navActivate()
+	self:Listen()
+end
+
 function Keybind:Listen()
 	if listening and listening ~= self then
 		listening:_stopListening()
@@ -325,9 +341,11 @@ function Keybind:_build(parent)
 	self:_chip(self._right, 100)
 end
 
+local modeGlyph = { Hold = "↓ ", Always = "∞ ", Release = "↑ ", Toggle = "", Press = "" }
+
 function Keybind:_render()
 	if self._chipLabel and listening ~= self then
-		self._chipLabel.Text = Keys.Display(self.Value)
+		self._chipLabel.Text = (self.Value ~= "None" and modeGlyph[self.Mode] or "") .. Keys.Display(self.Value)
 		Theme.Paint(self._chipLabel, { TextColor3 = self.Value == "None" and "TextMute" or "Text" })
 	end
 end
@@ -501,6 +519,14 @@ function ColorPicker:_render()
 	end
 	if self._popupRefs then
 		self:_paintPopup()
+	end
+end
+
+function ColorPicker:_navActivate()
+	if self._popup and self._popup.Open then
+		self:Close()
+	else
+		self:Open()
 	end
 end
 

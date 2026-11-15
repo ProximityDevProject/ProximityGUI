@@ -11,7 +11,9 @@ local Window = Proximity:Window({
 	Subtitle = "Showcase · v" .. Proximity.Version,
 	Keybind = Enum.KeyCode.RightShift,
 	Folder = "Proximity-Showcase",
-	Loading = { MinTime = 0.8 },
+	Loading = { MinTime = 1.2 },          -- the planet intro; Style = "Skeleton" for the old shell
+	KeySystem = false,                    -- true or { Keys = { "demo" }, GetKey = "https://..." }
+	Changelog = { Version = "1.2.0", Notes = { "Planet intro", "Player list", "Share codes" } },
 })
 
 -- Your own loading work appears in the skeleton as a stage with progress.
@@ -35,7 +37,7 @@ local Silent, Lock, Rage = Aim:Tabs({ "Silent", "Lock", "Rage" }, { Flag = "aim.
 Silent:Slider({ Name = "Hit chance", Min = 0, Max = 100, Default = 100, Suffix = "%", Flag = "aim.silent.chance" })
 Silent:Toggle({ Name = "All pellets", Flag = "aim.silent.pellets", Default = true })
 local trigger = Silent:Toggle({ Name = "Triggerbot", Flag = "aim.silent.trigger", Tooltip = "Fires when the crosshair is on a target" })
-trigger:Keybind({ Default = Enum.KeyCode.X, Mode = "Hold", Flag = "aim.silent.trigger.key" })
+trigger:Keybind({ Default = "Ctrl+X", Mode = "Hold", Flag = "aim.silent.trigger.key" })
 trigger:Options(function(o)
 	o:Slider({ Name = "Delay", Min = 0, Max = 300, Default = 40, Suffix = " ms", Flag = "aim.silent.trigger.delay" })
 	o:Toggle({ Name = "Only when scoped", Flag = "aim.silent.trigger.scoped" })
@@ -94,8 +96,16 @@ data:Graph({ Name = "FPS", Source = Proximity.Providers.FPS, Interval = 0.25, Po
 data:Progress({ Name = "Daily quest", Value = 62 })
 data:Stat({ Name = "Server uptime", Value = Proximity.Providers.ServerUptime, Interval = 1, Icon = "clock" })
 
+local players = Misc:Section({ Name = "Players", Icon = "players", Side = "Right" })
+players:PlayerList({ Height = 200 })
+
 local servers = Misc:Section({ Name = "Servers", Side = "Right" })
 servers:Table({
+	Filters = {
+		{ Key = "players", Name = "Players", Type = "Range" },
+		{ Key = "ping", Name = "Ping", Type = "Range" },
+		{ Key = "name", Name = "Map", Type = "Select", Values = { "Estonian Border", "Lighthouse", "Factory" } },
+	},
 	Height = 220,
 	Columns = { { Key = "name", Name = "Map", Width = 0.5 }, { Key = "players", Name = "Players", Width = 0.25, Align = "Center" }, { Key = "ping", Name = "Ping", Width = 0.25, Align = "Center" } },
 	Rows = {
@@ -139,6 +149,16 @@ Window:SettingsTab({
 		{ Target = "config", Title = "Configs", Text = "Click the name for quick load, the disk to save." },
 	},
 })
+
+-- your own HUD panel with Proximity elements inside
+local hud = Proximity:Widget({ Title = "Quick", Icon = "aimbot", Width = 200 })
+hud:Toggle({ Name = "Triggerbot", Icon = "triggerbot" })
+hud:Slider({ Name = "FOV", Min = 10, Max = 500, Default = 135 })
+hud:SetVisible(false)
+
+Proximity:OnError(function(message)
+	log:Error(message)
+end)
 
 Window:Command({ Name = "Unload", Icon = "power", Callback = function()
 	Proximity:Unload()

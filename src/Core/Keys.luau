@@ -89,8 +89,105 @@ function Keys.FromInput(input: InputObject): string?
 	return nil
 end
 
--- Accepts Enum.KeyCode, Enum.UserInputType, "E", "LeftShift", "LShift", "MB2", nil.
+-- ─── Combos: "Ctrl+Shift+X" ───────────────────────────────────────────
+-- Modifiers are stored by side-less name so either Ctrl works.
+local modifierOf = {
+	LeftControl = "Ctrl",
+	RightControl = "Ctrl",
+	LeftShift = "Shift",
+	RightShift = "Shift",
+	LeftAlt = "Alt",
+	RightAlt = "Alt",
+}
+local modifierKeys = {
+	Ctrl = { Enum.KeyCode.LeftControl, Enum.KeyCode.RightControl },
+	Shift = { Enum.KeyCode.LeftShift, Enum.KeyCode.RightShift },
+	Alt = { Enum.KeyCode.LeftAlt, Enum.KeyCode.RightAlt },
+}
+local modifierOrder = { "Ctrl", "Shift", "Alt" }
+
+function Keys.IsModifier(name: string): boolean
+	return modifierOf[name] ~= nil
+end
+
+local function held(mod)
+	local UIS = game:GetService("UserInputService")
+	for _, code in modifierKeys[mod] do
+		if UIS:IsKeyDown(code) then
+			return true
+		end
+	end
+	return false
+end
+
+-- "X" pressed while Ctrl and Shift are held -> "Ctrl+Shift+X"
+function Keys.Combo(main: string): string
+	if modifierOf[main] then
+		return main
+	end
+	local parts = {}
+	for _, mod in modifierOrder do
+		if held(mod) then
+			table.insert(parts, mod)
+		end
+	end
+	table.insert(parts, main)
+	return table.concat(parts, "+")
+end
+
+function Keys.MainKey(value: string): string
+	return string.match(value or "", "([^+]+)$") or "None"
+end
+
+-- Does a stored bind fire for this pressed key? Extra modifiers held by the
+-- player do not block a plain bind; a combo needs all of its modifiers.
+function Keys.MatchesCombo(value: string, pressed: string): boolean
+	if not value or value == "None" then
+		return false
+	end
+	if Keys.MainKey(value) ~= pressed then
+		return false
+	end
+	for mod in string.gmatch(value, "([^+]+)%+") do
+		if modifierKeys[mod] and not held(mod) then
+			return false
+		end
+	end
+	return true
+end
+
+-- Accepts Enum.KeyCode, Enum.UserInputType, "E", "LeftShift", "LShift", "MB2", "Ctrl+Shift+X", nil.
 function Keys.Normalize(value: any): string
+	if type(value) == "string" and string.find(value, "+", 2, true) then
+		local parts = string.split(value, "+")
+		local main = Keys.Normalize(parts[#parts])
+		if main == "None" then
+			return "None"
+		end
+		local mods = {}
+		for i = 1, #parts - 1 do
+			local m = string.lower(parts[i])
+			if m == "ctrl" or m == "control" then
+				mods.Ctrl = true
+			elseif m == "shift" then
+				mods.Shift = true
+			elseif m == "alt" then
+				mods.Alt = true
+			end
+		end
+		local out = {}
+		for _, mod in modifierOrder do
+			if mods[mod] then
+				table.insert(out, mod)
+			end
+		end
+		table.insert(out, main)
+		return table.concat(out, "+")
+	end
+	return Keys.NormalizeSingle(value)
+end
+
+function Keys.NormalizeSingle(value: any): string
 	if value == nil or value == false or value == "" or value == "None" or value == "-" then
 		return "None"
 	end
@@ -121,6 +218,11 @@ end
 function Keys.Display(name: string?): string
 	if not name or name == "None" then
 		return "None"
+	end
+	if string.find(name, "+", 2, true) then
+		local parts = string.split(name, "+")
+		parts[#parts] = short[parts[#parts]] or parts[#parts]
+		return table.concat(parts, "+")
 	end
 	return short[name] or name
 end

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Widgets - Proximity UI</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap page">
+<aside class="toc">
+  <b>Widgets</b>
+  <a href="#dock">Docking</a>
+  <a href="#watermark">Watermark</a>
+  <a href="#binds">Keybind list</a>
+  <a href="#player">Player panel</a>
+  <a href="#perf">FPS and ping graph</a>
+  <a href="#stopwatch">Stopwatch</a>
+  <a href="#hud">Your own HUD</a>
+  <a href="#topbar">Topbar button</a>
+</aside>
+<article>
+  <span class="eyebrow">Reference</span>
+  <h1>Widgets</h1>
+  <p class="lead">Small panels that live outside the window. All of them can be dragged, snap to corners and edges of the screen and remember where you put them. The settings tab has switches for each.</p>
+
+  <h2 id="dock">Docking</h2>
+<pre><code class="lua">Proximity:Dock(myFrame, "MyWidget", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 12) })</code></pre>
+
+  <h2 id="watermark">Watermark</h2>
+<pre><code class="lua">local wm = Proximity:Watermark({ Items = { "FPS", "Graph", "Ping", "Time" } })
+wm:SetItems({ "FPS", "Ping", "Session", "Memory", "Speed" })
+wm:AddItem({ Text = function() return "kills " .. kills end, Interval = 1 })</code></pre>
+  <p>Available items: <code>FPS</code>, <code>Graph</code> (a live FPS line), <code>Ping</code>, <code>Time</code>, <code>Date</code>, <code>Game</code>, <code>Player</code>, <code>Players</code>, <code>Executor</code>, <code>Session</code>, <code>Memory</code>, <code>Position</code>, <code>Speed</code>, <code>Uptime</code>, <code>Version</code>, <code>Server</code>. Players pick them with checkboxes in Settings.</p>
+
+  <h2 id="binds">Keybind list</h2>
+<pre><code class="lua">local binds = Proximity:KeybindList({ ShowInactive = true })</code></pre>
+  <p>Active binds are bright, inactive ones grey. Sorting: active first, by name or by key.</p>
+
+  <h2 id="player">Player panel</h2>
+<pre><code class="lua">Proximity:PlayerPanel()</code></pre>
+  <p>A slowly turning 3D copy of your character with health, speed, state and position.</p>
+
+  <h2 id="perf">FPS and ping graph</h2>
+<pre><code class="lua">Proximity:PerfGraph()</code></pre>
+
+  <h2 id="stopwatch">Stopwatch</h2>
+<pre><code class="lua">Proximity:Stopwatch()</code></pre>
+  <p>A stopwatch with start, pause and reset, plus the time you spent in this session.</p>
+
+  <h2 id="hud">Your own HUD</h2>
+<pre><code class="lua">local hud = Proximity:Widget({ Title = "Farm", Icon = "farm", Width = 220 })
+hud:Toggle({ Name = "Auto farm", Flag = "farm" })
+hud:Slider({ Name = "Radius", Min = 10, Max = 200, Default = 60 })
+hud:SetVisible(true)</code></pre>
+  <p>Any element works inside, with configs and keyboard focus.</p>
+
+  <h2 id="topbar">Topbar button</h2>
+  <p>A round planet button next to the Roblox menu opens and closes the window, and the window folds into it when hidden. Use <code>ToggleButton = "Bubble"</code> for a draggable button anywhere on screen, or <code>false</code> for none.</p>
+</article>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

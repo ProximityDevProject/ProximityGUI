@@ -340,7 +340,122 @@ function Table.new(section, options)
 	self.OnSelect = options.OnSelect
 	self.Query = ""
 	self.Value = nil
+	-- range / select / switch filters, like a server browser:
+	-- Filters = { { Key = "players", Name = "Players", Type = "Range" },
+	--             { Key = "region", Name = "Region", Type = "Select", Values = { "EU", "US" } },
+	--             { Key = "full", Name = "Hide full", Type = "Switch", Test = fn(row) -> bool } }
+	self.FilterSpecs = options.Filters or {}
+	self.FilterValues = {}
 	return self:_register()
+end
+
+function Table:_passesFilters(row)
+	for _, spec in self.FilterSpecs do
+		local v = self.FilterValues[spec.Key or spec.Name]
+		if v ~= nil then
+			local cell = row[spec.Key]
+			if spec.Type == "Range" then
+				local n = tonumber(cell)
+				if n == nil or (v.Min and n < v.Min) or (v.Max and n > v.Max) then
+					return false
+				end
+			elseif spec.Type == "Select" then
+				if v ~= "Any" and cell ~= v then
+					return false
+				end
+			elseif spec.Type == "Switch" then
+				if v == true and spec.Test then
+					local ok, keep = pcall(spec.Test, row)
+					if ok and keep == false then
+						return false
+					end
+				end
+			end
+		end
+	end
+	return true
+end
+
+function Table:ActiveFilters(): number
+	local n = 0
+	for _, v in self.FilterValues do
+		if v ~= nil and v ~= "Any" and v ~= false and not (type(v) == "table" and v.Min == nil and v.Max == nil) then
+			n += 1
+		end
+	end
+	return n
+end
+
+function Table:SetFilterValue(key, value)
+	self.FilterValues[key] = value
+	self:_refresh()
+	return self
+end
+
+function Table:ClearFilters()
+	table.clear(self.FilterValues)
+	self:_refresh()
+	return self
+end
+
+function Table:OpenFilters(anchor)
+	local popup = Shared.Overlay.Popup({ Anchor = anchor or self._filterButton, Width = 250, MaxHeight = 360, Align = "End", Padding = 10, Spacing = 8 })
+	local z = popup.Frame.ZIndex
+	for i, spec in self.FilterSpecs do
+		local key = spec.Key or spec.Name
+		local row = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, spec.Type == "Range" and 46 or 26), LayoutOrder = i, ZIndex = z, Parent = popup.Content })
+		local label = Util.Label({ Text = spec.Name or tostring(spec.Key), FontFace = Theme.Fonts.Medium, TextSize = 12, Size = UDim2.new(1, 0, 0, 16), ZIndex = z, Parent = row })
+		Theme.Paint(label, { TextColor3 = "TextDim" })
+		if spec.Type == "Range" then
+			local value = self.FilterValues[key] or {}
+			for j, side in { "Min", "Max" } do
+				local box = Util.New("TextBox", { Text = value[side] and tostring(value[side]) or "", PlaceholderText = side == "Min" and Locale.T("From") or Locale.T("To"), ClearTextOnFocus = false, FontFace = Theme.Fonts.Mono, TextSize = 12, Size = UDim2.new(0.5, -3, 0, 24), Position = UDim2.new((j - 1) * 0.5, (j - 1) * 3, 0, 20), ZIndex = z, Parent = row })
+				Util.Corner(5, box)
+				Theme.Paint(box, { BackgroundColor3 = "Surface2", TextColor3 = "Text", PlaceholderColor3 = "TextMute" })
+				box.FocusLost:Connect(function()
+					local v = self.FilterValues[key] or {}
+					v[side] = tonumber(box.Text)
+					self.FilterValues[key] = (v.Min or v.Max) and v or nil
+					self:_refresh()
+				end)
+			end
+		elseif spec.Type == "Select" then
+			local values = { "Any" }
+			for _, v in spec.Values or {} do
+				table.insert(values, v)
+			end
+			local current = self.FilterValues[key] or "Any"
+			local b = Util.New("TextButton", { Text = tostring(current), FontFace = Theme.Fonts.Medium, TextSize = 12, AutoButtonColor = false, Size = UDim2.new(0.5, 0, 0, 22), Position = UDim2.new(0.5, 0, 0, 0), ZIndex = z, Parent = row })
+			Util.Corner(5, b)
+			Theme.Paint(b, { BackgroundColor3 = "Surface2", TextColor3 = "Text" })
+			b.Activated:Connect(function()
+				local idx = (table.find(values, self.FilterValues[key] or "Any") or 1) % #values + 1
+				self.FilterValues[key] = values[idx] ~= "Any" and values[idx] or nil
+				b.Text = tostring(values[idx])
+				self:_refresh()
+			end)
+		elseif spec.Type == "Switch" then
+			local on = self.FilterValues[key] == true
+			local b = Util.New("TextButton", { Text = on and "ON" or "OFF", FontFace = Theme.Fonts.Bold, TextSize = 10, AutoButtonColor = false, Size = UDim2.fromOffset(40, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), ZIndex = z, Parent = row })
+			Util.Corner(5, b)
+			Theme.Paint(b, { BackgroundColor3 = on and "Accent" or "Surface3", TextColor3 = on and "AccentInk" or "TextMute" })
+			b.Activated:Connect(function()
+				local now = not (self.FilterValues[key] == true)
+				self.FilterValues[key] = now or nil
+				b.Text = now and "ON" or "OFF"
+				Theme.Paint(b, { BackgroundColor3 = now and "Accent" or "Surface3", TextColor3 = now and "AccentInk" or "TextMute" }, 0.1)
+				self:_refresh()
+			end)
+		end
+	end
+	local reset = Util.New("TextButton", { Text = Locale.T("ResetFilters"), FontFace = Theme.Fonts.SemiBold, TextSize = 12, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, 26), LayoutOrder = 99, ZIndex = z, Parent = popup.Content })
+	Util.Corner(6, reset)
+	Theme.Paint(reset, { BackgroundColor3 = "Surface3", TextColor3 = "Text" })
+	reset.Activated:Connect(function()
+		popup:Close()
+		self:ClearFilters()
+	end)
+	return popup
 end
 
 function Table:_view()
@@ -350,6 +465,9 @@ function Table:_view()
 		if self.Filter then
 			local s, r = pcall(self.Filter, row)
 			ok = s and r ~= false
+		end
+		if ok and #self.FilterSpecs > 0 then
+			ok = self:_passesFilters(row)
 		end
 		if ok and self.Query ~= "" then
 			local hay = {}
@@ -430,7 +548,22 @@ function Table:_build(parent)
 	self.Frame = frame
 	local y = 0
 	if self.SearchEnabled then
-		local search = Util.New("TextBox", { Text = "", PlaceholderText = Locale.T("Search") .. "…", ClearTextOnFocus = false, FontFace = Theme.Fonts.Regular, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -8, 0, 26), Position = UDim2.fromOffset(4, 0), Parent = frame })
+		local filterW = #self.FilterSpecs > 0 and 34 or 0
+		local search = Util.New("TextBox", { Text = "", PlaceholderText = Locale.T("Search") .. "…", ClearTextOnFocus = false, FontFace = Theme.Fonts.Regular, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -8 - filterW, 0, 26), Position = UDim2.fromOffset(4, 0), Parent = frame })
+		if filterW > 0 then
+			local fb = Util.New("ImageButton", { AutoButtonColor = false, Size = UDim2.fromOffset(28, 26), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 0), Parent = frame })
+			Util.Corner(6, fb)
+			Theme.Paint(fb, { BackgroundColor3 = "Surface2" })
+			local fi = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = Icons.Get("filter") or "", Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = fb })
+			Theme.Paint(fi, { ImageColor3 = "TextDim" })
+			local count = Util.Label({ Text = "", FontFace = Theme.Fonts.Bold, TextSize = 9, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(13, 13), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 3, 0, -3), BackgroundTransparency = 0, Visible = false, Parent = fb })
+			Util.Round(count)
+			Theme.Paint(count, { BackgroundColor3 = "Accent", TextColor3 = "AccentInk" })
+			self._filterButton, self._filterCount = fb, count
+			fb.Activated:Connect(function()
+				self:OpenFilters(fb)
+			end)
+		end
 		Util.Corner(5, search)
 		Util.Padding(search, 0, 8, 0, 26)
 		Theme.Paint(search, { BackgroundColor3 = "Surface2", TextColor3 = "Text", PlaceholderColor3 = "TextMute" })
@@ -482,6 +615,11 @@ function Table:_refresh()
 		return
 	end
 	self._viewRows = self:_view()
+	if self._filterCount then
+		local n = self:ActiveFilters()
+		self._filterCount.Visible = n > 0
+		self._filterCount.Text = tostring(n)
+	end
 	self._list.CanvasSize = UDim2.fromOffset(0, #self._viewRows * (self.RowHeight + 4))
 	self._empty.Visible = #self._viewRows == 0
 	for key, h in self._headers or {} do

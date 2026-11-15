@@ -61,6 +61,10 @@ function Dropdown.new(section, options)
 	end
 	self.Default = self:_normalize(default) or (self.Multi and {} or nil)
 	self.Value = Util.DeepCopy(self.Default)
+	local default = Util.Opt(options, "Default", "Value")
+	if default ~= nil and not self.Multi and self.Value == nil then
+		Shared.Lib:_optionWarning("Dropdown", self.Name, "default value " .. tostring(default) .. " is not in Values")
+	end
 	return self:_register()
 end
 
@@ -273,6 +277,23 @@ function Dropdown:_serialize()
 	return self.Value
 end
 
+function Dropdown:_navActivate()
+	if self:IsOpen() then
+		self:Close()
+	else
+		self:Open()
+	end
+end
+
+function Dropdown:_navAdjust(dir)
+	if self.Multi or #self.Values == 0 then
+		return
+	end
+	local i = table.find(self.Values, self.Value) or 0
+	i = (i - 1 + dir) % #self.Values + 1
+	self:_userSet(self.Values[i])
+end
+
 function Dropdown:_build(parent)
 	local row = self:_row(parent, 34)
 	local box = Util.New("TextButton", {
@@ -289,7 +310,7 @@ function Dropdown:_build(parent)
 	local stroke = Util.Stroke(box)
 	Theme.Paint(stroke, { Color = "Stroke" })
 	Util.Padding(box, 0, 26, 0, 9)
-	Util.New("UISizeConstraint", { MinSize = Vector2.new(70, 24), MaxSize = Vector2.new(170, 24), Parent = box })
+	Util.New("UISizeConstraint", { MinSize = Vector2.new(70, 24), MaxSize = Vector2.new(190, 24), Parent = box })
 	local label = Util.Label({
 		Text = "",
 		FontFace = Theme.Fonts.Medium,
@@ -328,7 +349,54 @@ function Dropdown:_build(parent)
 	end)
 end
 
+function Dropdown:_renderChips()
+	local box = self._box
+	if not box then
+		return
+	end
+	if self._chips then
+		self._chips:Destroy()
+		self._chips = nil
+	end
+	if not self.Multi or #self.Value == 0 then
+		self._label.Visible = true
+		return
+	end
+	self._label.Visible = false
+	local holder = Util.New("Frame", { Name = "Chips", BackgroundTransparency = 1, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), Parent = box })
+	Util.List(holder, 4, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
+	self._chips = holder
+	local shown = 0
+	for _, v in self.Value do
+		if shown >= 2 then
+			break
+		end
+		shown += 1
+		local chip = Util.New("TextButton", { Text = "", AutoButtonColor = false, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18), LayoutOrder = shown, Parent = holder })
+		Util.Corner(4, chip)
+		Util.Padding(chip, 0, 4, 0, 6)
+		Theme.Paint(chip, { BackgroundColor3 = "Surface2" })
+		Util.List(chip, 3, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
+		local text = Util.Label({ Text = Util.Truncate(self:_text(v), 10), FontFace = Theme.Fonts.Medium, TextSize = 11, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), Parent = chip })
+		Theme.Paint(text, { TextColor3 = "Text" })
+		local x = Util.New("ImageButton", { BackgroundTransparency = 1, Image = Icons.Get("x") or "", Size = UDim2.fromOffset(10, 10), LayoutOrder = 2, Parent = chip })
+		Theme.Paint(x, { ImageColor3 = "TextMute" })
+		x.Activated:Connect(function()
+			if not self:IsLocked() then
+				local before = Util.DeepCopy(self.Value)
+				self:Deselect(v)
+				self.Library:_pushHistory(self, before, Util.DeepCopy(self.Value))
+			end
+		end)
+	end
+	if #self.Value > shown then
+		local more = Util.Label({ Text = "+" .. (#self.Value - shown), FontFace = Theme.Fonts.MonoBold, TextSize = 11, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromScale(0, 1), LayoutOrder = 9, Parent = holder })
+		Theme.Paint(more, { TextColor3 = "TextDim" })
+	end
+end
+
 function Dropdown:_render()
+	self:_renderChips()
 	if self._label then
 		self._label.Text = self:GetText()
 		Theme.Paint(self._label, { TextColor3 = (self.Value == nil or (self.Multi and #self.Value == 0)) and "TextMute" or "Text" })
@@ -684,6 +752,10 @@ function Input:_onState(locked)
 	if self._box then
 		self._box.TextEditable = not locked
 	end
+end
+
+function Input:_navActivate()
+	self:Focus()
 end
 
 function Input:Focus()

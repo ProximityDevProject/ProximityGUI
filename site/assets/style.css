@@ -1,0 +1,130 @@
+/* Proximity docs - black space, one white accent, the planet everywhere. */
+:root {
+  --bg: #050506; --bg2: #0a0a0c; --card: #0e0e11; --card2: #141418; --line: #1d1d22; --line2: #2a2a31;
+  --fg: #f2f2f4; --dim: #a1a1aa; --mute: #64646d; --accent: #ffffff; --ink: #07070a;
+  --ok: #7be0a8; --warn: #f1c878; --bad: #ef7a83;
+  --display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+  --body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --radius: 14px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+html { scroll-behavior: smooth }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 var(--body); -webkit-font-smoothing: antialiased }
+a { color: inherit }
+img { max-width: 100%; display: block }
+::selection { background: #fff; color: #000 }
+
+/* ── nav ─────────────────────────────────────────────── */
+.nav { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(14px); background: color-mix(in srgb, var(--bg) 78%, transparent); border-bottom: 1px solid var(--line) }
+.nav .in { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 22px; padding: 12px max(20px, env(safe-area-inset-left)) }
+.brand { display: flex; gap: 10px; align-items: center; text-decoration: none; font: 600 15px var(--display); letter-spacing: .02em }
+.brand img { width: 30px; height: 30px; border-radius: 50% }
+.brand span { opacity: .55; font-weight: 400 }
+.links { display: flex; gap: 4px; flex: 1; overflow-x: auto; scrollbar-width: none }
+.links::-webkit-scrollbar { display: none }
+.links a { text-decoration: none; color: var(--dim); font-size: 14px; padding: 7px 12px; border-radius: 999px; white-space: nowrap; transition: color .2s, background .2s }
+.links a:hover { color: var(--fg); background: var(--card) }
+.links a.on { color: var(--ink); background: var(--accent) }
+.nav .gh { display: inline-flex; gap: 8px; align-items: center; text-decoration: none; font-weight: 600; font-size: 14px; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line2) }
+.nav .gh:hover { border-color: var(--fg) }
+.search-btn { border: 1px solid var(--line2); background: var(--card); color: var(--mute); border-radius: 999px; padding: 7px 14px; font: 13px var(--body); cursor: pointer; display: flex; gap: 10px; align-items: center }
+.search-btn kbd { font: 11px var(--mono); color: var(--dim) }
+@media (max-width: 860px) { .search-btn span, .nav .gh span { display: none } .links { order: 3; flex-basis: 100% } .nav .in { flex-wrap: wrap; gap: 10px } }
+
+/* ── layout ──────────────────────────────────────────── */
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 max(20px, env(safe-area-inset-left)) }
+.page { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-block: 48px 96px }
+.toc { position: sticky; top: 84px; align-self: start; display: flex; flex-direction: column; gap: 2px; font-size: 14px }
+.toc b { font: 600 11px var(--body); text-transform: uppercase; letter-spacing: .12em; color: var(--mute); margin: 14px 0 6px }
+.toc a { color: var(--dim); text-decoration: none; padding: 5px 10px; border-radius: 8px; border-left: 1px solid transparent }
+.toc a:hover, .toc a.on { color: var(--fg); background: var(--card) }
+@media (max-width: 900px) { .page { grid-template-columns: 1fr } .toc { position: static; flex-direction: row; flex-wrap: wrap } .toc b { display: none } }
+article { min-width: 0 }
+article h1 { font: 600 clamp(30px, 5vw, 46px)/1.12 var(--display); letter-spacing: -.01em; margin: 0 0 14px; text-wrap: balance }
+article .lead { color: var(--dim); font-size: 18px; max-width: 62ch; margin: 0 0 36px }
+article h2 { font: 500 24px/1.3 var(--display); margin: 56px 0 14px; scroll-margin-top: 90px }
+article h3 { font: 600 17px var(--body); margin: 30px 0 8px; scroll-margin-top: 90px }
+article p, article li { color: #c9c9cf; max-width: 72ch }
+article code { font: 13.5px var(--mono); background: var(--card2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; color: #e6e6ea }
+.eyebrow { font: 600 12px var(--body); text-transform: uppercase; letter-spacing: .16em; color: var(--mute) }
+
+/* code blocks */
+pre { position: relative; background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; overflow-x: auto; font: 13.5px/1.65 var(--mono); color: #dedee3; margin: 16px 0 }
+pre code { background: none; border: 0; padding: 0; font: inherit }
+pre .copy { position: absolute; top: 10px; right: 10px; border: 1px solid var(--line2); background: var(--card); color: var(--dim); border-radius: 8px; font: 12px var(--body); padding: 4px 10px; cursor: pointer; opacity: 0; transition: opacity .2s }
+pre:hover .copy, pre .copy:focus { opacity: 1 }
+.tk-k { color: #ffffff; font-weight: 600 } .tk-s { color: #9fd8b5 } .tk-n { color: #f1c878 } .tk-c { color: #5f5f68; font-style: italic } .tk-f { color: #b9c6ff }
+
+/* tables */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0 }
+.tablewrap { overflow-x: auto }
+.table th { text-align: left; font-weight: 600; color: var(--mute); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding: 10px 12px; border-bottom: 1px solid var(--line2) }
+.table td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; color: #cfcfd5 }
+.table td:first-child { white-space: nowrap }
+
+/* cards & grids */
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; transition: border-color .25s, transform .25s }
+.card:hover { border-color: var(--line2); transform: translateY(-2px) }
+.card h3 { margin: 10px 0 6px; font: 600 16px var(--body) }
+.card p { margin: 0; color: var(--dim); font-size: 14.5px }
+.card .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--card2); border: 1px solid var(--line2) }
+.card .ic svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 1.75 }
+a.card { text-decoration: none; display: block }
+.note { border: 1px solid var(--line2); background: var(--card); border-radius: 12px; padding: 14px 16px; color: var(--dim); font-size: 14.5px; margin: 16px 0 }
+.note b { color: var(--fg) }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 600 15px var(--body); padding: 13px 22px; border-radius: 999px; border: 1px solid var(--line2); background: var(--card); color: var(--fg); cursor: pointer; transition: transform .2s, border-color .2s, background .2s }
+.btn:hover { border-color: var(--fg); transform: translateY(-1px) }
+.btn.primary { background: var(--accent); color: var(--ink); border-color: var(--accent) }
+.btn.primary:hover { background: #e9e9ec }
+
+/* hero */
+.hero { position: relative; min-height: min(92vh, 860px); display: grid; place-items: center; overflow: hidden; border-bottom: 1px solid var(--line) }
+.hero canvas { position: absolute; inset: 0; width: 100%; height: 100% }
+.hero .in { position: relative; text-align: center; padding: 120px 20px 80px; max-width: 860px }
+.hero h1 { font: 600 clamp(38px, 7.4vw, 86px)/1.02 var(--display); letter-spacing: -.02em; margin: 18px 0 18px; text-wrap: balance }
+.hero h1 em { font-style: normal; color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,.75) }
+.hero p { color: var(--dim); font-size: clamp(16px, 2vw, 19px); max-width: 56ch; margin: 0 auto 30px }
+.pill { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line2); background: color-mix(in srgb, var(--card) 70%, transparent); border-radius: 999px; padding: 6px 14px 6px 8px; font-size: 13px; color: var(--dim) }
+.pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 12px var(--ok) }
+.loader { display: flex; gap: 10px; align-items: center; max-width: 720px; margin: 26px auto 0; background: color-mix(in srgb, var(--bg2) 85%, transparent); border: 1px solid var(--line2); border-radius: 14px; padding: 8px 8px 8px 18px; text-align: left }
+.loader code { flex: 1; min-width: 0; font: 12.5px var(--mono); white-space: nowrap; overflow-x: auto; color: #d9d9de; scrollbar-width: none }
+.loader button { flex: none }
+.cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap }
+.orbit-badge { position: absolute; right: max(24px, 4vw); top: 110px; width: 118px; height: 118px; animation: spin 22s linear infinite; opacity: .8 }
+@keyframes spin { to { transform: rotate(360deg) } }
+@media (max-width: 760px) { .orbit-badge { display: none } }
+
+section.block { padding-block: 90px; border-bottom: 1px solid var(--line) }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr } }
+.shot { border-radius: 16px; border: 1px solid var(--line2); box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02) }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden }
+.stats div { background: var(--bg); padding: 26px 22px }
+.stats b { display: block; font: 600 34px var(--display); letter-spacing: -.02em }
+.stats span { color: var(--mute); font-size: 14px }
+@media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr) } }
+
+footer { padding-block: 40px 60px; color: var(--mute); font-size: 14px }
+footer .in { display: flex; gap: 20px; justify-content: space-between; flex-wrap: wrap }
+
+/* search dialog */
+.sdlg { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); display: none; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px }
+.sdlg.open { display: flex }
+.sdlg .box { width: min(620px, 100%); background: var(--bg2); border: 1px solid var(--line2); border-radius: 16px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,.6) }
+.sdlg input { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--fg); font: 16px var(--body); padding: 18px 20px; outline: none }
+.sdlg .res { max-height: 50vh; overflow: auto; padding: 6px }
+.sdlg .res a { display: block; padding: 10px 14px; border-radius: 10px; text-decoration: none }
+.sdlg .res a:hover, .sdlg .res a.on { background: var(--card2) }
+.sdlg .res small { display: block; color: var(--mute); font-size: 12.5px }
+
+/* status chips */
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 12px var(--body); padding: 4px 10px; border-radius: 999px; border: 1px solid currentColor }
+.chip.ok { color: var(--ok) } .chip.warn { color: var(--warn) } .chip.bad { color: var(--bad) } .chip.dim { color: var(--dim) }
+
+:focus-visible { outline: 2px solid #fff; outline-offset: 2px }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important } }

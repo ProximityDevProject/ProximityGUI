@@ -363,7 +363,8 @@ end
 
 -- Standard row: [title + description] ........ [links][control]
 function Base:_row(parent: Instance, height: number?)
-	height = height or 34
+	local baseHeight = height or 34
+	height = math.floor(baseHeight * (Shared.Density or 1) + 0.5)
 	local row = Util.New("Frame", {
 		Name = self.Type .. "_" .. self.Name,
 		BackgroundTransparency = 1,
@@ -372,6 +373,7 @@ function Base:_row(parent: Instance, height: number?)
 	})
 	Theme.Paint(row, { BackgroundColor3 = "Surface2" })
 	Util.Corner(6, row)
+	row:SetAttribute("BaseH", baseHeight)
 	self.Frame = row
 
 	local textBox = Util.New("Frame", {
@@ -510,6 +512,9 @@ function Base:_wireRow()
 	Overlay.Hover(row, function()
 		if self:IsLocked() and self.LockReason then
 			return "🔒 " .. self.LockReason
+		end
+		if self.Library.Debug then
+			return (self.TooltipText and (self.TooltipText .. "\n") or "") .. "<font color=\"#8a8a92\">" .. self.Type .. (self.Flag and ("  ·  " .. self.Flag) or "") .. "</font>"
 		end
 		return self.TooltipText
 	end)

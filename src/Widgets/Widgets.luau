@@ -127,6 +127,8 @@ return function(Lib)
 		local duration = options.Duration or options.Time or options.Delay or 4
 		local handle = { Title = options.Title, Content = options.Content or options.Text or options.Description or "" }
 		table.insert(Lib.NotificationHistory, { Title = handle.Title, Content = handle.Content, Type = kind, Time = os.time() })
+		Lib.Unread = (Lib.Unread or 0) + 1
+		Lib.NotificationsChanged:Fire()
 		while #Lib.NotificationHistory > 50 do
 			table.remove(Lib.NotificationHistory, 1)
 		end
@@ -336,6 +338,50 @@ return function(Lib)
 			table.insert(widget.Items, item)
 			return item
 		end
+		function widget:AddGraph()
+			order += 1
+			local dot = Util.New("Frame", { Size = UDim2.fromOffset(3, 3), LayoutOrder = order, BorderSizePixel = 0, Parent = frame })
+			Util.Round(dot)
+			Theme.Paint(dot, { BackgroundColor3 = "TextMute" })
+			order += 1
+			local area = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(46, 16), LayoutOrder = order, ClipsDescendants = true, Parent = frame })
+			local item = { Label = area, Data = {} }
+			function item:Remove()
+				dot:Destroy()
+				area:Destroy()
+				self.Removed = true
+			end
+			function item:Set() end
+			task.spawn(function()
+				while not item.Removed and not Lib.Unloaded do
+					table.insert(item.Data, Lib.Providers.FPS())
+					if #item.Data > 24 then
+						table.remove(item.Data, 1)
+					end
+					if frame.Visible then
+						Lib._drawSpark(area, item.Data)
+					end
+					task.wait(0.5)
+				end
+			end)
+			table.insert(widget.Items, item)
+			return item
+		end
+		function widget:SetItems(list)
+			for _, item in widget.Items do
+				item:Remove()
+			end
+			widget.Items = {}
+			order = 1
+			for _, it in list do
+				if it == "Graph" then
+					widget:AddGraph()
+				else
+					widget:AddItem(it)
+				end
+			end
+			return self
+		end
 		function widget:SetVisible(v)
 			frame.Visible = v
 			return self
@@ -344,9 +390,7 @@ return function(Lib)
 			name.Text = t
 			return self
 		end
-		for _, it in options.Items or { "FPS", "Ping", "Time" } do
-			widget:AddItem(it)
-		end
+		widget:SetItems(options.Items or Lib:GetSetting("WatermarkItems", { "FPS", "Ping", "Time" }))
 		dock(frame, "Watermark", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12) })
 		frame.Visible = Lib:GetSetting("Watermark", options.Visible ~= false)
 		Lib.WatermarkWidget = widget
@@ -369,7 +413,38 @@ return function(Lib)
 		Player = { Text = function()
 			return Lib:GetIdentity().DisplayName
 		end, Interval = 5 },
+		Date = { Text = function()
+			return os.date("%d.%m.%Y")
+		end, Interval = 30 },
+		Players = { Text = function()
+			return Lib.Providers.Players()
+		end, Interval = 2 },
+		Executor = { Text = function()
+			return Lib.Providers.Executor()
+		end, Interval = 60 },
+		Session = { Text = function()
+			return Lib.Providers.Session()
+		end, Interval = 1 },
+		Memory = { Text = function()
+			return Lib.Providers.Memory()
+		end, Interval = 2 },
+		Position = { Text = function()
+			return Lib.Providers.Position()
+		end, Interval = 0.5 },
+		Speed = { Text = function()
+			return Lib.Providers.Speed()
+		end, Interval = 0.3 },
+		Uptime = { Text = function()
+			return Lib.Providers.ServerUptime()
+		end, Interval = 1 },
+		Version = { Text = function()
+			return "v" .. Lib.Version
+		end, Interval = 60 },
+		Server = { Text = function()
+			return Lib.Providers.JobId()
+		end, Interval = 60 },
 	}
+	Lib.WatermarkItemNames = { "FPS", "Graph", "Ping", "Time", "Date", "Game", "Player", "Players", "Executor", "Session", "Memory", "Position", "Speed", "Uptime", "Version", "Server" }
 
 	-- ═══ Keybind list ═════════════════════════════════════════════════════
 	function Lib:KeybindList(options)
@@ -389,7 +464,7 @@ return function(Lib)
 		local title = Util.Label({ Text = options.Title or Locale.T("KeybindList"), FontFace = Theme.Fonts.Bold, TextSize = 11, Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(19, 0), Parent = head })
 		Theme.Paint(title, { TextColor3 = "Text" })
 		local rows = {}
-		local showAll = options.ShowInactive == true
+		local showAll = options.ShowInactive == true or Lib:GetSetting("BindsInactive", false)
 		local function rebuild()
 			for _, r in rows do
 				r:Destroy()
@@ -401,7 +476,13 @@ return function(Lib)
 					table.insert(list, kb)
 				end
 			end
+			local sort = Lib:GetSetting("BindsSort", "Active")
 			table.sort(list, function(a, b)
+				if sort == "Active" and a.Active ~= b.Active then
+					return a.Active
+				elseif sort == "Key" then
+					return Keys.Display(a.Value) < Keys.Display(b.Value)
+				end
 				return a.Name < b.Name
 			end)
 			for i, kb in list do

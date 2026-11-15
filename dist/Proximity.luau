@@ -241,19 +241,43 @@ Slash='/',Backquote='`',Tilde='~'}local mouse={[Enum.UserInputType.MouseButton1]
 Keys.FromInput(input)if mouse[input.UserInputType]then return mouse[input.
 UserInputType]end if input.KeyCode~=Enum.KeyCode.Unknown then local t=input.
 UserInputType if t==Enum.UserInputType.Keyboard or t==Enum.UserInputType.
-Gamepad1 then return input.KeyCode.Name end end return nil end function Keys.
-Normalize(value)if value==nil or value==false or value==''or value=='None'or
-value=='-'then return'None'end if typeof(value)=='EnumItem'then if value.
+Gamepad1 then return input.KeyCode.Name end end return nil end local modifierOf=
+{LeftControl='Ctrl',RightControl='Ctrl',LeftShift='Shift',RightShift='Shift',
+LeftAlt='Alt',RightAlt='Alt'}local modifierKeys={Ctrl={Enum.KeyCode.LeftControl,
+Enum.KeyCode.RightControl},Shift={Enum.KeyCode.LeftShift,Enum.KeyCode.RightShift
+},Alt={Enum.KeyCode.LeftAlt,Enum.KeyCode.RightAlt}}local modifierOrder={'Ctrl',
+'Shift','Alt'}function Keys.IsModifier(name)return modifierOf[name]~=nil end
+local function held(mod)local UIS=game:GetService('UserInputService')for _,code
+in modifierKeys[mod]do if UIS:IsKeyDown(code)then return true end end return
+false end function Keys.Combo(main)if modifierOf[main]then return main end local
+parts={}for _,mod in modifierOrder do if held(mod)then table.insert(parts,mod)
+end end table.insert(parts,main)return table.concat(parts,'+')end function Keys.
+MainKey(value)return string.match(value or'','([^+]+)$')or'None'end function
+Keys.MatchesCombo(value,pressed)if not value or value=='None'then return false
+end if Keys.MainKey(value)~=pressed then return false end for mod in string.
+gmatch(value,'([^+]+)%+')do if modifierKeys[mod]and not held(mod)then return
+false end end return true end function Keys.Normalize(value)if type(value)==
+'string'and string.find(value,'+',2,true)then local parts=string.split(value,'+'
+)local main=Keys.Normalize(parts[#parts])if main=='None'then return'None'end
+local mods={}for i=1,#parts-1 do local m=string.lower(parts[i])if m=='ctrl'or m
+=='control'then mods.Ctrl=true elseif m=='shift'then mods.Shift=true elseif m==
+'alt'then mods.Alt=true end end local out={}for _,mod in modifierOrder do if
+mods[mod]then table.insert(out,mod)end end table.insert(out,main)return table.
+concat(out,'+')end return Keys.NormalizeSingle(value)end function Keys.
+NormalizeSingle(value)if value==nil or value==false or value==''or value=='None'
+or value=='-'then return'None'end if typeof(value)=='EnumItem'then if value.
 EnumType==Enum.UserInputType then return mouse[value]or'None'end return value.
 Name end value=tostring(value)if mouseReverse[value]then return value end local
 ok,code=pcall(function()return Enum.KeyCode[value]end)if ok and code then return
 code.Name end for long,s in short do if string.lower(s)==string.lower(value)then
 return long end end return'None'end function Keys.Display(name)if not name or
-name=='None'then return'None'end return short[name]or name end function Keys.
-Matches(name,input)return name~='None'and Keys.FromInput(input)==name end
-function Keys.ToEnum(name)if mouseReverse[name]then return mouseReverse[name]end
-local ok,code=pcall(function()return Enum.KeyCode[name]end)return ok and code or
-nil end return Keys end function __DARKLUA_BUNDLE_MODULES.f()local v=
+name=='None'then return'None'end if string.find(name,'+',2,true)then local parts
+=string.split(name,'+')parts[#parts]=short[parts[#parts] ]or parts[#parts]return
+table.concat(parts,'+')end return short[name]or name end function Keys.Matches(
+name,input)return name~='None'and Keys.FromInput(input)==name end function Keys.
+ToEnum(name)if mouseReverse[name]then return mouseReverse[name]end local ok,code
+=pcall(function()return Enum.KeyCode[name]end)return ok and code or nil end
+return Keys end function __DARKLUA_BUNDLE_MODULES.f()local v=
 __DARKLUA_BUNDLE_MODULES.cache.f if not v then v={c=__modImpl()}
 __DARKLUA_BUNDLE_MODULES.cache.f=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
@@ -283,27 +307,71 @@ Font.new(SANS,Enum.FontWeight.SemiBold),Bold=Font.new(SANS,Enum.FontWeight.Bold)
 ,Heavy=Font.new(SANS,Enum.FontWeight.ExtraBold),Mono=Font.new(MONO,Enum.
 FontWeight.Regular),MonoBold=Font.new(MONO,Enum.FontWeight.Medium)}function
 Theme.SetFont(family)for name,font in Theme.Fonts do if not string.find(name,
-'Mono')then Theme.Fonts[name]=Font.new(family,font.Weight)end end end Theme.Size
-={Tiny=10,Small=11,Body=13,Title=14,Header=16,Display=22}local bindings=
-setmetatable({},{__mode='k'})function Theme.Get(token)return Theme.Tokens[token]
-or base[token]or Color3.new(1,0,1)end function Theme.Paint(instance,map,time)
-local current=bindings[instance]if not current then current={}bindings[instance]
-=current end local goal={}for prop,token in map do if typeof(token)=='Color3'
-then current[prop]=nil goal[prop]=token else current[prop]=token goal[prop]=
-Theme.Get(token)end end if time and time>0 then Tween.Play(instance,goal,time)
-else for prop,value in goal do instance[prop]=value end end return instance end
-function Theme.Unbind(instance)bindings[instance]=nil end local function repaint
-(time)for instance,map in bindings do if instance.Parent~=nil then local goal={}
-for prop,token in map do goal[prop]=Theme.Get(token)end if time>0 then Tween.
-Play(instance,goal,time,Enum.EasingStyle.Sine)else for prop,value in goal do
-instance[prop]=value end end end end end function Theme.Set(spec,animate)local
-tokens=table.clone(base)if type(spec)=='string'then local preset=Theme.Presets[
-spec]if not preset then warn("[Proximity] unknown theme '"..spec.."'")return
-false end for k,v in preset do tokens[k]=v end Theme.Current=spec elseif type(
-spec)=='table'then for k,v in Theme.Tokens do tokens[k]=v end for k,v in spec do
-local color=Util.ToColor(v)if color then tokens[k]=color end end Theme.Current=
-spec.Name or'Custom'end Theme.Tokens=tokens repaint(animate==false and 0 or 0.35
-)Theme.Changed:Fire(Theme.Current,Theme.Tokens)return true end function Theme.
+'Mono')then Theme.Fonts[name]=Font.new(family,font.Weight)end end end Theme.
+FontFolder='Proximity/Fonts'Theme.FontBaseUrl=
+[[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/fonts/]]
+Theme.CustomFonts={['Minecraft (Monocraft)']={'Monocraft.ttf',
+'Monocraft-Bold.ttf'},['VT323 (terminal)']={'VT323-Regular.ttf'},[
+'Silkscreen (pixel)']={'Silkscreen-Regular.ttf'},['Russo One']={
+'RussoOne-Regular.ttf'},['Space Mono']={'SpaceMono-Regular.ttf'},['Audiowide']={
+'Audiowide-Regular.ttf'},['Rajdhani']={'Rajdhani-SemiBold.ttf'},[
+'Share Tech Mono']={'ShareTechMono-Regular.ttf'},['Righteous']={
+'Righteous-Regular.ttf'}}local builtinFamilies=nil local function scanBuiltins()
+if builtinFamilies then return builtinFamilies end builtinFamilies={}for nice,
+file in{['Press Start 2P']='PressStart2P',['Builder Sans']='BuilderSans',[
+'Builder Mono']='BuilderMono'}do builtinFamilies[nice]=
+'rbxasset://fonts/families/'..file..'.json'end for _,item in Enum.Font:
+GetEnumItems()do local ok,font=pcall(Font.fromEnum,item)if ok and font then
+local family=font.Family local file=string.match(family,'families/(.-)%.json$')
+if file and not string.find(file,'Legacy')and file~='Unknown'then local nice=
+string.gsub(file,'(%l)(%u)','%1 %2')builtinFamilies[nice]=family end end end
+return builtinFamilies end function Theme.FontList()local out={}for name in
+scanBuiltins()do table.insert(out,name)end for name in Theme.CustomFonts do
+table.insert(out,name)end table.sort(out)return out end local resolved={}
+function Theme.ResolveFamily(name)if resolved[name]then return resolved[name]end
+local builtin=scanBuiltins()[name]if builtin then resolved[name]=builtin return
+builtin end local files=Theme.CustomFonts[name]local Env=
+__DARKLUA_BUNDLE_MODULES.e()if not files or not Env.Caps.CustomAsset then return
+nil end local faces={}for i,file in files do local path=Theme.FontFolder..'/'..
+file if not Env.IsFile(path)then local body for attempt=1,3 do body=Env.HttpGet(
+Theme.FontBaseUrl..file)if body and#body>1000 then break end task.wait(attempt)
+end if not body or#body<1000 then return nil end Env.Write(path,body)end local
+asset=Env.CustomAsset(path)if not asset then return nil end if i==1 then for _,w
+in{{'Regular',400},{'Medium',500},{'SemiBold',600}}do table.insert(faces,{name=w
+[1],weight=w[2],style='normal',assetId=asset})end if not files[2]then table.
+insert(faces,{name='Bold',weight=700,style='normal',assetId=asset})table.insert(
+faces,{name='ExtraBold',weight=800,style='normal',assetId=asset})end else table.
+insert(faces,{name='Bold',weight=700,style='normal',assetId=asset})table.insert(
+faces,{name='ExtraBold',weight=800,style='normal',assetId=asset})end end local
+jsonPath=Theme.FontFolder..'/'..string.gsub(name,'[^%w]','')..'.json'Env.Write(
+jsonPath,game:GetService('HttpService'):JSONEncode({name=name,faces=faces}))
+local family=Env.CustomAsset(jsonPath)resolved[name]=family return family end
+Theme.FontName='Builder Sans'function Theme.ApplyFont(name,root)local family=
+Theme.ResolveFamily(name)if not family then return false end local old=Theme.
+Fonts.Regular.Family Theme.SetFont(family)Theme.FontName=name if root then for _
+,d in root:GetDescendants()do if d:IsA('TextLabel')or d:IsA('TextButton')or d:
+IsA('TextBox')then local f=d.FontFace if f.Family==old then d.FontFace=Font.new(
+family,f.Weight,f.Style)end end end end return true end Theme.Size={Tiny=10,
+Small=11,Body=13,Title=14,Header=16,Display=22}local bindings=setmetatable({},{
+__mode='k'})function Theme.Get(token)return Theme.Tokens[token]or base[token]or
+Color3.new(1,0,1)end function Theme.Paint(instance,map,time)local current=
+bindings[instance]if not current then current={}bindings[instance]=current end
+local goal={}for prop,token in map do if typeof(token)=='Color3'then current[
+prop]=nil goal[prop]=token else current[prop]=token goal[prop]=Theme.Get(token)
+end end if time and time>0 then Tween.Play(instance,goal,time)else for prop,
+value in goal do instance[prop]=value end end return instance end function Theme
+.Unbind(instance)bindings[instance]=nil end local function repaint(time)for
+instance,map in bindings do if instance.Parent~=nil then local goal={}for prop,
+token in map do goal[prop]=Theme.Get(token)end if time>0 then Tween.Play(
+instance,goal,time,Enum.EasingStyle.Sine)else for prop,value in goal do instance
+[prop]=value end end end end end function Theme.Set(spec,animate)local tokens=
+table.clone(base)if type(spec)=='string'then local preset=Theme.Presets[spec]if
+not preset then warn("[Proximity] unknown theme '"..spec.."'")return false end
+for k,v in preset do tokens[k]=v end Theme.Current=spec elseif type(spec)==
+'table'then for k,v in Theme.Tokens do tokens[k]=v end for k,v in spec do local
+color=Util.ToColor(v)if color then tokens[k]=color end end Theme.Current=spec.
+Name or'Custom'end Theme.Tokens=tokens repaint(animate==false and 0 or 0.35)
+Theme.Changed:Fire(Theme.Current,Theme.Tokens)return true end function Theme.
 SetToken(token,color,animate)return Theme.Set({[token]=color,Name=Theme.Current}
 ,animate)end function Theme.Register(name,tokens)local preset={}for k,v in
 tokens do preset[k]=Util.ToColor(v)end Theme.Presets[name]=preset if not table.
@@ -703,7 +771,35 @@ Selected='selected',Press='Press a key',Saved='Saved',Loaded='Loaded',Deleted=
 'Redo',Favorites='Favorites',FavoritesHint=
 'Right-click any feature and pick Favorites to pin it here',Commands='Action',
 Elements='Feature',Tabs='Tab',Hidden='Menu hidden. Press %s to bring it back',
-Empty='Nothing here yet',Hide='Hide menu',Home='Home'},ru={Search=
+Empty='Nothing here yet',Hide='Hide menu',Home='Home',KeyTitle='Enter your key',
+KeySubtitle='One key per player, it is remembered on this device',KeyPlaceholder
+='Paste the key here',GetKey='Get a key',CheckKey='Check',Checking='Checking',
+JoinDiscord='Join our Discord',LinkCopied='Link copied, open it in your browser'
+,KeyWait='Too many tries. Wait %d s',KeyOk='Key accepted, loading',KeyLocked=
+'Too many wrong keys. Try again in %d s',KeyBad=
+'That key did not work. Tries left: %d',PlayerPanel='Player',Health='Health',
+Speed='Speed',State='State',Position='Position',Performance='Performance',Ping=
+'Ping',Stopwatch='Stopwatch',InGame='In game',UpdateTitle='%s update',UpdateBody
+='You have %s, version %s is out',EconomyTitle='Saving FPS',EconomyBody=
+'FPS dropped, so the stars and the planet are off for now',NotificationCenter=
+'Notifications',MiniMode='Mini mode',Unsaved='Unsaved changes',UnsavedHint=
+'Changes in %s are not saved yet',WhatsNew="What's new in %s",NoNotifications=
+'No notifications yet',ClearAll='Clear all',From='From',To='To',ResetFilters=
+'Reset filters',Navigation='Navigation',Sidebar='Sidebar',Rail='Icons only',Font
+='Font',FontFailed=
+[[This font needs getcustomasset, your executor does not have it]],Density=
+'Density',Compact='Compact',Normal='Normal',Comfortable='Roomy',Touch='Touch',
+ToggleStyle='Toggle style',BackgroundImage='Background image',BackgroundDim=
+'Background dim',WatermarkItems='Watermark shows',ShowInactive=
+'Show inactive binds',SortBinds='Sort binds',SortActive='Active first',SortName=
+'By name',SortKey='By key',Widgets='Widgets',AutoEconomy=
+'Save FPS automatically',AutoEconomyHint='Turns effects off when FPS drops',
+ShareCode='Share code',ImportCode='Enter code',CodeCopied=
+'Code %s is copied. Send it to a friend',CodeFailed=
+'Could not upload. Your executor needs the request function',CodeInvalid=
+'That code did not work',Restore='Restore',DeletedHint='%s is deleted',
+SaveBeforeUnload='Save changes to %s before unloading?',DontSave="Don't save",
+Replaced='Replaced the old copy v%s with v%s'},ru={Search=
 '\u{41f}\u{43e}\u{438}\u{441}\u{43a}',SearchHint=
 '\u{41d}\u{430}\u{439}\u{434}\u{438} \u{444}\u{443}\u{43d}\u{43a}\u{446}\u{438}\u{44e}, \u{432}\u{43a}\u{43b}\u{430}\u{434}\u{43a}\u{443} \u{438}\u{43b}\u{438} \u{434}\u{435}\u{439}\u{441}\u{442}\u{432}\u{438}\u{435}'
 ,NoResults=
@@ -814,14 +910,111 @@ Imported=
 ,Empty=
 '\u{422}\u{443}\u{442} \u{43f}\u{43e}\u{43a}\u{430} \u{43f}\u{443}\u{441}\u{442}\u{43e}'
 ,Hide='\u{421}\u{43a}\u{440}\u{44b}\u{442}\u{44c} \u{43c}\u{435}\u{43d}\u{44e}',
-Home='\u{413}\u{43b}\u{430}\u{432}\u{43d}\u{430}\u{44f}'}}Locale.Names={en=
-'English',ru='\u{420}\u{443}\u{441}\u{441}\u{43a}\u{438}\u{439}'}function Locale
-.T(key,...)local pack=packs[Locale.Current]local text=(pack and pack[key])or
-packs.en[key]or key if select('#',...)>0 then return string.format(text,...)end
-return text end function Locale.Set(code)if not packs[code]then return false end
-Locale.Current=code Locale.Changed:Fire(code)return true end function Locale.Add
-(code,strings,displayName)packs[code]=packs[code]or{}for k,v in strings do packs
-[code][k]=v end Locale.Names[code]=displayName or Locale.Names[code]or code end
+Home='\u{413}\u{43b}\u{430}\u{432}\u{43d}\u{430}\u{44f}',KeyTitle=
+'\u{412}\u{432}\u{435}\u{434}\u{438} \u{43a}\u{43b}\u{44e}\u{447}',KeySubtitle=
+'\u{41e}\u{434}\u{438}\u{43d} \u{43a}\u{43b}\u{44e}\u{447} \u{43d}\u{430} \u{438}\u{433}\u{440}\u{43e}\u{43a}\u{430}, \u{43e}\u{43d} \u{437}\u{430}\u{43f}\u{43e}\u{43c}\u{43d}\u{438}\u{442}\u{441}\u{44f} \u{43d}\u{430} \u{44d}\u{442}\u{43e}\u{43c} \u{443}\u{441}\u{442}\u{440}\u{43e}\u{439}\u{441}\u{442}\u{432}\u{435}'
+,KeyPlaceholder=
+'\u{412}\u{441}\u{442}\u{430}\u{432}\u{44c} \u{43a}\u{43b}\u{44e}\u{447} \u{441}\u{44e}\u{434}\u{430}'
+,GetKey=
+'\u{41f}\u{43e}\u{43b}\u{443}\u{447}\u{438}\u{442}\u{44c} \u{43a}\u{43b}\u{44e}\u{447}'
+,CheckKey='\u{41f}\u{440}\u{43e}\u{432}\u{435}\u{440}\u{438}\u{442}\u{44c}',
+Checking='\u{41f}\u{440}\u{43e}\u{432}\u{435}\u{440}\u{44f}\u{44e}',JoinDiscord=
+'\u{41d}\u{430}\u{448} Discord',LinkCopied=
+'\u{421}\u{441}\u{44b}\u{43b}\u{43a}\u{430} \u{441}\u{43a}\u{43e}\u{43f}\u{438}\u{440}\u{43e}\u{432}\u{430}\u{43d}\u{430}, \u{43e}\u{442}\u{43a}\u{440}\u{43e}\u{439} \u{435}\u{451} \u{432} \u{431}\u{440}\u{430}\u{443}\u{437}\u{435}\u{440}\u{435}'
+,KeyWait=
+'\u{421}\u{43b}\u{438}\u{448}\u{43a}\u{43e}\u{43c} \u{43c}\u{43d}\u{43e}\u{433}\u{43e} \u{43f}\u{43e}\u{43f}\u{44b}\u{442}\u{43e}\u{43a}. \u{41f}\u{43e}\u{434}\u{43e}\u{436}\u{434}\u{438} %d \u{441}'
+,KeyOk=
+'\u{41a}\u{43b}\u{44e}\u{447} \u{43f}\u{43e}\u{434}\u{43e}\u{448}\u{451}\u{43b}, \u{437}\u{430}\u{433}\u{440}\u{443}\u{436}\u{430}\u{44e}'
+,KeyLocked=
+'\u{421}\u{43b}\u{438}\u{448}\u{43a}\u{43e}\u{43c} \u{43c}\u{43d}\u{43e}\u{433}\u{43e} \u{43d}\u{435}\u{432}\u{435}\u{440}\u{43d}\u{44b}\u{445} \u{43a}\u{43b}\u{44e}\u{447}\u{435}\u{439}. \u{41f}\u{43e}\u{43f}\u{440}\u{43e}\u{431}\u{443}\u{439} \u{447}\u{435}\u{440}\u{435}\u{437} %d \u{441}'
+,KeyBad=
+'\u{41a}\u{43b}\u{44e}\u{447} \u{43d}\u{435} \u{43f}\u{43e}\u{434}\u{43e}\u{448}\u{451}\u{43b}. \u{41e}\u{441}\u{442}\u{430}\u{43b}\u{43e}\u{441}\u{44c} \u{43f}\u{43e}\u{43f}\u{44b}\u{442}\u{43e}\u{43a}: %d'
+,PlayerPanel='\u{418}\u{433}\u{440}\u{43e}\u{43a}',Health=
+'\u{417}\u{434}\u{43e}\u{440}\u{43e}\u{432}\u{44c}\u{435}',Speed=
+'\u{421}\u{43a}\u{43e}\u{440}\u{43e}\u{441}\u{442}\u{44c}',State=
+'\u{421}\u{43e}\u{441}\u{442}\u{43e}\u{44f}\u{43d}\u{438}\u{435}',Position=
+'\u{41f}\u{43e}\u{437}\u{438}\u{446}\u{438}\u{44f}',Performance=
+'\u{41f}\u{440}\u{43e}\u{438}\u{437}\u{432}\u{43e}\u{434}\u{438}\u{442}\u{435}\u{43b}\u{44c}\u{43d}\u{43e}\u{441}\u{442}\u{44c}'
+,Ping='\u{41f}\u{438}\u{43d}\u{433}',Stopwatch=
+'\u{421}\u{435}\u{43a}\u{443}\u{43d}\u{434}\u{43e}\u{43c}\u{435}\u{440}',InGame=
+'\u{412} \u{438}\u{433}\u{440}\u{435}',UpdateTitle=
+'\u{41e}\u{431}\u{43d}\u{43e}\u{432}\u{43b}\u{435}\u{43d}\u{438}\u{435} %s',
+UpdateBody=
+'\u{423} \u{442}\u{435}\u{431}\u{44f} %s, \u{432}\u{44b}\u{448}\u{43b}\u{430} \u{432}\u{435}\u{440}\u{441}\u{438}\u{44f} %s'
+,EconomyTitle='\u{42d}\u{43a}\u{43e}\u{43d}\u{43e}\u{43c}\u{438}\u{43c} FPS',
+EconomyBody=
+'FPS \u{43f}\u{440}\u{43e}\u{441}\u{435}\u{43b}, \u{43f}\u{43e}\u{44d}\u{442}\u{43e}\u{43c}\u{443} \u{437}\u{432}\u{451}\u{437}\u{434}\u{44b} \u{438} \u{43f}\u{43b}\u{430}\u{43d}\u{435}\u{442}\u{430} \u{43f}\u{43e}\u{43a}\u{430} \u{432}\u{44b}\u{43a}\u{43b}\u{44e}\u{447}\u{435}\u{43d}\u{44b}'
+,NotificationCenter=
+'\u{423}\u{432}\u{435}\u{434}\u{43e}\u{43c}\u{43b}\u{435}\u{43d}\u{438}\u{44f}',
+MiniMode='\u{41c}\u{438}\u{43d}\u{438}-\u{440}\u{435}\u{436}\u{438}\u{43c}',
+Unsaved=
+'\u{415}\u{441}\u{442}\u{44c} \u{43d}\u{435}\u{441}\u{43e}\u{445}\u{440}\u{430}\u{43d}\u{451}\u{43d}\u{43d}\u{43e}\u{435}'
+,UnsavedHint=
+'\u{418}\u{437}\u{43c}\u{435}\u{43d}\u{435}\u{43d}\u{438}\u{44f} \u{432} %s \u{435}\u{449}\u{451} \u{43d}\u{435} \u{441}\u{43e}\u{445}\u{440}\u{430}\u{43d}\u{435}\u{43d}\u{44b}'
+,WhatsNew=
+'\u{427}\u{442}\u{43e} \u{43d}\u{43e}\u{432}\u{43e}\u{433}\u{43e} \u{432} %s',
+NoNotifications=
+'\u{423}\u{432}\u{435}\u{434}\u{43e}\u{43c}\u{43b}\u{435}\u{43d}\u{438}\u{439} \u{43f}\u{43e}\u{43a}\u{430} \u{43d}\u{435}\u{442}'
+,ClearAll='\u{41e}\u{447}\u{438}\u{441}\u{442}\u{438}\u{442}\u{44c}',From=
+'\u{41e}\u{442}',To='\u{414}\u{43e}',ResetFilters=
+'\u{421}\u{431}\u{440}\u{43e}\u{441}\u{438}\u{442}\u{44c} \u{444}\u{438}\u{43b}\u{44c}\u{442}\u{440}\u{44b}'
+,Navigation='\u{41d}\u{430}\u{432}\u{438}\u{433}\u{430}\u{446}\u{438}\u{44f}',
+Sidebar=
+'\u{411}\u{43e}\u{43a}\u{43e}\u{432}\u{430}\u{44f} \u{43f}\u{430}\u{43d}\u{435}\u{43b}\u{44c}'
+,Rail=
+'\u{422}\u{43e}\u{43b}\u{44c}\u{43a}\u{43e} \u{438}\u{43a}\u{43e}\u{43d}\u{43a}\u{438}'
+,Font='\u{428}\u{440}\u{438}\u{444}\u{442}',FontFailed=
+'\u{42d}\u{442}\u{43e}\u{43c}\u{443} \u{448}\u{440}\u{438}\u{444}\u{442}\u{443} \u{43d}\u{443}\u{436}\u{435}\u{43d} getcustomasset, \u{432} \u{442}\u{432}\u{43e}\u{451}\u{43c} \u{44d}\u{43a}\u{437}\u{435}\u{43a}\u{443}\u{442}\u{43e}\u{440}\u{435} \u{435}\u{433}\u{43e} \u{43d}\u{435}\u{442}'
+,Density='\u{41f}\u{43b}\u{43e}\u{442}\u{43d}\u{43e}\u{441}\u{442}\u{44c}',
+Compact='\u{41a}\u{43e}\u{43c}\u{43f}\u{430}\u{43a}\u{442}\u{43d}\u{43e}',Normal
+='\u{41e}\u{431}\u{44b}\u{447}\u{43d}\u{43e}',Comfortable=
+'\u{41f}\u{440}\u{43e}\u{441}\u{442}\u{43e}\u{440}\u{43d}\u{43e}',Touch=
+'\u{414}\u{43b}\u{44f} \u{43f}\u{430}\u{43b}\u{44c}\u{446}\u{435}\u{432}',
+ToggleStyle=
+'\u{412}\u{438}\u{434} \u{43f}\u{435}\u{440}\u{435}\u{43a}\u{43b}\u{44e}\u{447}\u{430}\u{442}\u{435}\u{43b}\u{435}\u{439}'
+,BackgroundImage=
+'\u{41a}\u{430}\u{440}\u{442}\u{438}\u{43d}\u{43a}\u{430} \u{444}\u{43e}\u{43d}\u{430}'
+,BackgroundDim=
+'\u{417}\u{430}\u{442}\u{435}\u{43c}\u{43d}\u{435}\u{43d}\u{438}\u{435} \u{444}\u{43e}\u{43d}\u{430}'
+,WatermarkItems=
+'\u{427}\u{442}\u{43e} \u{43f}\u{43e}\u{43a}\u{430}\u{437}\u{44b}\u{432}\u{430}\u{442}\u{44c} \u{432} \u{432}\u{43e}\u{442}\u{435}\u{440}\u{43c}\u{430}\u{440}\u{43a}\u{435}'
+,ShowInactive=
+'\u{41f}\u{43e}\u{43a}\u{430}\u{437}\u{44b}\u{432}\u{430}\u{442}\u{44c} \u{43d}\u{435}\u{430}\u{43a}\u{442}\u{438}\u{432}\u{43d}\u{44b}\u{435} \u{431}\u{438}\u{43d}\u{434}\u{44b}'
+,SortBinds=
+'\u{41f}\u{43e}\u{440}\u{44f}\u{434}\u{43e}\u{43a} \u{431}\u{438}\u{43d}\u{434}\u{43e}\u{432}'
+,SortActive=
+'\u{421}\u{43d}\u{430}\u{447}\u{430}\u{43b}\u{430} \u{430}\u{43a}\u{442}\u{438}\u{432}\u{43d}\u{44b}\u{435}'
+,SortName=
+'\u{41f}\u{43e} \u{43d}\u{430}\u{437}\u{432}\u{430}\u{43d}\u{438}\u{44e}',
+SortKey='\u{41f}\u{43e} \u{43a}\u{43b}\u{430}\u{432}\u{438}\u{448}\u{435}',
+Widgets='\u{412}\u{438}\u{434}\u{436}\u{435}\u{442}\u{44b}',AutoEconomy=
+'\u{42d}\u{43a}\u{43e}\u{43d}\u{43e}\u{43c}\u{438}\u{442}\u{44c} FPS \u{441}\u{430}\u{43c}\u{43e}\u{43c}\u{443}'
+,AutoEconomyHint=
+'\u{412}\u{44b}\u{43a}\u{43b}\u{44e}\u{447}\u{430}\u{435}\u{442} \u{44d}\u{444}\u{444}\u{435}\u{43a}\u{442}\u{44b}, \u{43a}\u{43e}\u{433}\u{434}\u{430} FPS \u{43f}\u{430}\u{434}\u{430}\u{435}\u{442}'
+,ShareCode=
+'\u{41f}\u{43e}\u{434}\u{435}\u{43b}\u{438}\u{442}\u{44c}\u{441}\u{44f} \u{43a}\u{43e}\u{434}\u{43e}\u{43c}'
+,ImportCode='\u{412}\u{432}\u{435}\u{441}\u{442}\u{438} \u{43a}\u{43e}\u{434}',
+CodeCopied=
+'\u{41a}\u{43e}\u{434} %s \u{441}\u{43a}\u{43e}\u{43f}\u{438}\u{440}\u{43e}\u{432}\u{430}\u{43d}. \u{41e}\u{442}\u{43f}\u{440}\u{430}\u{432}\u{44c} \u{435}\u{433}\u{43e} \u{434}\u{440}\u{443}\u{433}\u{443}'
+,CodeFailed=
+'\u{41d}\u{435} \u{432}\u{44b}\u{448}\u{43b}\u{43e} \u{437}\u{430}\u{433}\u{440}\u{443}\u{437}\u{438}\u{442}\u{44c}. \u{41d}\u{443}\u{436}\u{43d}\u{430} \u{444}\u{443}\u{43d}\u{43a}\u{446}\u{438}\u{44f} request \u{432} \u{44d}\u{43a}\u{437}\u{435}\u{43a}\u{443}\u{442}\u{43e}\u{440}\u{435}'
+,CodeInvalid=
+'\u{42d}\u{442}\u{43e}\u{442} \u{43a}\u{43e}\u{434} \u{43d}\u{435} \u{43f}\u{43e}\u{434}\u{43e}\u{448}\u{451}\u{43b}'
+,Restore='\u{412}\u{435}\u{440}\u{43d}\u{443}\u{442}\u{44c}',DeletedHint=
+'%s \u{443}\u{434}\u{430}\u{43b}\u{451}\u{43d}',SaveBeforeUnload=
+'\u{421}\u{43e}\u{445}\u{440}\u{430}\u{43d}\u{438}\u{442}\u{44c} \u{438}\u{437}\u{43c}\u{435}\u{43d}\u{435}\u{43d}\u{438}\u{44f} \u{432} %s \u{43f}\u{435}\u{440}\u{435}\u{434} \u{432}\u{44b}\u{433}\u{440}\u{443}\u{437}\u{43a}\u{43e}\u{439}?'
+,DontSave=
+'\u{41d}\u{435} \u{441}\u{43e}\u{445}\u{440}\u{430}\u{43d}\u{44f}\u{442}\u{44c}'
+,Replaced=
+'\u{421}\u{442}\u{430}\u{440}\u{430}\u{44f} \u{43a}\u{43e}\u{43f}\u{438}\u{44f} v%s \u{437}\u{430}\u{43c}\u{435}\u{43d}\u{435}\u{43d}\u{430} \u{43d}\u{430} v%s'
+}}Locale.Names={en='English',ru=
+'\u{420}\u{443}\u{441}\u{441}\u{43a}\u{438}\u{439}'}function Locale.T(key,...)
+local pack=packs[Locale.Current]local text=(pack and pack[key])or packs.en[key]
+or key if select('#',...)>0 then return string.format(text,...)end return text
+end function Locale.Set(code)if not packs[code]then return false end Locale.
+Current=code Locale.Changed:Fire(code)return true end function Locale.Add(code,
+strings,displayName)packs[code]=packs[code]or{}for k,v in strings do packs[code]
+[k]=v end Locale.Names[code]=displayName or Locale.Names[code]or code end
 function Locale.List()local out={}for code in packs do table.insert(out,code)end
 table.sort(out)return out end return Locale end function
 __DARKLUA_BUNDLE_MODULES.j()local v=__DARKLUA_BUNDLE_MODULES.cache.j if not v
@@ -968,104 +1161,132 @@ l()local v=__DARKLUA_BUNDLE_MODULES.cache.l if not v then v={c=__modImpl()}
 __DARKLUA_BUNDLE_MODULES.cache.l=v end return v.c end end do local function 
 __modImpl()local HttpService=game:GetService('HttpService')local Util=
 __DARKLUA_BUNDLE_MODULES.a()local Env=__DARKLUA_BUNDLE_MODULES.e()local Signal=
-__DARKLUA_BUNDLE_MODULES.b()return function(Lib)Lib.Folder='Proximity'Lib.
-SchemaVersion=1 Lib.Migrations={}Lib.ConfigsChanged=Signal.new()Lib.ConfigLoaded
-=Signal.new()Lib.ConfigSaved=Signal.new()Lib.Loading=false local settingsCache=
-nil local function configDir()return Lib.Folder..'/configs'end local function 
-configPath(name)return configDir()..'/'..Util.SafeName(name)..'.json'end local 
-function encode(t)return HttpService:JSONEncode(t)end local function decode(s)
-local ok,result=pcall(HttpService.JSONDecode,HttpService,s)if ok and type(result
-)=='table'then return result end return nil end local function loadSettings()if
-settingsCache then return settingsCache end local raw=Env.Read(Lib.Folder..
-'/settings.json')settingsCache=raw and decode(raw)or{}return settingsCache end
-local flushSettings=Util.Debounce(0.6,function()if settingsCache then Env.Write(
-Lib.Folder..'/settings.json',encode(settingsCache))end end)function Lib:
-GetSetting(key,default)local value=loadSettings()[key]if value==nil then return
-default end return value end function Lib:SetSetting(key,value)loadSettings()[
-key]=value flushSettings()end function Lib:SetFolder(folder)Lib.Folder=Util.
-SafeName(folder)settingsCache=nil Env.MakeFolder(configDir())end function Lib:
-GetState()local state={}for flag,element in Lib.Elements do if element.Save~=
-false then local ok,value=pcall(element._serialize,element)if ok and value~=nil
-then state[flag]=value end end end return state end function Lib:ApplyState(
-state,options)options=options or{}local budget=options.Budget or 0.002 local
-items={}for flag,value in state do local element=Lib.Elements[flag]if element
-and element.Save~=false then table.insert(items,{element,value})end end Lib.
-Loading=true local applied,start=0,os.clock()for i,item in items do local ok=
-pcall(item[1]._deserialize,item[1],item[2],options.Silent)if ok then applied+=1
-end if options.OnProgress then options.OnProgress(i,#items)end if budget>0 and
-os.clock()-start>budget then task.wait()start=os.clock()end end Lib.Loading=
-false return applied,#items end function Lib:SaveConfig(name,meta)name=Util.
-SafeName(name or'')if name==''then return false,'invalid name'end local path=
-configPath(name)local previous=Env.Read(path)local created=os.time()if previous
-then local old=decode(previous)if old and old.Created then created=old.Created
-end end local data={Proximity=Lib.Version,Schema=Lib.SchemaVersion,Name=name,
-Created=created,Updated=os.time(),PlaceId=game.PlaceId,Author=meta and meta.
-Author or nil,Note=meta and meta.Note or nil,Flags=Lib:GetState()}local ok=Env.
-Write(path,encode(data))if ok then Lib.ConfigSaved:Fire(name)Lib.ConfigsChanged:
-Fire()end return ok,ok and name or'write failed'end local function migrate(data)
-local schema=tonumber(data.Schema)or 1 while schema<Lib.SchemaVersion do local
-step=Lib.Migrations[schema]if step then local ok,result=pcall(step,data.Flags or
-{})if ok and type(result)=='table'then data.Flags=result end end schema+=1 end
-return data end function Lib:ReadConfig(name)local raw=Env.Read(configPath(name)
-)if not raw then return nil end local data=decode(raw)if not data then Env.
-Write(configPath(name)..'.broken',raw)return nil end return migrate(data)end
-function Lib:LoadConfig(name,options)local data=Lib:ReadConfig(name)if not data
-then return false,'config not found or broken'end local applied,total=Lib:
-ApplyState(data.Flags or{},options)Lib.ConfigLoaded:Fire(name,applied,total)
-return true,string.format('%d/%d',applied,total)end function Lib:DeleteConfig(
-name)local ok=Env.Delete(configPath(name))if ok then if Lib:GetAutoLoad()==Util.
-SafeName(name)then Lib:SetAutoLoad(nil)end Lib.ConfigsChanged:Fire()end return
-ok end function Lib:ListConfigs()local out={}for _,file in Env.List(configDir())
-do local name=string.match(file,'^(.+)%.json$')if name then table.insert(out,
-name)end end return out end function Lib:ConfigExists(name)return Env.IsFile(
-configPath(name))end function Lib:GetConfigInfo(name)local data=Lib:ReadConfig(
-name)if not data then return nil end return{Name=data.Name or name,Created=data.
-Created,Updated=data.Updated,Author=data.Author,Note=data.Note,Version=data.
-Proximity,Schema=data.Schema,Count=Util.Count(data.Flags or{})}end function Lib:
-RenameConfig(from,to)local raw=Env.Read(configPath(from))if not raw then return
-false end local ok=Env.Write(configPath(to),raw)if ok then Env.Delete(
-configPath(from))if Lib:GetAutoLoad()==Util.SafeName(from)then Lib:SetAutoLoad(
-to)end Lib.ConfigsChanged:Fire()end return ok end function Lib:DuplicateConfig(
-from,to)local raw=Env.Read(configPath(from))if not raw then return false end
-local ok=Env.Write(configPath(to),raw)Lib.ConfigsChanged:Fire()return ok end
-function Lib:DiffConfig(name)local data=Lib:ReadConfig(name)local out={}if not
-data then return out end local current=Lib:GetState()for flag,value in data.
-Flags or{}do if Lib.Elements[flag]and not Util.Equal(current[flag],value)then
-table.insert(out,{Flag=flag,From=current[flag],To=value})end end table.sort(out,
-function(a,b)return a.Flag<b.Flag end)return out end function Lib:ExportConfig(
-name)local flags if name then local data=Lib:ReadConfig(name)if not data then
-return nil end flags=data.Flags else flags=Lib:GetState()end local body=Util.
-Base64Encode(encode({Schema=Lib.SchemaVersion,Flags=flags}))return'PRX1.'..body
-..'.'..Util.Checksum(body)end function Lib:ImportConfig(text,saveAs)text=Util.
-Trim(tostring(text or''))local body,sum=string.match(text,
-'^PRX1%.([%w%+/=]+)%.(%x+)$')if not body then return false,'format'end if Util.
-Checksum(body)~=sum then return false,'checksum'end local data=decode(Util.
-Base64Decode(body))if not data or type(data.Flags)~='table'then return false,
-'decode'end data=migrate(data)if saveAs then local ok=Env.Write(configPath(
-saveAs),encode({Proximity=Lib.Version,Schema=Lib.SchemaVersion,Name=Util.
-SafeName(saveAs),Created=os.time(),Updated=os.time(),Flags=data.Flags}))Lib.
-ConfigsChanged:Fire()return ok,saveAs end Lib:ApplyState(data.Flags)return true
-end function Lib:SetAutoLoad(name)Lib:SetSetting('AutoLoad',name and Util.
-SafeName(name)or false)end function Lib:GetAutoLoad()local name=Lib:GetSetting(
-'AutoLoad')return type(name)=='string'and name or nil end function Lib:
-SetAutoSave(name)Lib:SetSetting('AutoSave',name and Util.SafeName(name)or false)
-end function Lib:GetAutoSave()local name=Lib:GetSetting('AutoSave')return type(
-name)=='string'and name or nil end local autoSave=Util.Debounce(1.5,function()
-local name=Lib:GetAutoSave()if name and not Lib.Unloaded then Lib:SaveConfig(
-name)end end)function Lib:_scheduleAutoSave()if Lib.Loading or not Lib.
-_autoSaveArmed then return end if Lib:GetAutoSave()then autoSave()end end
-function Lib:LoadAutoConfig(options)local name=Lib:GetAutoLoad()if name and Lib:
-ConfigExists(name)then Lib:LoadConfig(name,options)return name end return nil
-end end end function __DARKLUA_BUNDLE_MODULES.m()local v=
-__DARKLUA_BUNDLE_MODULES.cache.m if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.m=v end return v.c end end do local function 
-__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
-__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
-__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
-__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
-=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.k()local
-HttpService=game:GetService('HttpService')local Base={}Base.__index=Base
-function Base.extend(kind)local class=setmetatable({},{__index=Base})class.
+__DARKLUA_BUNDLE_MODULES.b()local Locale=__DARKLUA_BUNDLE_MODULES.j()return
+function(Lib)Lib.Folder='Proximity'Lib.SchemaVersion=1 Lib.Migrations={}Lib.
+ConfigsChanged=Signal.new()Lib.ConfigLoaded=Signal.new()Lib.ConfigSaved=Signal.
+new()Lib.Loading=false local settingsCache=nil local function configDir()return
+Lib.Folder..'/configs'end local function configPath(name)return configDir()..'/'
+..Util.SafeName(name)..'.json'end local function encode(t)return HttpService:
+JSONEncode(t)end Lib.EncryptConfigs=true local SECRET='proximity-planet'local 
+function xor(data)local out=table.create(#data)local n=#SECRET for i=1,#data do
+out[i]=string.char(bit32.bxor(string.byte(data,i),string.byte(SECRET,(i-1)%n+1))
+)end return table.concat(out)end local function protect(json)if not Lib.
+EncryptConfigs then return json end local body=Util.Base64Encode(xor(json))
+return'PRXC1.'..body..'.'..Util.Checksum(body)end local function unprotect(raw)
+local body,sum=string.match(raw,'^PRXC1%.([%w%+/=]+)%.(%x+)%s*$')if not body
+then return raw end if Util.Checksum(body)~=sum then return nil end return xor(
+Util.Base64Decode(body))end local function decode(s)if type(s)~='string'then
+return nil end s=unprotect(s)if not s then return nil end local ok,result=pcall(
+HttpService.JSONDecode,HttpService,s)if ok and type(result)=='table'then return
+result end return nil end local function loadSettings()if settingsCache then
+return settingsCache end local raw=Env.Read(Lib.Folder..'/settings.json')
+settingsCache=raw and decode(raw)or{}return settingsCache end local
+flushSettings=Util.Debounce(0.6,function()if settingsCache then Env.Write(Lib.
+Folder..'/settings.json',encode(settingsCache))end end)function Lib:GetSetting(
+key,default)local value=loadSettings()[key]if value==nil then return default end
+return value end function Lib:SetSetting(key,value)loadSettings()[key]=value
+flushSettings()end function Lib:SetFolder(folder)Lib.Folder=Util.SafeName(folder
+)settingsCache=nil Env.MakeFolder(configDir())end function Lib:GetState()local
+state={}for flag,element in Lib.Elements do if element.Save~=false then local ok
+,value=pcall(element._serialize,element)if ok and value~=nil then state[flag]=
+value end end end return state end function Lib:ApplyState(state,options)options
+=options or{}local budget=options.Budget or 0.002 local items={}for flag,value
+in state do local element=Lib.Elements[flag]if element and element.Save~=false
+then table.insert(items,{element,value})end end Lib.Loading=true local applied,
+start=0,os.clock()for i,item in items do local ok=pcall(item[1]._deserialize,
+item[1],item[2],options.Silent)if ok then applied+=1 end if options.OnProgress
+then options.OnProgress(i,#items)end if budget>0 and os.clock()-start>budget
+then task.wait()start=os.clock()end end Lib.Loading=false return applied,#items
+end function Lib:SaveConfig(name,meta)name=Util.SafeName(name or'')if name==''
+then return false,'invalid name'end local path=configPath(name)local previous=
+Env.Read(path)local created=os.time()if previous then local old=decode(previous)
+if old and old.Created then created=old.Created end end local data={Proximity=
+Lib.Version,Schema=Lib.SchemaVersion,Name=name,Created=created,Updated=os.time()
+,PlaceId=game.PlaceId,Author=meta and meta.Author or nil,Note=meta and meta.Note
+or nil,Flags=Lib:GetState()}if previous then Env.Write(path..'.bak',previous)end
+local ok=Env.Write(path,protect(encode(data)))if ok then Lib.ConfigSaved:Fire(
+name)Lib.ConfigsChanged:Fire()end return ok,ok and name or'write failed'end
+local function migrate(data)local schema=tonumber(data.Schema)or 1 while schema<
+Lib.SchemaVersion do local step=Lib.Migrations[schema]if step then local ok,
+result=pcall(step,data.Flags or{})if ok and type(result)=='table'then data.Flags
+=result end end schema+=1 end return data end function Lib:ReadConfig(name)local
+raw=Env.Read(configPath(name))if not raw then return nil end local data=decode(
+raw)if not data then Env.Write(configPath(name)..'.broken',raw)return nil end
+return migrate(data)end function Lib:LoadConfig(name,options)local data=Lib:
+ReadConfig(name)if not data then return false,'config not found or broken'end
+local applied,total=Lib:ApplyState(data.Flags or{},options)Lib.ConfigLoaded:
+Fire(name,applied,total)return true,string.format('%d/%d',applied,total)end
+function Lib:RestoreBackup(name)local raw=Env.Read(configPath(name)..'.bak')if
+not raw then return false end Env.Write(configPath(name),raw)Lib.ConfigsChanged:
+Fire()return true end function Lib:DeleteConfig(name,quiet)local raw=Env.Read(
+configPath(name))local ok=Env.Delete(configPath(name))if ok and raw and not
+quiet and Lib.Notify then Lib:Notify({Title=Locale.T('Deleted'),Content=Locale.
+T('DeletedHint',name),Type='info',Duration=5,Actions={{Text=Locale.T('Restore'),
+Callback=function()Env.Write(configPath(name),raw)Lib.ConfigsChanged:Fire()end}}
+})end if ok then if Lib:GetAutoLoad()==Util.SafeName(name)then Lib:SetAutoLoad(
+nil)end Lib.ConfigsChanged:Fire()end return ok end function Lib:ListConfigs()
+local out={}for _,file in Env.List(configDir())do local name=string.match(file,
+'^(.+)%.json$')if name then table.insert(out,name)end end return out end
+function Lib:ConfigExists(name)return Env.IsFile(configPath(name))end function
+Lib:GetConfigInfo(name)local data=Lib:ReadConfig(name)if not data then return
+nil end return{Name=data.Name or name,Created=data.Created,Updated=data.Updated,
+Author=data.Author,Note=data.Note,Version=data.Proximity,Schema=data.Schema,
+Count=Util.Count(data.Flags or{})}end function Lib:RenameConfig(from,to)local
+raw=Env.Read(configPath(from))if not raw then return false end local ok=Env.
+Write(configPath(to),raw)if ok then Env.Delete(configPath(from))if Lib:
+GetAutoLoad()==Util.SafeName(from)then Lib:SetAutoLoad(to)end Lib.ConfigsChanged
+:Fire()end return ok end function Lib:DuplicateConfig(from,to)local raw=Env.
+Read(configPath(from))if not raw then return false end local ok=Env.Write(
+configPath(to),raw)Lib.ConfigsChanged:Fire()return ok end function Lib:
+DiffConfig(name)local data=Lib:ReadConfig(name)local out={}if not data then
+return out end local current=Lib:GetState()for flag,value in data.Flags or{}do
+if Lib.Elements[flag]and not Util.Equal(current[flag],value)then table.insert(
+out,{Flag=flag,From=current[flag],To=value})end end table.sort(out,function(a,b)
+return a.Flag<b.Flag end)return out end function Lib:ExportConfig(name)local
+flags if name then local data=Lib:ReadConfig(name)if not data then return nil
+end flags=data.Flags else flags=Lib:GetState()end local body=Util.Base64Encode(
+encode({Schema=Lib.SchemaVersion,Flags=flags}))return'PRX1.'..body..'.'..Util.
+Checksum(body)end function Lib:ImportConfig(text,saveAs)text=Util.Trim(tostring(
+text or''))local body,sum=string.match(text,'^PRX1%.([%w%+/=]+)%.(%x+)$')if not
+body then return false,'format'end if Util.Checksum(body)~=sum then return false
+,'checksum'end local data=decode(Util.Base64Decode(body))if not data or type(
+data.Flags)~='table'then return false,'decode'end data=migrate(data)if saveAs
+then local ok=Env.Write(configPath(saveAs),encode({Proximity=Lib.Version,Schema=
+Lib.SchemaVersion,Name=Util.SafeName(saveAs),Created=os.time(),Updated=os.time()
+,Flags=data.Flags}))Lib.ConfigsChanged:Fire()return ok,saveAs end Lib:
+ApplyState(data.Flags)return true end Lib.ShareService={Upload=function(text)
+local req=Env.Global('request')or Env.Global('http_request')if not req then
+return nil end local ok,res=pcall(req,{Url='https://paste.rs/',Method='POST',
+Body=text,Headers={['Content-Type']='text/plain'}})if ok and res and(res.
+StatusCode==201 or res.StatusCode==206 or res.StatusCode==200)and res.Body then
+return string.match(res.Body,'paste%.rs/([%w]+)')end return nil end,Download=
+function(code)return Env.HttpGet('https://paste.rs/'..code)end}function Lib:
+ShareConfig(name)local text=Lib:ExportConfig(name)if not text then return nil,
+'export'end local code=Lib.ShareService.Upload(text)if not code then return nil,
+'upload'end return code end function Lib:ImportCode(code,saveAs)code=Util.Trim(
+tostring(code or''))code=string.match(code,'([%w]+)$')or code if code==''then
+return false,'empty'end local text=Lib.ShareService.Download(code)if not text
+then return false,'download'end return Lib:ImportConfig(text,saveAs)end function
+Lib:SetAutoLoad(name)Lib:SetSetting('AutoLoad',name and Util.SafeName(name)or
+false)end function Lib:GetAutoLoad()local name=Lib:GetSetting('AutoLoad')return
+type(name)=='string'and name or nil end function Lib:SetAutoSave(name)Lib:
+SetSetting('AutoSave',name and Util.SafeName(name)or false)end function Lib:
+GetAutoSave()local name=Lib:GetSetting('AutoSave')return type(name)=='string'and
+name or nil end local autoSave=Util.Debounce(1.5,function()local name=Lib:
+GetAutoSave()if name and not Lib.Unloaded then Lib:SaveConfig(name)end end)
+function Lib:_scheduleAutoSave()if Lib.Loading or not Lib._autoSaveArmed then
+return end if Lib:GetAutoSave()then autoSave()end end function Lib:
+LoadAutoConfig(options)local name=Lib:GetAutoLoad()if name and Lib:ConfigExists(
+name)then Lib:LoadConfig(name,options)return name end return nil end end end
+function __DARKLUA_BUNDLE_MODULES.m()local v=__DARKLUA_BUNDLE_MODULES.cache.m if
+not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.m=v end return v.c
+end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
+local Signal=__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()
+local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()
+local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()
+local Locale=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.
+k()local HttpService=game:GetService('HttpService')local Base={}Base.__index=
+Base function Base.extend(kind)local class=setmetatable({},{__index=Base})class.
 __index=class class.Kind=kind return class end function Base.new(class,section,
 options)options=options or{}local Lib=Shared.Lib local self=setmetatable({},
 class)self.Type=class.Kind self.Library=Lib self.Section=section self.Window=
@@ -1142,29 +1363,31 @@ self._destroyed then return end self._mounted=true self:_build(parent,order)if
 self.Frame then self.Frame.LayoutOrder=order or self.Frame.LayoutOrder self:
 _wireRow()end for _,link in self.Links do self:_mountLink(link)end self:_render(
 false)self:_applyState()end function Base:IsMounted()return self._mounted end
-function Base:_row(parent,height)height=height or 34 local row=Util.New('Frame',
-{Name=self.Type..'_'..self.Name,BackgroundTransparency=1,Size=UDim2.new(1,0,0,
-height),Parent=parent})Theme.Paint(row,{BackgroundColor3='Surface2'})Util.
-Corner(6,row)self.Frame=row local textBox=Util.New('Frame',{Name='Text',
-BackgroundTransparency=1,Size=UDim2.new(1,-110,1,0),Position=UDim2.fromOffset(8,
-0),Parent=row})self._textBox=textBox local title=Util.Label({Name='Title',Text=
-self.Name,FontFace=Theme.Fonts.Medium,TextSize=Theme.Size.Body,TextTruncate=Enum
-.TextTruncate.AtEnd,Size=UDim2.new(1,0,0,16),Position=UDim2.new(0,0,0.5,-8),
-Parent=textBox})Theme.Paint(title,{TextColor3='Text'})self._title=title local
-iconId=self.Icon and Icons.Get(self.Icon)if iconId then Util.New('UIPadding',{
-PaddingLeft=UDim.new(0,22),Parent=textBox})local icon=Util.New('ImageLabel',{
-Name='Icon',BackgroundTransparency=1,Image=iconId,Size=UDim2.fromOffset(15,15),
-Parent=textBox})Theme.Paint(icon,{ImageColor3='TextDim'})local function follow()
-icon.Position=UDim2.new(0,-22,title.Position.Y.Scale,title.Position.Y.Offset+1)
-end title:GetPropertyChangedSignal('Position'):Connect(follow)follow()self._icon
-=icon end if self.Description and self.Description~=''then title.Position=UDim2.
-new(0,0,0.5,-15)local desc=Util.Label({Name='Description',Text=self.Description,
-FontFace=Theme.Fonts.Regular,TextSize=Theme.Size.Small,TextTruncate=Enum.
-TextTruncate.AtEnd,Size=UDim2.new(1,0,0,13),Position=UDim2.new(0,0,0.5,2),Parent
-=textBox})Theme.Paint(desc,{TextColor3='TextMute'})self._desc=desc row.Size=
-UDim2.new(1,0,0,math.max(height,42))end local badge=Util.New('Frame',{Name=
-'Badge',AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,14),
-AnchorPoint=Vector2.new(0,0.5),Visible=false,Parent=textBox})Theme.Paint(badge,{
+function Base:_row(parent,height)local baseHeight=height or 34 height=math.
+floor(baseHeight*(Shared.Density or 1)+0.5)local row=Util.New('Frame',{Name=self
+.Type..'_'..self.Name,BackgroundTransparency=1,Size=UDim2.new(1,0,0,height),
+Parent=parent})Theme.Paint(row,{BackgroundColor3='Surface2'})Util.Corner(6,row)
+row:SetAttribute('BaseH',baseHeight)self.Frame=row local textBox=Util.New(
+'Frame',{Name='Text',BackgroundTransparency=1,Size=UDim2.new(1,-110,1,0),
+Position=UDim2.fromOffset(8,0),Parent=row})self._textBox=textBox local title=
+Util.Label({Name='Title',Text=self.Name,FontFace=Theme.Fonts.Medium,TextSize=
+Theme.Size.Body,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,0,0,16),
+Position=UDim2.new(0,0,0.5,-8),Parent=textBox})Theme.Paint(title,{TextColor3=
+'Text'})self._title=title local iconId=self.Icon and Icons.Get(self.Icon)if
+iconId then Util.New('UIPadding',{PaddingLeft=UDim.new(0,22),Parent=textBox})
+local icon=Util.New('ImageLabel',{Name='Icon',BackgroundTransparency=1,Image=
+iconId,Size=UDim2.fromOffset(15,15),Parent=textBox})Theme.Paint(icon,{
+ImageColor3='TextDim'})local function follow()icon.Position=UDim2.new(0,-22,
+title.Position.Y.Scale,title.Position.Y.Offset+1)end title:
+GetPropertyChangedSignal('Position'):Connect(follow)follow()self._icon=icon end
+if self.Description and self.Description~=''then title.Position=UDim2.new(0,0,
+0.5,-15)local desc=Util.Label({Name='Description',Text=self.Description,FontFace
+=Theme.Fonts.Regular,TextSize=Theme.Size.Small,TextTruncate=Enum.TextTruncate.
+AtEnd,Size=UDim2.new(1,0,0,13),Position=UDim2.new(0,0,0.5,2),Parent=textBox})
+Theme.Paint(desc,{TextColor3='TextMute'})self._desc=desc row.Size=UDim2.new(1,0,
+0,math.max(height,42))end local badge=Util.New('Frame',{Name='Badge',
+AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,14),AnchorPoint=
+Vector2.new(0,0.5),Visible=false,Parent=textBox})Theme.Paint(badge,{
 BackgroundColor3='Accent'})Util.Corner(4,badge)Util.Padding(badge,0,5,0,5)local
 badgeLabel=Util.Label({AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0
 ,1),FontFace=Theme.Fonts.Bold,TextSize=9,Text='',Parent=badge})Theme.Paint(
@@ -1190,19 +1413,21 @@ Shared.Overlay row.MouseEnter:Connect(function()if not self:IsLocked()then Tween
 .Play(row,{BackgroundTransparency=0.55},0.12)end end)row.MouseLeave:Connect(
 function()Tween.Play(row,{BackgroundTransparency=1},0.18)end)Overlay.Hover(row,
 function()if self:IsLocked()and self.LockReason then return'\u{1f512} '..self.
-LockReason end return self.TooltipText end)row.InputBegan:Connect(function(input
-)if input.UserInputType==Enum.UserInputType.MouseButton2 then self:
-OpenContextMenu(Vector2.new(input.Position.X,input.Position.Y))end end)end
-function Base:_applyState()if not self._mounted or not self.Frame then return
-end local visible=self.Visible and self._depsOk~=false self.Frame.Visible=
-visible local locked=self:IsLocked()if self._lock then self._lock.Visible=locked
-end if self._title then local token=self.Risky and'Risky'or(locked and'TextMute'
-or(self._titleToken or'Text'))Theme.Paint(self._title,{TextColor3=token},0.15)
-end if self._onState then self:_onState(locked)end end function Base:
-_contextItems()local T=Locale.T local items={}if self.Default~=nil then table.
-insert(items,{Text=T('Reset'),Icon='rotate-ccw',Callback=function()self:
-_userSet(Util.DeepCopy(self.Default))end})end if self.Value~=nil then table.
-insert(items,{Text=T('Copy'),Icon='copy',Callback=function()self:Copy()end})
+LockReason end if self.Library.Debug then return(self.TooltipText and(self.
+TooltipText..'\n')or'')..'<font color="#8a8a92">'..self.Type..(self.Flag and(
+'  \u{b7}  '..self.Flag)or'')..'</font>'end return self.TooltipText end)row.
+InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.
+MouseButton2 then self:OpenContextMenu(Vector2.new(input.Position.X,input.
+Position.Y))end end)end function Base:_applyState()if not self._mounted or not
+self.Frame then return end local visible=self.Visible and self._depsOk~=false
+self.Frame.Visible=visible local locked=self:IsLocked()if self._lock then self.
+_lock.Visible=locked end if self._title then local token=self.Risky and'Risky'or
+(locked and'TextMute'or(self._titleToken or'Text'))Theme.Paint(self._title,{
+TextColor3=token},0.15)end if self._onState then self:_onState(locked)end end
+function Base:_contextItems()local T=Locale.T local items={}if self.Default~=nil
+then table.insert(items,{Text=T('Reset'),Icon='rotate-ccw',Callback=function()
+self:_userSet(Util.DeepCopy(self.Default))end})end if self.Value~=nil then table
+.insert(items,{Text=T('Copy'),Icon='copy',Callback=function()self:Copy()end})
 table.insert(items,{Text=T('Paste'),Icon='clipboard',Callback=function()self:
 Paste()end})end if self.Flag then table.insert(items,{Text=T('CopyFlag'),Icon=
 'hash',Hint=self.Flag,Callback=function()Env.Clipboard(self.Flag)end})end local
@@ -1273,73 +1498,139 @@ __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
 __DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
 Shared=__DARKLUA_BUNDLE_MODULES.k()local Base=__DARKLUA_BUNDLE_MODULES.n()local
-classes={}local Toggle=Base.extend('Toggle')classes.Toggle=Toggle function
-Toggle.new(section,options)local self=Base.new(Toggle,section,options)self.
-Default=Util.Opt(options,'Default','Value','State')==true self.Value=self.
-Default self.Style=options.Style or'Switch'self.ConfirmText=options.Confirm
-return self:_register()end function Toggle:_normalize(v)if v==nil then return
-false end return v==true or v==1 or v=='true'end function Toggle:Toggle()return
-self:Set(not self.Value)end function Toggle:On()return self:Set(true)end
-function Toggle:Off()return self:Set(false)end function Toggle:IsOn()return self
-.Value end function Toggle:_request(value)if value and(self.ConfirmText or self.
-Risky)and not self._confirmed and self.Window then task.spawn(function()local
-text=type(self.ConfirmText)=='string'and self.ConfirmText or Locale.T(
-'RiskyConfirm')if self.Window:Confirm({Title=self.Name,Content=text,Danger=true}
-)then self._confirmed=true self:_userSet(true)end end)return end self:_userSet(
-value)end function Toggle:_build(parent)local row=self:_row(parent)local holder=
-self._right if self.Style=='Checkbox'then local box=Util.New('Frame',{Name=
-'Checkbox',Size=UDim2.fromOffset(18,18),LayoutOrder=100,Parent=holder})Util.
-Corner(5,box)local stroke=Util.Stroke(box)local check=Util.New('ImageLabel',{
-BackgroundTransparency=1,Image=Icons.Get('check')or'',Size=UDim2.fromOffset(12,
-12),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Parent=
-box})self._box,self._boxStroke,self._check=box,stroke,check else local track=
-Util.New('Frame',{Name='Switch',Size=UDim2.fromOffset(32,18),LayoutOrder=100,
-Parent=holder})Util.Round(track)local stroke=Util.Stroke(track)local knob=Util.
-New('Frame',{Name='Knob',Size=UDim2.fromOffset(12,12),AnchorPoint=Vector2.new(0,
-0.5),Parent=track})Util.Round(knob)self._track,self._trackStroke,self._knob=
-track,stroke,knob end local hit=Util.Hitbox(row,0)hit.Activated:Connect(function
-()if not self:IsLocked()then self:_request(not self.Value)end end)self._hit=hit
-end function Toggle:_render(animate)local t=animate and 0.18 or 0 local on=self.
-Value self._titleToken=on and'Text'or'TextDim'if self._title and not self.Risky
-and not self:IsLocked()then Theme.Paint(self._title,{TextColor3=self._titleToken
-},t)end if self._icon then Theme.Paint(self._icon,{ImageColor3=on and'Accent'or
-'TextMute'},t)end if self._track then Theme.Paint(self._track,{BackgroundColor3=
-on and'Accent'or'Surface3'},t)Theme.Paint(self._trackStroke,{Color=on and
-'Accent'or'StrokeHi'},t)Theme.Paint(self._knob,{BackgroundColor3=on and
-'AccentInk'or'TextDim'},t)Tween.Play(self._knob,{Position=on and UDim2.new(1,-15
-,0.5,0)or UDim2.new(0,3,0.5,0)},t*1.3,Enum.EasingStyle.Back)elseif self._box
-then Theme.Paint(self._box,{BackgroundColor3=on and'Accent'or'Surface3'},t)Theme
-.Paint(self._boxStroke,{Color=on and'Accent'or'StrokeHi'},t)Theme.Paint(self.
-_check,{ImageColor3='AccentInk'})self._check.ImageTransparency=on and 0 or 1
-self._check.Size=on and UDim2.fromOffset(12,12)or UDim2.fromOffset(4,4)if
-animate and on then self._check.Size=UDim2.fromOffset(4,4)Tween.Play(self._check
-,{Size=UDim2.fromOffset(12,12)},0.22,Enum.EasingStyle.Back)end end end function
-Toggle:SetStyle(style)self.Style=style return self end local Button=Base.extend(
-'Button')classes.Button=Button function Button.new(section,options)local self=
-Base.new(Button,section,options)self.Style=options.Style or'Secondary'self.Icon=
-options.Icon self.Hint=options.Hint self.ConfirmText=options.Confirm self.
-DoubleClick=options.DoubleClick self.Cooldown=options.Cooldown or 0 self._last=0
-return self:_register()end function Button:_callbackArgs()return nil end
-function Button:Press()if self:IsLocked()then return self end local now=os.
-clock()if now-self._last<self.Cooldown then return self end self._last=now self:
-_fireCallbacks()return self end Button.Click=Button.Press function Button:
-_activate()if self:IsLocked()then return end if self.DoubleClick and not self.
-_armed then self._armed=true self._label.Text=Locale.T('Confirm')..'?'task.
-delay(2,function()self._armed=false if self._label then self._label.Text=self.
-Name end end)return end self._armed=false if self._label then self._label.Text=
-self.Name end if self.ConfirmText and self.Window then task.spawn(function()if
-self.Window:Confirm({Title=self.Name,Content=type(self.ConfirmText)=='string'and
-self.ConfirmText or nil,Danger=self.Style=='Danger'})then self:Press()end end)
-return end self:Press()end local buttonStyles={Primary={Bg='Accent',Text=
-'AccentInk',Stroke='Accent',BgT=0},Secondary={Bg='Surface3',Text='Text',Stroke=
-'Stroke',BgT=0},Ghost={Bg='Surface3',Text='TextDim',Stroke='Stroke',BgT=1},
-Danger={Bg='Surface3',Text='Risky',Stroke='Risky',BgT=0}}function Button:_build(
-parent)local row=Util.New('Frame',{Name='Button_'..self.Name,
-BackgroundTransparency=1,Size=UDim2.new(1,0,0,34),Parent=parent})self.Frame=row
-local button=Util.New('TextButton',{Text='',AutoButtonColor=false,Size=UDim2.
-new(1,0,0,30),Position=UDim2.fromOffset(0,2),ClipsDescendants=true,Parent=row})
-Util.Corner(6,button)local stroke=Util.Stroke(button)local label=Util.Label({
-Text=self.Name,FontFace=Theme.Fonts.SemiBold,TextSize=Theme.Size.Body,
+classes={}local Toggle=Base.extend('Toggle')classes.Toggle=Toggle Toggle.Styles=
+{'Switch','Compact','Checkbox','Chip','Radio','Square','Pill','Dot','Orbit'}
+function Toggle.new(section,options)local self=Base.new(Toggle,section,options)
+self.Default=Util.Opt(options,'Default','Value','State')==true self.Value=self.
+Default self.Style=options.Style self.ConfirmText=options.Confirm return self:
+_register()end function Toggle:_normalize(v)if v==nil then return false end
+return v==true or v==1 or v=='true'end function Toggle:Toggle()return self:Set(
+not self.Value)end function Toggle:On()return self:Set(true)end function Toggle:
+Off()return self:Set(false)end function Toggle:IsOn()return self.Value end
+function Toggle:_request(value)if value and(self.ConfirmText or self.Risky)and
+not self._confirmed and self.Window then task.spawn(function()local text=type(
+self.ConfirmText)=='string'and self.ConfirmText or Locale.T('RiskyConfirm')if
+self.Window:Confirm({Title=self.Name,Content=text,Danger=true})then self.
+_confirmed=true self:_userSet(true)end end)return end self:_userSet(value)end
+function Toggle:_navActivate()self:_request(not self.Value)end function Toggle:
+_navAdjust(dir)self:_request(dir>0)end function Toggle:GetStyle()return self.
+Style or Shared.Lib.ToggleStyle or'Switch'end local styles={}local function 
+track(holder,w,h,radius)local f=Util.New('Frame',{Name='Control',Size=UDim2.
+fromOffset(w,h),LayoutOrder=100,Parent=holder})if radius then Util.Corner(radius
+,f)else Util.Round(f)end local stroke=Util.Stroke(f)return f,stroke end local 
+function knob(parent,size,radius)local k=Util.New('Frame',{Name='Knob',Size=
+UDim2.fromOffset(size,size),AnchorPoint=Vector2.new(0,0.5),Parent=parent})if
+radius then Util.Corner(radius,k)else Util.Round(k)end return k end styles.
+Switch={build=function(self,holder)local f,stroke=track(holder,32,18)return{
+Frame=f,Stroke=stroke,Knob=knob(f,12)}end,paint=function(r,on,t)Theme.Paint(r.
+Frame,{BackgroundColor3=on and'Accent'or'Surface3'},t)Theme.Paint(r.Stroke,{
+Color=on and'Accent'or'StrokeHi'},t)Tween.Play(r.Stroke,{Thickness=on and 2.5 or
+1,Transparency=on and 0.75 or 0},t)Theme.Paint(r.Knob,{BackgroundColor3=on and
+'AccentInk'or'TextDim'},t)Tween.Play(r.Knob,{Position=on and UDim2.new(1,-15,0.5
+,0)or UDim2.new(0,3,0.5,0)},t*1.3,Enum.EasingStyle.Back)end}styles.Square={build
+=function(self,holder)local f,stroke=track(holder,32,18,4)return{Frame=f,Stroke=
+stroke,Knob=knob(f,12,3)}end,paint=styles.Switch.paint}styles.Compact={build=
+function(self,holder)local f,stroke=track(holder,16,16)local dot=Util.New(
+'Frame',{Size=UDim2.fromOffset(0,0),AnchorPoint=Vector2.new(0.5,0.5),Position=
+UDim2.fromScale(0.5,0.5),Parent=f})Util.Round(dot)f.BackgroundTransparency=1
+return{Frame=f,Stroke=stroke,Dot=dot}end,paint=function(r,on,t)Theme.Paint(r.
+Stroke,{Color=on and'Accent'or'StrokeHi'},t)Theme.Paint(r.Dot,{BackgroundColor3=
+'Accent'})Tween.Play(r.Dot,{Size=on and UDim2.fromOffset(10,10)or UDim2.
+fromOffset(0,0)},t*1.4,Enum.EasingStyle.Back)end}styles.Radio={build=function(
+self,holder)local f,stroke=track(holder,18,18)local dot=Util.New('Frame',{Size=
+UDim2.fromOffset(8,8),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(
+0.5,0.5),Parent=f})Util.Round(dot)return{Frame=f,Stroke=stroke,Dot=dot}end,paint
+=function(r,on,t)Theme.Paint(r.Frame,{BackgroundColor3=on and'Accent'or
+'Surface3'},t)Theme.Paint(r.Stroke,{Color=on and'Accent'or'StrokeHi'},t)Theme.
+Paint(r.Dot,{BackgroundColor3='AccentInk'})Tween.Play(r.Dot,{Size=on and UDim2.
+fromOffset(7,7)or UDim2.fromOffset(0,0)},t,Enum.EasingStyle.Back)end}styles.
+Checkbox={build=function(self,holder)local f,stroke=track(holder,18,18,5)local
+check=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('check')or
+'',Size=UDim2.fromOffset(12,12),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromScale(0.5,0.5),Parent=f})return{Frame=f,Stroke=stroke,Check=check}end,paint=
+function(r,on,t,animate)Theme.Paint(r.Frame,{BackgroundColor3=on and'Accent'or
+'Surface3'},t)Theme.Paint(r.Stroke,{Color=on and'Accent'or'StrokeHi'},t)Theme.
+Paint(r.Check,{ImageColor3='AccentInk'})r.Check.ImageTransparency=on and 0 or 1
+r.Check.Size=UDim2.fromOffset(on and 12 or 4,on and 12 or 4)if animate and on
+then r.Check.Size=UDim2.fromOffset(4,4)Tween.Play(r.Check,{Size=UDim2.
+fromOffset(12,12)},0.22,Enum.EasingStyle.Back)end end}styles.Chip={build=
+function(self,holder)local f,stroke=track(holder,40,20,5)local label=Util.Label(
+{Text='OFF',FontFace=Theme.Fonts.Bold,TextSize=10,TextXAlignment=Enum.
+TextXAlignment.Center,Size=UDim2.fromScale(1,1),Parent=f})return{Frame=f,Stroke=
+stroke,Label=label}end,paint=function(r,on,t)Theme.Paint(r.Frame,{
+BackgroundColor3=on and'Accent'or'Surface3'},t)Theme.Paint(r.Stroke,{Color=on
+and'Accent'or'StrokeHi'},t)Theme.Paint(r.Label,{TextColor3=on and'AccentInk'or
+'TextMute'},t)r.Label.Text=on and'ON'or'OFF'end}styles.Pill={build=function(self
+,holder)local f,stroke=track(holder,52,20)local k=Util.New('Frame',{Size=UDim2.
+fromOffset(24,14),AnchorPoint=Vector2.new(0,0.5),Parent=f})Util.Round(k)local
+label=Util.Label({Text='',FontFace=Theme.Fonts.Bold,TextSize=9,TextXAlignment=
+Enum.TextXAlignment.Center,Size=UDim2.fromScale(1,1),Parent=k})return{Frame=f,
+Stroke=stroke,Knob=k,Label=label}end,paint=function(r,on,t)Theme.Paint(r.Frame,{
+BackgroundColor3='Surface3'},t)Theme.Paint(r.Stroke,{Color=on and'Accent'or
+'StrokeHi'},t)Theme.Paint(r.Knob,{BackgroundColor3=on and'Accent'or'Surface2'},t
+)Theme.Paint(r.Label,{TextColor3=on and'AccentInk'or'TextMute'},t)r.Label.Text=
+on and'ON'or'OFF'Tween.Play(r.Knob,{Position=on and UDim2.new(1,-27,0.5,0)or
+UDim2.new(0,3,0.5,0)},t*1.3,Enum.EasingStyle.Quint)end}styles.Dot={build=
+function(self,holder)local f=Util.New('Frame',{Name='Control',
+BackgroundTransparency=1,Size=UDim2.fromOffset(18,18),LayoutOrder=100,Parent=
+holder})local dot=Util.New('Frame',{Size=UDim2.fromOffset(8,8),AnchorPoint=
+Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Parent=f})Util.Round(dot)
+local halo=Util.Stroke(dot,nil,4,1)return{Frame=f,Dot=dot,Halo=halo}end,paint=
+function(r,on,t)Theme.Paint(r.Dot,{BackgroundColor3=on and'Accent'or'StrokeHi'},
+t)Theme.Paint(r.Halo,{Color='Accent'})Tween.Play(r.Halo,{Transparency=on and
+0.75 or 1},t)end}styles.Orbit={build=function(self,holder)local f=Util.New(
+'Frame',{Name='Control',BackgroundTransparency=1,Size=UDim2.fromOffset(34,20),
+LayoutOrder=100,Parent=holder})local ring=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.fromOffset(34,12),AnchorPoint=Vector2.new(
+0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Rotation=-12,Parent=f})Util.Round(
+ring)local stroke=Util.Stroke(ring)local planet=Util.New('Frame',{Size=UDim2.
+fromOffset(10,10),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,
+0.5),Parent=f})Util.Round(planet)local moon=Util.New('Frame',{Size=UDim2.
+fromOffset(6,6),AnchorPoint=Vector2.new(0.5,0.5),Parent=f})Util.Round(moon)
+return{Frame=f,Stroke=stroke,Planet=planet,Moon=moon}end,paint=function(r,on,t)
+Theme.Paint(r.Stroke,{Color=on and'Accent'or'StrokeHi'},t)Theme.Paint(r.Planet,{
+BackgroundColor3=on and'Accent'or'Surface3'},t)Theme.Paint(r.Moon,{
+BackgroundColor3=on and'Accent'or'TextMute'},t)Tween.Play(r.Moon,{Position=on
+and UDim2.new(1,-2,0.32,0)or UDim2.new(0,2,0.68,0)},t*1.6,Enum.EasingStyle.Sine)
+end}Toggle._styleImpl=styles function Toggle:_buildControl()if self._control and
+self._control.Frame then self._control.Frame:Destroy()end local style=styles[
+self:GetStyle()]or styles.Switch self._styleImpl=style self._control=style.
+build(self,self._right)end function Toggle:_build(parent)local row=self:_row(
+parent)self:_buildControl()local hit=Util.Hitbox(row,0)hit.Activated:Connect(
+function()if not self:IsLocked()then self:_request(not self.Value)end end)self.
+_hit=hit end function Toggle:_render(animate)local t=animate and 0.18 or 0 local
+on=self.Value self._titleToken=on and'Text'or'TextDim'if self._title and not
+self.Risky and not self:IsLocked()then Theme.Paint(self._title,{TextColor3=self.
+_titleToken},t)end if self._icon then Theme.Paint(self._icon,{ImageColor3=on and
+'Accent'or'TextMute'},t)end if self._control and self._styleImpl then self.
+_styleImpl.paint(self._control,on,t,animate)end end function Toggle:SetStyle(
+style)self.Style=style if self._mounted then self:_buildControl()self:_render(
+false)end return self end local Button=Base.extend('Button')classes.Button=
+Button function Button.new(section,options)local self=Base.new(Button,section,
+options)self.Style=options.Style or'Secondary'self.Icon=options.Icon self.Hint=
+options.Hint self.ConfirmText=options.Confirm self.DoubleClick=options.
+DoubleClick self.Cooldown=options.Cooldown or 0 self._last=0 return self:
+_register()end function Button:_callbackArgs()return nil end function Button:
+_navActivate()self:_activate()end function Button:Press()if self:IsLocked()then
+return self end local now=os.clock()if now-self._last<self.Cooldown then return
+self end self._last=now self:_fireCallbacks()return self end Button.Click=Button
+.Press function Button:_activate()if self:IsLocked()then return end if self.
+DoubleClick and not self._armed then self._armed=true self._label.Text=Locale.T(
+'Confirm')..'?'task.delay(2,function()self._armed=false if self._label then self
+._label.Text=self.Name end end)return end self._armed=false if self._label then
+self._label.Text=self.Name end if self.ConfirmText and self.Window then task.
+spawn(function()if self.Window:Confirm({Title=self.Name,Content=type(self.
+ConfirmText)=='string'and self.ConfirmText or nil,Danger=self.Style=='Danger'})
+then self:Press()end end)return end self:Press()end local buttonStyles={Primary=
+{Bg='Accent',Text='AccentInk',Stroke='Accent',BgT=0},Secondary={Bg='Surface3',
+Text='Text',Stroke='Stroke',BgT=0},Ghost={Bg='Surface3',Text='TextDim',Stroke=
+'Stroke',BgT=1},Danger={Bg='Surface3',Text='Risky',Stroke='Risky',BgT=0}}
+function Button:_build(parent)local row=Util.New('Frame',{Name='Button_'..self.
+Name,BackgroundTransparency=1,Size=UDim2.new(1,0,0,34),Parent=parent})self.Frame
+=row local button=Util.New('TextButton',{Text='',AutoButtonColor=false,Size=
+UDim2.new(1,0,0,30),Position=UDim2.fromOffset(0,2),ClipsDescendants=true,Parent=
+row})Util.Corner(6,button)local stroke=Util.Stroke(button)local label=Util.
+Label({Text=self.Name,FontFace=Theme.Fonts.SemiBold,TextSize=Theme.Size.Body,
 TextXAlignment=Enum.TextXAlignment.Center,Size=UDim2.fromScale(1,1),Parent=
 button})local icon=Util.New('ImageLabel',{BackgroundTransparency=1,Size=UDim2.
 fromOffset(15,15),AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,10,0.5,0),
@@ -1468,69 +1759,74 @@ function Spacer:_applyState()end local Navigate=Base.extend('Navigate')classes.
 Navigate=Navigate function Navigate.new(section,options)local self=Base.new(
 Navigate,section,options)self.Target=options.Page or options.Target self.Icon=
 options.Icon self.Value2=options.Value return self:_register()end function
-Navigate:_callbackArgs()return nil end function Navigate:_build(parent)local row
-=self:_row(parent)local value=Util.Label({Text=self.Value2 or'',FontFace=Theme.
-Fonts.Regular,TextSize=12,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
-fromOffset(0,16),LayoutOrder=99,Parent=self._right})Theme.Paint(value,{
-TextColor3='TextMute'})self._valueLabel=value local arrow=Util.New('ImageLabel',
-{BackgroundTransparency=1,Image=Icons.Get('chevron-right')or'',Size=UDim2.
-fromOffset(15,15),LayoutOrder=100,Parent=self._right})Theme.Paint(arrow,{
-ImageColor3='TextDim'})local hit=Util.Hitbox(row,0)hit.Activated:Connect(
-function()if self:IsLocked()then return end if self.Target and self.Target.
-Select then self.Target:Select()end self:_fireCallbacks()end)end function
-Navigate:SetValue(text)self.Value2=text if self._valueLabel then self.
-_valueLabel.Text=text or''end return self end function Navigate:_contextItems()
-return{}end return classes end function __DARKLUA_BUNDLE_MODULES.o()local v=
-__DARKLUA_BUNDLE_MODULES.cache.o if not v then v={c=__modImpl()}
+Navigate:_callbackArgs()return nil end function Navigate:_navActivate()if self.
+Target and self.Target.Select then self.Target:Select()end self:_fireCallbacks()
+end function Navigate:_build(parent)local row=self:_row(parent)local value=Util.
+Label({Text=self.Value2 or'',FontFace=Theme.Fonts.Regular,TextSize=12,
+AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,16),LayoutOrder=99,
+Parent=self._right})Theme.Paint(value,{TextColor3='TextMute'})self._valueLabel=
+value local arrow=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.
+Get('chevron-right')or'',Size=UDim2.fromOffset(15,15),LayoutOrder=100,Parent=
+self._right})Theme.Paint(arrow,{ImageColor3='TextDim'})local hit=Util.Hitbox(row
+,0)hit.Activated:Connect(function()if self:IsLocked()then return end if self.
+Target and self.Target.Select then self.Target:Select()end self:_fireCallbacks()
+end)end function Navigate:SetValue(text)self.Value2=text if self._valueLabel
+then self._valueLabel.Text=text or''end return self end function Navigate:
+_contextItems()return{}end return classes end function __DARKLUA_BUNDLE_MODULES.
+o()local v=__DARKLUA_BUNDLE_MODULES.cache.o if not v then v={c=__modImpl()}
 __DARKLUA_BUNDLE_MODULES.cache.o=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
-__DARKLUA_BUNDLE_MODULES.g()__DARKLUA_BUNDLE_MODULES.i()__DARKLUA_BUNDLE_MODULES
-.k()local Base=__DARKLUA_BUNDLE_MODULES.n()local UIS=Env.Service(
-'UserInputService')local Slider=Base.extend('Slider')function Slider.new(section
-,options)local self=Base.new(Slider,section,options)self.Min=options.Min or 0
-self.Max=options.Max or 100 if self.Min>self.Max then self.Min,self.Max=self.Max
-,self.Min end self.Labels=options.Labels or options.TextProps if self.Labels
-then self.Min,self.Max,self.Step=1,#self.Labels,1 else local decimals=options.
-Decimals or options.Rounding or options.Round self.Step=options.Step or options.
-Increment or(decimals and 10^-decimals)or 1 end self.Range=options.Range==true
-self.Suffix=options.Suffix or''self.Prefix=options.Prefix or''self.Format=
-options.Format self.Presets=options.Presets local default=Util.Opt(options,
-'Default','Value')if self.Range then default=default or{self.Min,self.Max}elseif
-self.Labels and type(default)=='string'then default=table.find(self.Labels,
-default)or 1 end self.Default=self:_normalize(default~=nil and default or self.
-Min)self.Value=Util.DeepCopy(self.Default)return self:_register()end function
-Slider:_snap(v)v=tonumber(v)if not v then return nil end return Util.Clamp(Util.
-Snap(v,self.Step,self.Min),self.Min,self.Max)end function Slider:_normalize(v)if
-self.Range then if type(v)~='table'then return nil end local a=self:_snap(v.Min
-or v[1])local b=self:_snap(v.Max or v[2])if not a or not b then return nil end
-if a>b then a,b=b,a end return{Min=a,Max=b}end if self.Labels and type(v)==
-'string'then v=table.find(self.Labels,v)end return self:_snap(v)end function
-Slider:_callbackArgs()if self.Labels then return self.Labels[self.Value],self.
-Value end return self.Value end function Slider:GetText()return self:_format(
-self.Value)end function Slider:_format(v)if self.Range and type(v)=='table'then
-return self:_format(v.Min)..' - '..self:_format(v.Max)end if self.Labels then
-return tostring(self.Labels[v]or v)end if self.Format then local ok,text=pcall(
-self.Format,v)if ok then return tostring(text)end end return self.Prefix..Util.
-FormatNumber(v,Util.Decimals(self.Step))..self.Suffix end function Slider:
-GetPercent()local v=self.Range and self.Value.Max or self.Value return(v-self.
-Min)/math.max(self.Max-self.Min,1e-9)end function Slider:SetMin(min)self.Min=min
-self:Set(self.Value,true)if self._mounted then self:_render(true)end return self
-end function Slider:SetMax(max)self.Max=max self:Set(self.Value,true)if self.
-_mounted then self:_render(true)end return self end function Slider:SetLimits(
-min,max)self.Min,self.Max=min,max local v=self:_normalize(self.Value)if v~=nil
-then self.Value=v end if self._mounted then self:_render(true)end return self
-end Slider.SetRange=Slider.SetLimits function Slider:SetStep(step)self.Step=step
-return self end function Slider:Increment(n)if self.Range then return self end
-return self:Set(self.Value+(n or 1)*self.Step)end function Slider:Decrement(n)
-return self:Increment(-(n or 1))end function Slider:_serialize()if self.Range
-then return{self.Value.Min,self.Value.Max}end return self.Value end function
-Slider:_build(parent)local row=self:_row(parent,46)row.Size=UDim2.new(1,0,0,self
-.Description and 54 or 46)local textBox=self._textBox textBox.Size=UDim2.new(1,-
-16,0,22)textBox.Position=UDim2.fromOffset(8,2)self._title.Position=UDim2.new(0,0
-,0,4)if self._desc then self._desc.Position=UDim2.new(0,0,0,20)end self._right.
-Size=UDim2.new(0,0,0,26)local value=Util.New('TextBox',{Name='Value',
-BackgroundTransparency=1,ClearTextOnFocus=false,TextEditable=false,Text='',
+__DARKLUA_BUNDLE_MODULES.g()__DARKLUA_BUNDLE_MODULES.i()local Shared=
+__DARKLUA_BUNDLE_MODULES.k()local Base=__DARKLUA_BUNDLE_MODULES.n()local UIS=Env
+.Service('UserInputService')local Slider=Base.extend('Slider')function Slider.
+new(section,options)local self=Base.new(Slider,section,options)self.Min=options.
+Min or 0 self.Max=options.Max or 100 if self.Min>self.Max then Shared.Lib:
+_optionWarning('Slider',self.Name,string.format(
+'Min (%s) is bigger than Max (%s), swapped them',tostring(self.Min),tostring(
+self.Max)))self.Min,self.Max=self.Max,self.Min end self.Labels=options.Labels or
+options.TextProps if self.Labels then self.Min,self.Max,self.Step=1,#self.Labels
+,1 else local decimals=options.Decimals or options.Rounding or options.Round
+self.Step=options.Step or options.Increment or(decimals and 10^-decimals)or 1
+end self.Range=options.Range==true self.Suffix=options.Suffix or''self.Prefix=
+options.Prefix or''self.Format=options.Format self.Presets=options.Presets local
+default=Util.Opt(options,'Default','Value')if self.Range then default=default or
+{self.Min,self.Max}elseif self.Labels and type(default)=='string'then default=
+table.find(self.Labels,default)or 1 end self.Default=self:_normalize(default~=
+nil and default or self.Min)self.Value=Util.DeepCopy(self.Default)return self:
+_register()end function Slider:_snap(v)v=tonumber(v)if not v then return nil end
+return Util.Clamp(Util.Snap(v,self.Step,self.Min),self.Min,self.Max)end function
+Slider:_normalize(v)if self.Range then if type(v)~='table'then return nil end
+local a=self:_snap(v.Min or v[1])local b=self:_snap(v.Max or v[2])if not a or
+not b then return nil end if a>b then a,b=b,a end return{Min=a,Max=b}end if self
+.Labels and type(v)=='string'then v=table.find(self.Labels,v)end return self:
+_snap(v)end function Slider:_callbackArgs()if self.Labels then return self.
+Labels[self.Value],self.Value end return self.Value end function Slider:GetText(
+)return self:_format(self.Value)end function Slider:_format(v)if self.Range and
+type(v)=='table'then return self:_format(v.Min)..' - '..self:_format(v.Max)end
+if self.Labels then return tostring(self.Labels[v]or v)end if self.Format then
+local ok,text=pcall(self.Format,v)if ok then return tostring(text)end end return
+self.Prefix..Util.FormatNumber(v,Util.Decimals(self.Step))..self.Suffix end
+function Slider:GetPercent()local v=self.Range and self.Value.Max or self.Value
+return(v-self.Min)/math.max(self.Max-self.Min,1e-9)end function Slider:SetMin(
+min)self.Min=min self:Set(self.Value,true)if self._mounted then self:_render(
+true)end return self end function Slider:SetMax(max)self.Max=max self:Set(self.
+Value,true)if self._mounted then self:_render(true)end return self end function
+Slider:SetLimits(min,max)self.Min,self.Max=min,max local v=self:_normalize(self.
+Value)if v~=nil then self.Value=v end if self._mounted then self:_render(true)
+end return self end Slider.SetRange=Slider.SetLimits function Slider:SetStep(
+step)self.Step=step return self end function Slider:Increment(n)if self.Range
+then return self end return self:Set(self.Value+(n or 1)*self.Step)end function
+Slider:Decrement(n)return self:Increment(-(n or 1))end function Slider:
+_navActivate()end function Slider:_navAdjust(dir)if not self.Range then self:
+_userSet(self.Value+dir*self.Step)end end function Slider:_serialize()if self.
+Range then return{self.Value.Min,self.Value.Max}end return self.Value end
+function Slider:_build(parent)local row=self:_row(parent,46)row.Size=UDim2.new(1
+,0,0,self.Description and 54 or 46)local textBox=self._textBox textBox.Size=
+UDim2.new(1,-16,0,22)textBox.Position=UDim2.fromOffset(8,2)self._title.Position=
+UDim2.new(0,0,0,4)if self._desc then self._desc.Position=UDim2.new(0,0,0,20)end
+self._right.Size=UDim2.new(0,0,0,26)local value=Util.New('TextBox',{Name='Value'
+,BackgroundTransparency=1,ClearTextOnFocus=false,TextEditable=false,Text='',
 FontFace=Theme.Fonts.Mono,TextSize=12,TextXAlignment=Enum.TextXAlignment.Right,
 AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,16),LayoutOrder=100,
 Parent=self._right})Theme.Paint(value,{TextColor3='Text'})self._valueBox=value
@@ -1630,18 +1926,21 @@ or{}self.Prefixes=options.Prefixes or options.Flags or{}self.Display=options.
 Display local default=Util.Opt(options,'Default','Value')if self.Multi then
 default=type(default)=='table'and default or(default~=nil and{default}or{})end
 self.Default=self:_normalize(default)or(self.Multi and{}or nil)self.Value=Util.
-DeepCopy(self.Default)return self:_register()end function Dropdown:_normalize(v)
-if self.Multi then if type(v)~='table'then v=v~=nil and{v}or{}end local out,seen
-={},{}local list=v if#v==0 and next(v)~=nil then list={}for k,on in v do if on
-then table.insert(list,k)end end end for _,item in list do if table.find(self.
-Values,item)and not seen[item]then seen[item]=true table.insert(out,item)end end
-table.sort(out,function(a,b)return(table.find(self.Values,a)or 0)<(table.find(
-self.Values,b)or 0)end)return out end if v==nil then return nil end if table.
-find(self.Values,v)then return v end return nil end function Dropdown:Set(value,
-silent)if not self.Multi and value==nil then if self.Value==nil then return self
-end local old=self.Value self.Value=nil if self.Flag then self.Library.Flags[
-self.Flag]=nil end if self._mounted then self:_render(true)end if not silent
-then self:_fireCallbacks()end self.Changed:Fire(nil,old)self.Library:
+DeepCopy(self.Default)local default=Util.Opt(options,'Default','Value')if
+default~=nil and not self.Multi and self.Value==nil then Shared.Lib:
+_optionWarning('Dropdown',self.Name,'default value '..tostring(default)..
+' is not in Values')end return self:_register()end function Dropdown:_normalize(
+v)if self.Multi then if type(v)~='table'then v=v~=nil and{v}or{}end local out,
+seen={},{}local list=v if#v==0 and next(v)~=nil then list={}for k,on in v do if
+on then table.insert(list,k)end end end for _,item in list do if table.find(self
+.Values,item)and not seen[item]then seen[item]=true table.insert(out,item)end
+end table.sort(out,function(a,b)return(table.find(self.Values,a)or 0)<(table.
+find(self.Values,b)or 0)end)return out end if v==nil then return nil end if
+table.find(self.Values,v)then return v end return nil end function Dropdown:Set(
+value,silent)if not self.Multi and value==nil then if self.Value==nil then
+return self end local old=self.Value self.Value=nil if self.Flag then self.
+Library.Flags[self.Flag]=nil end if self._mounted then self:_render(true)end if
+not silent then self:_fireCallbacks()end self.Changed:Fire(nil,old)self.Library:
 _onElementChanged(self,nil,old)return self end return Base.Set(self,value,silent
 )end function Dropdown:_text(v)if v==nil then return self.Placeholder end local
 text=self.Display and self.Display(v)or tostring(v)local prefix=self.Prefixes[v]
@@ -1677,36 +1976,63 @@ self end Dropdown.Add=Dropdown.AddValue function Dropdown:RemoveValue(v)local
 list=table.clone(self.Values)local i=table.find(list,v)if i then table.remove(
 list,i)self:SetValues(list,true)end return self end Dropdown.Remove=Dropdown.
 RemoveValue function Dropdown:Clear()return self:Set(self.Multi and{}or nil)end
-function Dropdown:_serialize()return self.Value end function Dropdown:_build(
-parent)local row=self:_row(parent,34)local box=Util.New('TextButton',{Name='Box'
-,Text='',AutoButtonColor=false,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
-fromOffset(0,24),LayoutOrder=100,Parent=self._right})Util.Corner(5,box)Theme.
-Paint(box,{BackgroundColor3='Surface3'})local stroke=Util.Stroke(box)Theme.
-Paint(stroke,{Color='Stroke'})Util.Padding(box,0,26,0,9)Util.New(
-'UISizeConstraint',{MinSize=Vector2.new(70,24),MaxSize=Vector2.new(170,24),
-Parent=box})local label=Util.Label({Text='',FontFace=Theme.Fonts.Medium,TextSize
-=12,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,1),TextTruncate=
-Enum.TextTruncate.AtEnd,Parent=box})Util.New('UISizeConstraint',{MaxSize=Vector2
-.new(135,24),Parent=label})local chevron=Util.New('ImageLabel',{
-BackgroundTransparency=1,Image=Icons.Get('chevron-down')or'',Size=UDim2.
-fromOffset(13,13),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,19,0.5,0),
-Parent=box})Theme.Paint(chevron,{ImageColor3='TextDim'})self._box,self.
-_boxStroke,self._label,self._chevron=box,stroke,label,chevron box.Activated:
-Connect(function()if self:IsLocked()then return end if self:IsOpen()then self:
+function Dropdown:_serialize()return self.Value end function Dropdown:
+_navActivate()if self:IsOpen()then self:Close()else self:Open()end end function
+Dropdown:_navAdjust(dir)if self.Multi or#self.Values==0 then return end local i=
+table.find(self.Values,self.Value)or 0 i=(i-1+dir)%#self.Values+1 self:_userSet(
+self.Values[i])end function Dropdown:_build(parent)local row=self:_row(parent,34
+)local box=Util.New('TextButton',{Name='Box',Text='',AutoButtonColor=false,
+AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,24),LayoutOrder=100,
+Parent=self._right})Util.Corner(5,box)Theme.Paint(box,{BackgroundColor3=
+'Surface3'})local stroke=Util.Stroke(box)Theme.Paint(stroke,{Color='Stroke'})
+Util.Padding(box,0,26,0,9)Util.New('UISizeConstraint',{MinSize=Vector2.new(70,24
+),MaxSize=Vector2.new(190,24),Parent=box})local label=Util.Label({Text='',
+FontFace=Theme.Fonts.Medium,TextSize=12,AutomaticSize=Enum.AutomaticSize.X,Size=
+UDim2.fromScale(0,1),TextTruncate=Enum.TextTruncate.AtEnd,Parent=box})Util.New(
+'UISizeConstraint',{MaxSize=Vector2.new(135,24),Parent=label})local chevron=Util
+.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('chevron-down')or'',
+Size=UDim2.fromOffset(13,13),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1
+,19,0.5,0),Parent=box})Theme.Paint(chevron,{ImageColor3='TextDim'})self._box,
+self._boxStroke,self._label,self._chevron=box,stroke,label,chevron box.Activated
+:Connect(function()if self:IsLocked()then return end if self:IsOpen()then self:
 Close()else self:Open()end end)local hit=Util.Hitbox(row,0)hit.Activated:
 Connect(function()if not self:IsLocked()and not self:IsOpen()then self:Open()end
-end)end function Dropdown:_render()if self._label then self._label.Text=self:
-GetText()Theme.Paint(self._label,{TextColor3=(self.Value==nil or(self.Multi and#
-self.Value==0))and'TextMute'or'Text'})end if self._popup and self._popup.Open
-then self:_paintRows()end end function Dropdown:IsOpen()return self._popup~=nil
-and self._popup.Open end function Dropdown:Close()if self._popup then self.
-_popup:Close()end return self end function Dropdown:Open()if not self._box or
-self:IsOpen()then return self end local Overlay=Shared.Overlay local popup=
-Overlay.Popup({Anchor=self._box,Width=math.max(180,self._box.AbsoluteSize.X/(
-Shared.Scale or 1)),MaxHeight=260,Align='End',Padding=4,OnClose=function()Theme.
-Paint(self._boxStroke,{Color='Stroke'},0.15)Tween.Play(self._chevron,{Rotation=0
-},0.15)end})self._popup=popup Theme.Paint(self._boxStroke,{Color='Accent'},0.15)
-Tween.Play(self._chevron,{Rotation=180},0.15)self._query=''local useSearch=self.
+end)end function Dropdown:_renderChips()local box=self._box if not box then
+return end if self._chips then self._chips:Destroy()self._chips=nil end if not
+self.Multi or#self.Value==0 then self._label.Visible=true return end self._label
+.Visible=false local holder=Util.New('Frame',{Name='Chips',
+BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
+fromScale(0,1),Parent=box})Util.List(holder,4,Enum.FillDirection.Horizontal,Enum
+.HorizontalAlignment.Left,Enum.VerticalAlignment.Center)self._chips=holder local
+shown=0 for _,v in self.Value do if shown>=2 then break end shown+=1 local chip=
+Util.New('TextButton',{Text='',AutoButtonColor=false,AutomaticSize=Enum.
+AutomaticSize.X,Size=UDim2.fromOffset(0,18),LayoutOrder=shown,Parent=holder})
+Util.Corner(4,chip)Util.Padding(chip,0,4,0,6)Theme.Paint(chip,{BackgroundColor3=
+'Surface2'})Util.List(chip,3,Enum.FillDirection.Horizontal,Enum.
+HorizontalAlignment.Left,Enum.VerticalAlignment.Center)local text=Util.Label({
+Text=Util.Truncate(self:_text(v),10),FontFace=Theme.Fonts.Medium,TextSize=11,
+AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,1),Parent=chip})Theme.
+Paint(text,{TextColor3='Text'})local x=Util.New('ImageButton',{
+BackgroundTransparency=1,Image=Icons.Get('x')or'',Size=UDim2.fromOffset(10,10),
+LayoutOrder=2,Parent=chip})Theme.Paint(x,{ImageColor3='TextMute'})x.Activated:
+Connect(function()if not self:IsLocked()then local before=Util.DeepCopy(self.
+Value)self:Deselect(v)self.Library:_pushHistory(self,before,Util.DeepCopy(self.
+Value))end end)end if#self.Value>shown then local more=Util.Label({Text='+'..(#
+self.Value-shown),FontFace=Theme.Fonts.MonoBold,TextSize=11,AutomaticSize=Enum.
+AutomaticSize.X,Size=UDim2.fromScale(0,1),LayoutOrder=9,Parent=holder})Theme.
+Paint(more,{TextColor3='TextDim'})end end function Dropdown:_render()self:
+_renderChips()if self._label then self._label.Text=self:GetText()Theme.Paint(
+self._label,{TextColor3=(self.Value==nil or(self.Multi and#self.Value==0))and
+'TextMute'or'Text'})end if self._popup and self._popup.Open then self:
+_paintRows()end end function Dropdown:IsOpen()return self._popup~=nil and self.
+_popup.Open end function Dropdown:Close()if self._popup then self._popup:Close()
+end return self end function Dropdown:Open()if not self._box or self:IsOpen()
+then return self end local Overlay=Shared.Overlay local popup=Overlay.Popup({
+Anchor=self._box,Width=math.max(180,self._box.AbsoluteSize.X/(Shared.Scale or 1)
+),MaxHeight=260,Align='End',Padding=4,OnClose=function()Theme.Paint(self.
+_boxStroke,{Color='Stroke'},0.15)Tween.Play(self._chevron,{Rotation=0},0.15)end}
+)self._popup=popup Theme.Paint(self._boxStroke,{Color='Accent'},0.15)Tween.Play(
+self._chevron,{Rotation=180},0.15)self._query=''local useSearch=self.
 SearchEnabled if useSearch==nil then useSearch=#self.Values>7 end if useSearch
 then local search=Util.New('TextBox',{Name='Search',Text='',PlaceholderText=
 Locale.T('Search')..'\u{2026}',ClearTextOnFocus=false,FontFace=Theme.Fonts.
@@ -1807,16 +2133,17 @@ Text=string.sub(box.Text,1,self.MaxLength)return end if not self.Finished and
 not self.Numeric and box:IsFocused()then commit()end end)end function Input:
 _render()if self._box and not self._box:IsFocused()then self._box.Text=tostring(
 self.Value)end end function Input:_onState(locked)if self._box then self._box.
-TextEditable=not locked end end function Input:Focus()if self._box then self.
-_box:CaptureFocus()end return self end function Input:Blur()if self._box then
-self._box:ReleaseFocus()end return self end function Input:Clear()return self:
-Set(self.Numeric and(self.Min or 0)or'')end function Input:SetPlaceholder(text)
-self.Placeholder=text if self._box then self._box.PlaceholderText=text end
-return self end classes.TextBox=Input classes.Textbox=Input return classes end
-function __DARKLUA_BUNDLE_MODULES.q()local v=__DARKLUA_BUNDLE_MODULES.cache.q if
-not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.q=v end return v.c
-end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
-local Signal=__DARKLUA_BUNDLE_MODULES.b()__DARKLUA_BUNDLE_MODULES.d()local Env=
+TextEditable=not locked end end function Input:_navActivate()self:Focus()end
+function Input:Focus()if self._box then self._box:CaptureFocus()end return self
+end function Input:Blur()if self._box then self._box:ReleaseFocus()end return
+self end function Input:Clear()return self:Set(self.Numeric and(self.Min or 0)or
+'')end function Input:SetPlaceholder(text)self.Placeholder=text if self._box
+then self._box.PlaceholderText=text end return self end classes.TextBox=Input
+classes.Textbox=Input return classes end function __DARKLUA_BUNDLE_MODULES.q()
+local v=__DARKLUA_BUNDLE_MODULES.cache.q if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.q=v end return v.c end end do local function 
+__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
+__DARKLUA_BUNDLE_MODULES.b()__DARKLUA_BUNDLE_MODULES.d()local Env=
 __DARKLUA_BUNDLE_MODULES.e()local Keys=__DARKLUA_BUNDLE_MODULES.f()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()__DARKLUA_BUNDLE_MODULES.i()local Locale=
 __DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.k()local Base=
@@ -1824,217 +2151,225 @@ __DARKLUA_BUNDLE_MODULES.n()local UIS=Env.Service('UserInputService')local
 RunService=Env.Service('RunService')local classes={}local Keybind=Base.extend(
 'Keybind')classes.Keybind=Keybind local registry={}local listening=nil local
 dispatcherReady=false local function startDispatcher()if dispatcherReady then
-return end dispatcherReady=true Shared.Maid:Connect(UIS.InputBegan,function(
-input,processed)local name=Keys.FromInput(input)if listening then local kb=
-listening if input.KeyCode==Enum.KeyCode.Escape then kb:_stopListening()elseif
-input.KeyCode==Enum.KeyCode.Backspace then kb:_stopListening()kb:_userSet('None'
-)elseif name and not(kb.Blacklist and table.find(kb.Blacklist,name))then if name
-=='MB1'and os.clock()-kb._listenAt<0.2 then return end kb:_stopListening()kb:
-_userSet(name)end return end if not name or UIS:GetFocusedTextBox()then return
-end if processed and string.sub(name,1,2)=='MB'then return end for _,kb in table
-.clone(registry)do if kb.Value==name and not kb:IsLocked()then kb:_down()end end
-end)Shared.Maid:Connect(UIS.InputEnded,function(input)local name=Keys.FromInput(
-input)if not name then return end for _,kb in table.clone(registry)do if kb.
-Value==name then kb:_up()end end end)end function Keybind.new(section,options)
-local self=Base.new(Keybind,section,options)self.Default=Keys.Normalize(Util.
-Opt(options,'Default','Value','Key'))self.Value=self.Default self.Mode=options.
-Mode or(self.Parent and self.Parent.Type=='Toggle'and'Toggle')or'Press'self.
-Modes=options.Modes or{'Toggle','Hold','Always','Release'}self.Blacklist=options
-.Blacklist self.ShowInList=options.ShowInList~=false self.OnPress=options.
-OnPress self.OnRelease=options.OnRelease self.OnToggle=options.OnToggle self.
-Active=self.Mode=='Always'self.StateChanged=Signal.new()if self.Parent and self.
-Name=='Keybind'then self.Name=self.Parent.Name end table.insert(registry,self)
-startDispatcher()return self:_register()end function Keybind:_normalize(v)return
-Keys.Normalize(v)end function Keybind:GetKey()return self.Value end function
-Keybind:GetKeyCode()return Keys.ToEnum(self.Value)end function Keybind:SetKey(
-key)return self:Set(key)end function Keybind:Clear()return self:Set('None')end
-function Keybind:GetMode()return self.Mode end function Keybind:IsActive()return
-self.Active end function Keybind:SetMode(mode)if not table.find({'Toggle','Hold'
-,'Always','Release','Press'},mode)then return self end self.Mode=mode if mode==
-'Always'then self:_setActive(true)elseif mode~='Toggle'then self:_setActive(
-false)end if self.Flag then self.Library:_onElementChanged(self,self.Value,self.
-Value)end self.Library.KeybindsChanged:Fire()return self end function Keybind:
-_setActive(state)if self.Active==state then return end self.Active=state self.
-StateChanged:Fire(state)self.Library.KeybindsChanged:Fire()if self.OnToggle then
-Util.SafeCall(self.OnToggle,state)end local parent=self.Parent if parent and
-parent.Type=='Toggle'and parent.Value~=state then parent:Set(state)end end
-function Keybind:_down()local mode=self.Mode if self.OnPress then Util.SafeCall(
-self.OnPress)end local parent=self.Parent if parent and parent.Type=='Button'
-then parent:Press()end if mode=='Toggle'then local current=parent and parent.
-Type=='Toggle'and parent.Value or self.Active self:_setActive(not current)elseif
-mode=='Hold'then self:_setActive(true)elseif mode=='Press'and not parent then
-self.StateChanged:Fire(true)end end function Keybind:_up()if self.OnRelease then
-Util.SafeCall(self.OnRelease)end if self.Mode=='Hold'then self:_setActive(false)
-elseif self.Mode=='Release'then local parent=self.Parent self:_setActive(not(
-parent and parent.Type=='Toggle'and parent.Value or self.Active))end end
-function Keybind:Press()self:_down()task.defer(function()self:_up()end)return
-self end function Keybind:Listen()if listening and listening~=self then
-listening:_stopListening()end listening=self Shared.KeybindListening=true self.
-_listenAt=os.clock()if self._chipLabel then self._chipLabel.Text='\u{2026}'Theme
-.Paint(self._chipStroke,{Color='Accent'},0.1)end return self end function
-Keybind:_stopListening()if listening==self then listening=nil task.defer(
-function()Shared.KeybindListening=listening~=nil end)end if self._chipStroke
-then Theme.Paint(self._chipStroke,{Color='Stroke'},0.1)end self:_render()end
-function Keybind:_serialize()return{self.Value,self.Mode}end function Keybind:
-_deserialize(v,silent)if type(v)=='table'then self:Set(v[1]or v.Key,silent)if v[
-2]or v.Mode then self:SetMode(v[2]or v.Mode)end else self:Set(v,silent)end end
-function Keybind:_chip(holder,order)local chip=Util.New('TextButton',{Name=
-'Keybind',Text='',AutoButtonColor=false,AutomaticSize=Enum.AutomaticSize.X,Size=
-UDim2.fromOffset(0,20),LayoutOrder=order or 100,Parent=holder})Util.Corner(5,
-chip)Util.Padding(chip,0,7,0,7)Util.New('UISizeConstraint',{MinSize=Vector2.new(
-26,20),Parent=chip})Theme.Paint(chip,{BackgroundColor3='Surface3'})local stroke=
-Util.Stroke(chip)Theme.Paint(stroke,{Color='Stroke'})local label=Util.Label({
-Text='',FontFace=Theme.Fonts.MonoBold,TextSize=11,TextXAlignment=Enum.
-TextXAlignment.Center,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,
-1),Parent=chip})self._chip,self._chipStroke,self._chipLabel=chip,stroke,label
-chip.Activated:Connect(function()if not self:IsLocked()then self:Listen()end end
-)chip.MouseButton2Click:Connect(function()if not self:IsLocked()then self:
-OpenModeMenu()end end)Shared.Overlay.Hover(chip,function()return Locale.T('Mode'
-)..': '..Locale.T(self.Mode=='Press'and'Press_'or self.Mode)..'  \u{b7}  RMB'end
-)return chip end function Keybind:OpenModeMenu()local items={}for _,mode in self
-.Modes do table.insert(items,{Text=(self.Mode==mode and'\u{25cf} 'or'   ')..
-Locale.T(mode=='Press'and'Press_'or mode),Callback=function()self:SetMode(mode)
-end})end table.insert(items,{Separator=true})table.insert(items,{Text=Locale.T(
-'Reset'),Icon='rotate-ccw',Callback=function()self:_userSet(self.Default)end})
-table.insert(items,{Text=Locale.T('None'),Icon='x',Callback=function()self:
-_userSet('None')end})Shared.Overlay.Menu(items,{Anchor=self._chip,Align='End',
-Width=160})end function Keybind:_buildInline(holder,order)self:_chip(holder,
-order)self._mounted=true end function Keybind:_build(parent)self:_row(parent)
-self:_chip(self._right,100)end function Keybind:_render()if self._chipLabel and
-listening~=self then self._chipLabel.Text=Keys.Display(self.Value)Theme.Paint(
-self._chipLabel,{TextColor3=self.Value=='None'and'TextMute'or'Text'})end end
-function Keybind:Destroy()local i=table.find(registry,self)if i then table.
-remove(registry,i)end if listening==self then listening=nil end if self._chip
-and self.Parent then self._chip:Destroy()end Base.Destroy(self)self.Library.
-KeybindsChanged:Fire()end function Keybind.All()return registry end local
-ColorPicker=Base.extend('ColorPicker')classes.ColorPicker=ColorPicker local
-recent={}local defaultPresets={Color3.fromRGB(255,255,255),Color3.fromRGB(160,
-160,168),Color3.fromRGB(60,60,66),Color3.fromRGB(232,76,84),Color3.fromRGB(240,
-196,110),Color3.fromRGB(120,220,160),Color3.fromRGB(110,170,255),Color3.fromRGB(
-190,130,255)}function ColorPicker.new(section,options)local self=Base.new(
-ColorPicker,section,options)self.Default=Util.ToColor(Util.Opt(options,'Default'
-,'Value','Color'))or Color3.new(1,1,1)self.Value=self.Default self.HasAlpha=
-options.Alpha~=nil or options.Transparency~=nil self.Alpha=self.HasAlpha and(
-options.Alpha or options.Transparency or 0)or 0 self.DefaultAlpha=self.Alpha
-self.Presets=options.Presets or defaultPresets self.Rainbow=false if self.Parent
-and self.Name=='ColorPicker'then self.Name=self.Parent.Name end return self:
-_register()end function ColorPicker:_normalize(v)return Util.ToColor(v)end
-function ColorPicker:_callbackArgs()return self.Value,self.Alpha end function
-ColorPicker:GetColor()return self.Value end function ColorPicker:SetColor(c)
-return self:Set(c)end function ColorPicker:GetAlpha()return self.Alpha end
-function ColorPicker:SetAlpha(a,silent)a=math.clamp(tonumber(a)or 0,0,1)if a==
-self.Alpha then return self end self.Alpha=a if self._mounted then self:_render(
-)end if not silent then self:_fireCallbacks()end self.Changed:Fire(self.Value,
-self.Value)self.Library:_onElementChanged(self,self.Value,self.Value)return self
-end function ColorPicker:GetHex()return Util.ToHex(self.Value)end function
-ColorPicker:SetHex(hex)return self:Set(hex)end function ColorPicker:Reset(silent
-)self:SetAlpha(self.DefaultAlpha,true)return Base.Reset(self,silent)end function
-ColorPicker:SetRainbow(on,speed)self.Rainbow=on if self._rainbowConn then self.
-_rainbowConn:Disconnect()self._rainbowConn=nil end if on then speed=speed or 4
-self._rainbowConn=RunService.Heartbeat:Connect(function()local _,s,v=self.Value:
-ToHSV()self:Set(Color3.fromHSV((os.clock()/speed)%1,math.max(s,0.6),math.max(v,
-0.8)))end)self.Maid:Give(self._rainbowConn)end return self end function
-ColorPicker:_serialize()return{Util.ToHex(self.Value),self.Alpha}end function
-ColorPicker:_deserialize(v,silent)if type(v)=='table'then self:SetAlpha(v[2]or v
-.Alpha or 0,true)self:Set(v[1]or v.Color,silent)else self:Set(v,silent)end end
-function ColorPicker:_swatch(holder,order)local swatch=Util.New('TextButton',{
-Name='Swatch',Text='',AutoButtonColor=false,Size=UDim2.fromOffset(28,16),
-LayoutOrder=order or 100,Parent=holder})Util.Corner(4,swatch)local stroke=Util.
-Stroke(swatch)Theme.Paint(stroke,{Color='StrokeHi'})self._swatch=swatch swatch.
-Activated:Connect(function()if self:IsLocked()then return end if self._popup and
-self._popup.Open then self:Close()else self:Open()end end)return swatch end
-function ColorPicker:_buildInline(holder,order)self:_swatch(holder,order)self.
-_mounted=true end function ColorPicker:_build(parent)self:_row(parent)self:
-_swatch(self._right,100)end function ColorPicker:_render()if self._swatch then
-self._swatch.BackgroundColor3=self.Value self._swatch.BackgroundTransparency=
-self.Alpha*0.85 end if self._popupRefs then self:_paintPopup()end end function
-ColorPicker:Close()if self._popup then self._popup:Close()end return self end
-function ColorPicker:Open()if not self._swatch or(self._popup and self._popup.
-Open)then return self end local Overlay=Shared.Overlay local startColor,
-startAlpha=self.Value,self.Alpha local popup=Overlay.Popup({Anchor=self._swatch,
-Width=236,MaxHeight=400,Align='End',Padding=10,Spacing=8,OnClose=function()self.
-_popupRefs=nil if self.Value~=startColor then table.insert(recent,1,self.Value)
-for i=#recent,2,-1 do if recent[i]==self.Value then table.remove(recent,i)end
-end while#recent>8 do table.remove(recent)end self.Library:_pushHistory(self,
-startColor,self.Value)end end})self._popup=popup local z=popup.Frame.ZIndex
-local content=popup.Content local h,s,v=self.Value:ToHSV()self._hsv={h,s,v}local
-refs={}local sv=Util.New('TextButton',{Name='SV',Text='',AutoButtonColor=false,
-Size=UDim2.new(1,0,0,140),LayoutOrder=1,ZIndex=z,Parent=content})Util.Corner(6,
-sv)local white=Util.New('Frame',{Size=UDim2.fromScale(1,1),BackgroundColor3=
-Color3.new(1,1,1),ZIndex=z,Parent=sv})Util.Corner(6,white)Util.Gradient(white,
-nil,NumberSequence.new(0,1),0)local black=Util.New('Frame',{Size=UDim2.
-fromScale(1,1),BackgroundColor3=Color3.new(0,0,0),ZIndex=z,Parent=sv})Util.
-Corner(6,black)Util.Gradient(black,nil,NumberSequence.new(1,0),90)local svKnob=
-Util.New('Frame',{Size=UDim2.fromOffset(12,12),AnchorPoint=Vector2.new(0.5,0.5),
-BackgroundTransparency=1,ZIndex=z+2,Parent=sv})Util.Round(svKnob)Util.Stroke(
-svKnob,Color3.new(1,1,1),2)refs.SV,refs.SVKnob=sv,svKnob local hue=Util.New(
-'TextButton',{Name='Hue',Text='',AutoButtonColor=false,Size=UDim2.new(1,0,0,10),
-BackgroundColor3=Color3.new(1,1,1),LayoutOrder=2,ZIndex=z,Parent=content})Util.
-Round(hue)local keys={}for i=0,6 do table.insert(keys,ColorSequenceKeypoint.new(
-i/6,Color3.fromHSV(i/6%1,1,1)))end Util.Gradient(hue,ColorSequence.new(keys))
-local hueKnob=Util.New('Frame',{Size=UDim2.fromOffset(6,14),AnchorPoint=Vector2.
-new(0.5,0.5),Position=UDim2.fromScale(0,0.5),BackgroundColor3=Color3.new(1,1,1),
-ZIndex=z+2,Parent=hue})Util.Corner(3,hueKnob)Util.Stroke(hueKnob,Color3.new(0,0,
-0),1,0.5)refs.Hue,refs.HueKnob=hue,hueKnob if self.HasAlpha then local alpha=
-Util.New('TextButton',{Name='Alpha',Text='',AutoButtonColor=false,Size=UDim2.
-new(1,0,0,10),LayoutOrder=3,ZIndex=z,Parent=content})Util.Round(alpha)local grad
-=Util.Gradient(alpha,nil,NumberSequence.new(0,1))local alphaKnob=Util.New(
-'Frame',{Size=UDim2.fromOffset(6,14),AnchorPoint=Vector2.new(0.5,0.5),Position=
-UDim2.fromScale(0,0.5),BackgroundColor3=Color3.new(1,1,1),ZIndex=z+2,Parent=
-alpha})Util.Corner(3,alphaKnob)Util.Stroke(alphaKnob,Color3.new(0,0,0),1,0.5)
-refs.Alpha,refs.AlphaKnob,refs.AlphaGrad=alpha,alphaKnob,grad end local line=
-Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,26),LayoutOrder=
-4,ZIndex=z,Parent=content})local hex=Util.New('TextBox',{Text='',
-ClearTextOnFocus=false,FontFace=Theme.Fonts.Mono,TextSize=12,Size=UDim2.new(1,-
-66,1,0),ZIndex=z,Parent=line})Util.Corner(5,hex)Theme.Paint(hex,{
-BackgroundColor3='Surface2',TextColor3='Text'})local old=Util.New('TextButton',{
-Text='',AutoButtonColor=false,Size=UDim2.fromOffset(28,26),Position=UDim2.new(1,
--60,0,0),BackgroundColor3=startColor,ZIndex=z,Parent=line})Util.Corner(5,old)
-local new=Util.New('Frame',{Size=UDim2.fromOffset(28,26),Position=UDim2.new(1,-
-28,0,0),ZIndex=z,Parent=line})Util.Corner(5,new)Shared.Overlay.Hover(old,
-function()return Locale.T('Reset')end)old.Activated:Connect(function()self:
-SetAlpha(startAlpha)self:Set(startColor)self._hsv={startColor:ToHSV()}self:
-_paintPopup()end)hex.FocusLost:Connect(function()local c=Util.FromHex(hex.Text)
-if c then self._hsv={c:ToHSV()}self:Set(c)end self:_paintPopup()end)refs.Hex,
-refs.New=hex,new local function swatchRow(order,colors)local row=Util.New(
-'Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,18),LayoutOrder=order,
-ZIndex=z,Parent=content})Util.List(row,6,Enum.FillDirection.Horizontal)for _,c
-in colors do local b=Util.New('TextButton',{Text='',AutoButtonColor=false,Size=
-UDim2.fromOffset(18,18),BackgroundColor3=c,ZIndex=z,Parent=row})Util.Round(b)
-Theme.Paint(Util.Stroke(b),{Color='StrokeHi'})b.Activated:Connect(function()self
-._hsv={c:ToHSV()}self:Set(c)self:_paintPopup()end)end end swatchRow(5,self.
-Presets)if#recent>0 then swatchRow(6,recent)end local dragging=nil local 
-function update(pos)if dragging=='SV'then local rel=(pos-sv.AbsolutePosition)/sv
-.AbsoluteSize self._hsv[2]=math.clamp(rel.X,0,1)self._hsv[3]=1-math.clamp(rel.Y,
-0,1)elseif dragging=='Hue'then self._hsv[1]=math.clamp((pos.X-hue.
-AbsolutePosition.X)/hue.AbsoluteSize.X,0,0.999)elseif dragging=='Alpha'then self
-:SetAlpha(math.clamp((pos.X-refs.Alpha.AbsolutePosition.X)/refs.Alpha.
-AbsoluteSize.X,0,1))self:_paintPopup()return end self:Set(Color3.fromHSV(self.
-_hsv[1],self._hsv[2],self._hsv[3]))self:_paintPopup()end local function hook(gui
-,name)gui.InputBegan:Connect(function(input)if input.UserInputType==Enum.
-UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
-dragging=name update(Vector2.new(input.Position.X,input.Position.Y))end end)end
-hook(sv,'SV')hook(hue,'Hue')if refs.Alpha then hook(refs.Alpha,'Alpha')end local
-c1=UIS.InputChanged:Connect(function(input)if dragging and(input.UserInputType==
-Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.
-Touch)then update(Vector2.new(input.Position.X,input.Position.Y))end end)local
-c2=UIS.InputEnded:Connect(function(input)if input.UserInputType==Enum.
-UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
-dragging=nil end end)popup.Frame.Destroying:Connect(function()c1:Disconnect()c2:
-Disconnect()end)self._popupRefs=refs self:_paintPopup()return self end function
-ColorPicker:_paintPopup()local refs=self._popupRefs if not refs then return end
-local hsv=self._hsv or{self.Value:ToHSV()}refs.SV.BackgroundColor3=Color3.
-fromHSV(hsv[1],1,1)refs.SVKnob.Position=UDim2.fromScale(hsv[2],1-hsv[3])refs.
-HueKnob.Position=UDim2.fromScale(hsv[1],0.5)if refs.Alpha then refs.Alpha.
-BackgroundColor3=self.Value refs.AlphaKnob.Position=UDim2.fromScale(self.Alpha,
-0.5)end if not refs.Hex:IsFocused()then refs.Hex.Text=Util.ToHex(self.Value)end
-refs.New.BackgroundColor3=self.Value refs.New.BackgroundTransparency=self.Alpha*
-0.85 end function ColorPicker:Destroy()self:Close()if self._swatch and self.
-Parent then self._swatch:Destroy()end Base.Destroy(self)end classes.Colorpicker=
-ColorPicker return classes end function __DARKLUA_BUNDLE_MODULES.r()local v=
-__DARKLUA_BUNDLE_MODULES.cache.r if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.r=v end return v.c end end do local function 
-__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+return end dispatcherReady=true local pendingModifier=nil Shared.Maid:Connect(
+UIS.InputBegan,function(input,processed)local name=Keys.FromInput(input)if
+listening then local kb=listening if input.KeyCode==Enum.KeyCode.Escape then kb:
+_stopListening()elseif input.KeyCode==Enum.KeyCode.Backspace then kb:
+_stopListening()kb:_userSet('None')elseif name and Keys.IsModifier(name)and kb.
+AllowCombos~=false then pendingModifier=name elseif name and not(kb.Blacklist
+and table.find(kb.Blacklist,name))then if name=='MB1'and os.clock()-kb._listenAt
+<0.2 then return end pendingModifier=nil kb:_stopListening()kb:_userSet(kb.
+AllowCombos~=false and Keys.Combo(name)or name)end return end if not name or UIS
+:GetFocusedTextBox()then return end if processed and string.sub(name,1,2)=='MB'
+then return end for _,kb in table.clone(registry)do if Keys.MatchesCombo(kb.
+Value,name)and not kb:IsLocked()then kb:_down()end end end)Shared.Maid:Connect(
+UIS.InputEnded,function(input)local name=Keys.FromInput(input)if not name then
+return end if listening and pendingModifier==name then local kb=listening
+pendingModifier=nil kb:_stopListening()kb:_userSet(name)return end for _,kb in
+table.clone(registry)do if Keys.MainKey(kb.Value)==name then kb:_up()end end end
+)end function Keybind.new(section,options)local self=Base.new(Keybind,section,
+options)self.Default=Keys.Normalize(Util.Opt(options,'Default','Value','Key'))
+self.Value=self.Default self.Mode=options.Mode or(self.Parent and self.Parent.
+Type=='Toggle'and'Toggle')or'Press'self.Modes=options.Modes or{'Toggle','Hold',
+'Always','Release'}self.Blacklist=options.Blacklist self.ShowInList=options.
+ShowInList~=false self.OnPress=options.OnPress self.OnRelease=options.OnRelease
+self.OnToggle=options.OnToggle self.Active=self.Mode=='Always'self.StateChanged=
+Signal.new()if self.Parent and self.Name=='Keybind'then self.Name=self.Parent.
+Name end table.insert(registry,self)startDispatcher()return self:_register()end
+function Keybind:_normalize(v)return Keys.Normalize(v)end function Keybind:
+GetKey()return self.Value end function Keybind:GetKeyCode()return Keys.ToEnum(
+self.Value)end function Keybind:SetKey(key)return self:Set(key)end function
+Keybind:Clear()return self:Set('None')end function Keybind:GetMode()return self.
+Mode end function Keybind:IsActive()return self.Active end function Keybind:
+SetMode(mode)if not table.find({'Toggle','Hold','Always','Release','Press'},mode
+)then return self end self.Mode=mode if mode=='Always'then self:_setActive(true)
+elseif mode~='Toggle'then self:_setActive(false)end if self.Flag then self.
+Library:_onElementChanged(self,self.Value,self.Value)end self.Library.
+KeybindsChanged:Fire()return self end function Keybind:_setActive(state)if self.
+Active==state then return end self.Active=state self.StateChanged:Fire(state)
+self.Library.KeybindsChanged:Fire()if self.OnToggle then Util.SafeCall(self.
+OnToggle,state)end local parent=self.Parent if parent and parent.Type=='Toggle'
+and parent.Value~=state then parent:Set(state)end end function Keybind:_down()
+local mode=self.Mode if self.OnPress then Util.SafeCall(self.OnPress)end local
+parent=self.Parent if parent and parent.Type=='Button'then parent:Press()end if
+mode=='Toggle'then local current=parent and parent.Type=='Toggle'and parent.
+Value or self.Active self:_setActive(not current)elseif mode=='Hold'then self:
+_setActive(true)elseif mode=='Press'and not parent then self.StateChanged:Fire(
+true)end end function Keybind:_up()if self.OnRelease then Util.SafeCall(self.
+OnRelease)end if self.Mode=='Hold'then self:_setActive(false)elseif self.Mode==
+'Release'then local parent=self.Parent self:_setActive(not(parent and parent.
+Type=='Toggle'and parent.Value or self.Active))end end function Keybind:Press()
+self:_down()task.defer(function()self:_up()end)return self end function Keybind:
+_navActivate()self:Listen()end function Keybind:Listen()if listening and
+listening~=self then listening:_stopListening()end listening=self Shared.
+KeybindListening=true self._listenAt=os.clock()if self._chipLabel then self.
+_chipLabel.Text='\u{2026}'Theme.Paint(self._chipStroke,{Color='Accent'},0.1)end
+return self end function Keybind:_stopListening()if listening==self then
+listening=nil task.defer(function()Shared.KeybindListening=listening~=nil end)
+end if self._chipStroke then Theme.Paint(self._chipStroke,{Color='Stroke'},0.1)
+end self:_render()end function Keybind:_serialize()return{self.Value,self.Mode}
+end function Keybind:_deserialize(v,silent)if type(v)=='table'then self:Set(v[1]
+or v.Key,silent)if v[2]or v.Mode then self:SetMode(v[2]or v.Mode)end else self:
+Set(v,silent)end end function Keybind:_chip(holder,order)local chip=Util.New(
+'TextButton',{Name='Keybind',Text='',AutoButtonColor=false,AutomaticSize=Enum.
+AutomaticSize.X,Size=UDim2.fromOffset(0,20),LayoutOrder=order or 100,Parent=
+holder})Util.Corner(5,chip)Util.Padding(chip,0,7,0,7)Util.New('UISizeConstraint'
+,{MinSize=Vector2.new(26,20),Parent=chip})Theme.Paint(chip,{BackgroundColor3=
+'Surface3'})local stroke=Util.Stroke(chip)Theme.Paint(stroke,{Color='Stroke'})
+local label=Util.Label({Text='',FontFace=Theme.Fonts.MonoBold,TextSize=11,
+TextXAlignment=Enum.TextXAlignment.Center,AutomaticSize=Enum.AutomaticSize.X,
+Size=UDim2.fromScale(0,1),Parent=chip})self._chip,self._chipStroke,self.
+_chipLabel=chip,stroke,label chip.Activated:Connect(function()if not self:
+IsLocked()then self:Listen()end end)chip.MouseButton2Click:Connect(function()if
+not self:IsLocked()then self:OpenModeMenu()end end)Shared.Overlay.Hover(chip,
+function()return Locale.T('Mode')..': '..Locale.T(self.Mode=='Press'and'Press_'
+or self.Mode)..'  \u{b7}  RMB'end)return chip end function Keybind:OpenModeMenu(
+)local items={}for _,mode in self.Modes do table.insert(items,{Text=(self.Mode==
+mode and'\u{25cf} 'or'   ')..Locale.T(mode=='Press'and'Press_'or mode),Callback=
+function()self:SetMode(mode)end})end table.insert(items,{Separator=true})table.
+insert(items,{Text=Locale.T('Reset'),Icon='rotate-ccw',Callback=function()self:
+_userSet(self.Default)end})table.insert(items,{Text=Locale.T('None'),Icon='x',
+Callback=function()self:_userSet('None')end})Shared.Overlay.Menu(items,{Anchor=
+self._chip,Align='End',Width=160})end function Keybind:_buildInline(holder,order
+)self:_chip(holder,order)self._mounted=true end function Keybind:_build(parent)
+self:_row(parent)self:_chip(self._right,100)end local modeGlyph={Hold=
+'\u{2193} ',Always='\u{221e} ',Release='\u{2191} ',Toggle='',Press=''}function
+Keybind:_render()if self._chipLabel and listening~=self then self._chipLabel.
+Text=(self.Value~='None'and modeGlyph[self.Mode]or'')..Keys.Display(self.Value)
+Theme.Paint(self._chipLabel,{TextColor3=self.Value=='None'and'TextMute'or'Text'}
+)end end function Keybind:Destroy()local i=table.find(registry,self)if i then
+table.remove(registry,i)end if listening==self then listening=nil end if self.
+_chip and self.Parent then self._chip:Destroy()end Base.Destroy(self)self.
+Library.KeybindsChanged:Fire()end function Keybind.All()return registry end
+local ColorPicker=Base.extend('ColorPicker')classes.ColorPicker=ColorPicker
+local recent={}local defaultPresets={Color3.fromRGB(255,255,255),Color3.fromRGB(
+160,160,168),Color3.fromRGB(60,60,66),Color3.fromRGB(232,76,84),Color3.fromRGB(
+240,196,110),Color3.fromRGB(120,220,160),Color3.fromRGB(110,170,255),Color3.
+fromRGB(190,130,255)}function ColorPicker.new(section,options)local self=Base.
+new(ColorPicker,section,options)self.Default=Util.ToColor(Util.Opt(options,
+'Default','Value','Color'))or Color3.new(1,1,1)self.Value=self.Default self.
+HasAlpha=options.Alpha~=nil or options.Transparency~=nil self.Alpha=self.
+HasAlpha and(options.Alpha or options.Transparency or 0)or 0 self.DefaultAlpha=
+self.Alpha self.Presets=options.Presets or defaultPresets self.Rainbow=false if
+self.Parent and self.Name=='ColorPicker'then self.Name=self.Parent.Name end
+return self:_register()end function ColorPicker:_normalize(v)return Util.
+ToColor(v)end function ColorPicker:_callbackArgs()return self.Value,self.Alpha
+end function ColorPicker:GetColor()return self.Value end function ColorPicker:
+SetColor(c)return self:Set(c)end function ColorPicker:GetAlpha()return self.
+Alpha end function ColorPicker:SetAlpha(a,silent)a=math.clamp(tonumber(a)or 0,0,
+1)if a==self.Alpha then return self end self.Alpha=a if self._mounted then self:
+_render()end if not silent then self:_fireCallbacks()end self.Changed:Fire(self.
+Value,self.Value)self.Library:_onElementChanged(self,self.Value,self.Value)
+return self end function ColorPicker:GetHex()return Util.ToHex(self.Value)end
+function ColorPicker:SetHex(hex)return self:Set(hex)end function ColorPicker:
+Reset(silent)self:SetAlpha(self.DefaultAlpha,true)return Base.Reset(self,silent)
+end function ColorPicker:SetRainbow(on,speed)self.Rainbow=on if self.
+_rainbowConn then self._rainbowConn:Disconnect()self._rainbowConn=nil end if on
+then speed=speed or 4 self._rainbowConn=RunService.Heartbeat:Connect(function()
+local _,s,v=self.Value:ToHSV()self:Set(Color3.fromHSV((os.clock()/speed)%1,math.
+max(s,0.6),math.max(v,0.8)))end)self.Maid:Give(self._rainbowConn)end return self
+end function ColorPicker:_serialize()return{Util.ToHex(self.Value),self.Alpha}
+end function ColorPicker:_deserialize(v,silent)if type(v)=='table'then self:
+SetAlpha(v[2]or v.Alpha or 0,true)self:Set(v[1]or v.Color,silent)else self:Set(v
+,silent)end end function ColorPicker:_swatch(holder,order)local swatch=Util.New(
+'TextButton',{Name='Swatch',Text='',AutoButtonColor=false,Size=UDim2.fromOffset(
+28,16),LayoutOrder=order or 100,Parent=holder})Util.Corner(4,swatch)local stroke
+=Util.Stroke(swatch)Theme.Paint(stroke,{Color='StrokeHi'})self._swatch=swatch
+swatch.Activated:Connect(function()if self:IsLocked()then return end if self.
+_popup and self._popup.Open then self:Close()else self:Open()end end)return
+swatch end function ColorPicker:_buildInline(holder,order)self:_swatch(holder,
+order)self._mounted=true end function ColorPicker:_build(parent)self:_row(parent
+)self:_swatch(self._right,100)end function ColorPicker:_render()if self._swatch
+then self._swatch.BackgroundColor3=self.Value self._swatch.
+BackgroundTransparency=self.Alpha*0.85 end if self._popupRefs then self:
+_paintPopup()end end function ColorPicker:_navActivate()if self._popup and self.
+_popup.Open then self:Close()else self:Open()end end function ColorPicker:Close(
+)if self._popup then self._popup:Close()end return self end function ColorPicker
+:Open()if not self._swatch or(self._popup and self._popup.Open)then return self
+end local Overlay=Shared.Overlay local startColor,startAlpha=self.Value,self.
+Alpha local popup=Overlay.Popup({Anchor=self._swatch,Width=236,MaxHeight=400,
+Align='End',Padding=10,Spacing=8,OnClose=function()self._popupRefs=nil if self.
+Value~=startColor then table.insert(recent,1,self.Value)for i=#recent,2,-1 do if
+recent[i]==self.Value then table.remove(recent,i)end end while#recent>8 do table
+.remove(recent)end self.Library:_pushHistory(self,startColor,self.Value)end end}
+)self._popup=popup local z=popup.Frame.ZIndex local content=popup.Content local
+h,s,v=self.Value:ToHSV()self._hsv={h,s,v}local refs={}local sv=Util.New(
+'TextButton',{Name='SV',Text='',AutoButtonColor=false,Size=UDim2.new(1,0,0,140),
+LayoutOrder=1,ZIndex=z,Parent=content})Util.Corner(6,sv)local white=Util.New(
+'Frame',{Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.new(1,1,1),ZIndex=z,
+Parent=sv})Util.Corner(6,white)Util.Gradient(white,nil,NumberSequence.new(0,1),0
+)local black=Util.New('Frame',{Size=UDim2.fromScale(1,1),BackgroundColor3=Color3
+.new(0,0,0),ZIndex=z,Parent=sv})Util.Corner(6,black)Util.Gradient(black,nil,
+NumberSequence.new(1,0),90)local svKnob=Util.New('Frame',{Size=UDim2.fromOffset(
+12,12),AnchorPoint=Vector2.new(0.5,0.5),BackgroundTransparency=1,ZIndex=z+2,
+Parent=sv})Util.Round(svKnob)Util.Stroke(svKnob,Color3.new(1,1,1),2)refs.SV,refs
+.SVKnob=sv,svKnob local hue=Util.New('TextButton',{Name='Hue',Text='',
+AutoButtonColor=false,Size=UDim2.new(1,0,0,10),BackgroundColor3=Color3.new(1,1,1
+),LayoutOrder=2,ZIndex=z,Parent=content})Util.Round(hue)local keys={}for i=0,6
+do table.insert(keys,ColorSequenceKeypoint.new(i/6,Color3.fromHSV(i/6%1,1,1)))
+end Util.Gradient(hue,ColorSequence.new(keys))local hueKnob=Util.New('Frame',{
+Size=UDim2.fromOffset(6,14),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromScale(0,0.5),BackgroundColor3=Color3.new(1,1,1),ZIndex=z+2,Parent=hue})Util.
+Corner(3,hueKnob)Util.Stroke(hueKnob,Color3.new(0,0,0),1,0.5)refs.Hue,refs.
+HueKnob=hue,hueKnob if self.HasAlpha then local alpha=Util.New('TextButton',{
+Name='Alpha',Text='',AutoButtonColor=false,Size=UDim2.new(1,0,0,10),LayoutOrder=
+3,ZIndex=z,Parent=content})Util.Round(alpha)local grad=Util.Gradient(alpha,nil,
+NumberSequence.new(0,1))local alphaKnob=Util.New('Frame',{Size=UDim2.fromOffset(
+6,14),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0,0.5),
+BackgroundColor3=Color3.new(1,1,1),ZIndex=z+2,Parent=alpha})Util.Corner(3,
+alphaKnob)Util.Stroke(alphaKnob,Color3.new(0,0,0),1,0.5)refs.Alpha,refs.
+AlphaKnob,refs.AlphaGrad=alpha,alphaKnob,grad end local line=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,26),LayoutOrder=4,ZIndex=z,Parent=
+content})local hex=Util.New('TextBox',{Text='',ClearTextOnFocus=false,FontFace=
+Theme.Fonts.Mono,TextSize=12,Size=UDim2.new(1,-66,1,0),ZIndex=z,Parent=line})
+Util.Corner(5,hex)Theme.Paint(hex,{BackgroundColor3='Surface2',TextColor3='Text'
+})local old=Util.New('TextButton',{Text='',AutoButtonColor=false,Size=UDim2.
+fromOffset(28,26),Position=UDim2.new(1,-60,0,0),BackgroundColor3=startColor,
+ZIndex=z,Parent=line})Util.Corner(5,old)local new=Util.New('Frame',{Size=UDim2.
+fromOffset(28,26),Position=UDim2.new(1,-28,0,0),ZIndex=z,Parent=line})Util.
+Corner(5,new)Shared.Overlay.Hover(old,function()return Locale.T('Reset')end)old.
+Activated:Connect(function()self:SetAlpha(startAlpha)self:Set(startColor)self.
+_hsv={startColor:ToHSV()}self:_paintPopup()end)hex.FocusLost:Connect(function()
+local c=Util.FromHex(hex.Text)if c then self._hsv={c:ToHSV()}self:Set(c)end self
+:_paintPopup()end)refs.Hex,refs.New=hex,new local function swatchRow(order,
+colors)local row=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0
+,18),LayoutOrder=order,ZIndex=z,Parent=content})Util.List(row,6,Enum.
+FillDirection.Horizontal)for _,c in colors do local b=Util.New('TextButton',{
+Text='',AutoButtonColor=false,Size=UDim2.fromOffset(18,18),BackgroundColor3=c,
+ZIndex=z,Parent=row})Util.Round(b)Theme.Paint(Util.Stroke(b),{Color='StrokeHi'})
+b.Activated:Connect(function()self._hsv={c:ToHSV()}self:Set(c)self:_paintPopup()
+end)end end swatchRow(5,self.Presets)if#recent>0 then swatchRow(6,recent)end
+local dragging=nil local function update(pos)if dragging=='SV'then local rel=(
+pos-sv.AbsolutePosition)/sv.AbsoluteSize self._hsv[2]=math.clamp(rel.X,0,1)self.
+_hsv[3]=1-math.clamp(rel.Y,0,1)elseif dragging=='Hue'then self._hsv[1]=math.
+clamp((pos.X-hue.AbsolutePosition.X)/hue.AbsoluteSize.X,0,0.999)elseif dragging
+=='Alpha'then self:SetAlpha(math.clamp((pos.X-refs.Alpha.AbsolutePosition.X)/
+refs.Alpha.AbsoluteSize.X,0,1))self:_paintPopup()return end self:Set(Color3.
+fromHSV(self._hsv[1],self._hsv[2],self._hsv[3]))self:_paintPopup()end local 
+function hook(gui,name)gui.InputBegan:Connect(function(input)if input.
+UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.
+UserInputType.Touch then dragging=name update(Vector2.new(input.Position.X,input
+.Position.Y))end end)end hook(sv,'SV')hook(hue,'Hue')if refs.Alpha then hook(
+refs.Alpha,'Alpha')end local c1=UIS.InputChanged:Connect(function(input)if
+dragging and(input.UserInputType==Enum.UserInputType.MouseMovement or input.
+UserInputType==Enum.UserInputType.Touch)then update(Vector2.new(input.Position.X
+,input.Position.Y))end end)local c2=UIS.InputEnded:Connect(function(input)if
+input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==
+Enum.UserInputType.Touch then dragging=nil end end)popup.Frame.Destroying:
+Connect(function()c1:Disconnect()c2:Disconnect()end)self._popupRefs=refs self:
+_paintPopup()return self end function ColorPicker:_paintPopup()local refs=self.
+_popupRefs if not refs then return end local hsv=self._hsv or{self.Value:ToHSV()
+}refs.SV.BackgroundColor3=Color3.fromHSV(hsv[1],1,1)refs.SVKnob.Position=UDim2.
+fromScale(hsv[2],1-hsv[3])refs.HueKnob.Position=UDim2.fromScale(hsv[1],0.5)if
+refs.Alpha then refs.Alpha.BackgroundColor3=self.Value refs.AlphaKnob.Position=
+UDim2.fromScale(self.Alpha,0.5)end if not refs.Hex:IsFocused()then refs.Hex.Text
+=Util.ToHex(self.Value)end refs.New.BackgroundColor3=self.Value refs.New.
+BackgroundTransparency=self.Alpha*0.85 end function ColorPicker:Destroy()self:
+Close()if self._swatch and self.Parent then self._swatch:Destroy()end Base.
+Destroy(self)end classes.Colorpicker=ColorPicker return classes end function
+__DARKLUA_BUNDLE_MODULES.r()local v=__DARKLUA_BUNDLE_MODULES.cache.r if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.r=v end return v.c end end
+do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
 =__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.k()local Base
@@ -2141,147 +2476,213 @@ self.Rows=table.clone(options.Rows or{})self.Height=options.Height or 240 self.
 RowHeight=options.RowHeight or 30 self.SearchEnabled=options.Search~=false self.
 SortKey=options.SortBy self.Descending=options.Descending==true self.Filter=
 options.Filter self.Actions=options.Actions or{}self.OnSelect=options.OnSelect
-self.Query=''self.Value=nil return self:_register()end function Table:_view()
-local out={}for i,row in self.Rows do local ok=true if self.Filter then local s,
-r=pcall(self.Filter,row)ok=s and r~=false end if ok and self.Query~=''then local
-hay={}for _,col in self.Columns do table.insert(hay,tostring(row[col.Key]or''))
-end ok=Util.Fuzzy(self.Query,table.concat(hay,' '))~=nil end if ok then table.
-insert(out,row)end end if self.SortKey then local key,desc=self.SortKey,self.
-Descending table.sort(out,function(a,b)local va,vb=a[key],b[key]if type(va)~=
-type(vb)then va,vb=tostring(va),tostring(vb)end if va==nil or vb==nil then
-return vb==nil and va~=nil end if desc then return va>vb end return va<vb end)
-end return out end function Table:SetRows(rows)self.Rows=table.clone(rows or{})
-self:_refresh()return self end function Table:AddRow(row)table.insert(self.Rows,
-row)self:_refresh()return self end function Table:RemoveRow(which)for i=#self.
-Rows,1,-1 do if i==which or(type(which)=='function'and which(self.Rows[i]))or
-self.Rows[i]==which then table.remove(self.Rows,i)end end self:_refresh()return
-self end function Table:Clear()return self:SetRows({})end function Table:GetRows
-()return table.clone(self.Rows)end function Table:GetSelected()return self.Value
-end function Table:SortBy(key,descending)self.SortKey,self.Descending=key,
-descending==true self:_refresh()return self end function Table:SetFilter(fn)self
-.Filter=fn self:_refresh()return self end function Table:SetQuery(text)self.
-Query=text or''self:_refresh()return self end function Table:_build(parent)local
-frame=Util.New('Frame',{Name='Table',BackgroundTransparency=1,Size=UDim2.new(1,0
-,0,self.Height),Parent=parent})self.Frame=frame local y=0 if self.SearchEnabled
-then local search=Util.New('TextBox',{Text='',PlaceholderText=Locale.T('Search')
-..'\u{2026}',ClearTextOnFocus=false,FontFace=Theme.Fonts.Regular,TextSize=12,
-TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,26),Position=UDim2
-.fromOffset(4,0),Parent=frame})Util.Corner(5,search)Util.Padding(search,0,8,0,26
-)Theme.Paint(search,{BackgroundColor3='Surface2',TextColor3='Text',
-PlaceholderColor3='TextMute'})local icon=Util.New('ImageLabel',{
-BackgroundTransparency=1,Image=Icons.Get('search')or'',Size=UDim2.fromOffset(13,
-13),Position=UDim2.new(0,-19,0.5,-6),Parent=search})Theme.Paint(icon,{
-ImageColor3='TextMute'})search:GetPropertyChangedSignal('Text'):Connect(function
-()self.Query=search.Text self:_refresh()end)y=32 end local header=Util.New(
-'Frame',{BackgroundTransparency=1,Size=UDim2.new(1,-8,0,22),Position=UDim2.
-fromOffset(4,y),Parent=frame})local x=0 self._headers={}for _,col in self.
-Columns do local w=col.Width or(1/#self.Columns)local h=Util.New('TextButton',{
-Text=col.Name or tostring(col.Key),FontFace=Theme.Fonts.SemiBold,TextSize=11,
-AutoButtonColor=false,BackgroundTransparency=1,TextXAlignment=col.Align==
-'Center'and Enum.TextXAlignment.Center or(col.Align=='Right'and Enum.
-TextXAlignment.Right or Enum.TextXAlignment.Left),Size=UDim2.new(w,-6,1,0),
-Position=UDim2.new(x,8,0,0),Parent=header})Theme.Paint(h,{TextColor3='TextMute'}
-)h.Activated:Connect(function()if self.SortKey==col.Key then self.Descending=not
-self.Descending else self.SortKey,self.Descending=col.Key,false end self:
-_refresh()end)self._headers[col.Key]={Button=h,Name=col.Name or tostring(col.Key
-)}x+=w end y+=24 local list=Util.New('ScrollingFrame',{BackgroundTransparency=1,
-BorderSizePixel=0,Size=UDim2.new(1,0,1,-y),Position=UDim2.fromOffset(0,y),
-CanvasSize=UDim2.new(),ScrollBarThickness=2,Parent=frame})Theme.Paint(list,{
-ScrollBarImageColor3='StrokeHi'})self._list=list local empty=Util.Label({Text=
-Locale.T('Empty'),FontFace=Theme.Fonts.Regular,TextSize=12,TextXAlignment=Enum.
-TextXAlignment.Center,Size=UDim2.new(1,0,0,40),Visible=false,Parent=list})Theme.
-Paint(empty,{TextColor3='TextMute'})self._empty=empty self._pool={}list:
+self.Query=''self.Value=nil self.FilterSpecs=options.Filters or{}self.
+FilterValues={}return self:_register()end function Table:_passesFilters(row)for
+_,spec in self.FilterSpecs do local v=self.FilterValues[spec.Key or spec.Name]if
+v~=nil then local cell=row[spec.Key]if spec.Type=='Range'then local n=tonumber(
+cell)if n==nil or(v.Min and n<v.Min)or(v.Max and n>v.Max)then return false end
+elseif spec.Type=='Select'then if v~='Any'and cell~=v then return false end
+elseif spec.Type=='Switch'then if v==true and spec.Test then local ok,keep=
+pcall(spec.Test,row)if ok and keep==false then return false end end end end end
+return true end function Table:ActiveFilters()local n=0 for _,v in self.
+FilterValues do if v~=nil and v~='Any'and v~=false and not(type(v)=='table'and v
+.Min==nil and v.Max==nil)then n+=1 end end return n end function Table:
+SetFilterValue(key,value)self.FilterValues[key]=value self:_refresh()return self
+end function Table:ClearFilters()table.clear(self.FilterValues)self:_refresh()
+return self end function Table:OpenFilters(anchor)local popup=Shared.Overlay.
+Popup({Anchor=anchor or self._filterButton,Width=250,MaxHeight=360,Align='End',
+Padding=10,Spacing=8})local z=popup.Frame.ZIndex for i,spec in self.FilterSpecs
+do local key=spec.Key or spec.Name local row=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,spec.Type=='Range'and 46 or 26),
+LayoutOrder=i,ZIndex=z,Parent=popup.Content})local label=Util.Label({Text=spec.
+Name or tostring(spec.Key),FontFace=Theme.Fonts.Medium,TextSize=12,Size=UDim2.
+new(1,0,0,16),ZIndex=z,Parent=row})Theme.Paint(label,{TextColor3='TextDim'})if
+spec.Type=='Range'then local value=self.FilterValues[key]or{}for j,side in{'Min'
+,'Max'}do local box=Util.New('TextBox',{Text=value[side]and tostring(value[side]
+)or'',PlaceholderText=side=='Min'and Locale.T('From')or Locale.T('To'),
+ClearTextOnFocus=false,FontFace=Theme.Fonts.Mono,TextSize=12,Size=UDim2.new(0.5,
+-3,0,24),Position=UDim2.new((j-1)*0.5,(j-1)*3,0,20),ZIndex=z,Parent=row})Util.
+Corner(5,box)Theme.Paint(box,{BackgroundColor3='Surface2',TextColor3='Text',
+PlaceholderColor3='TextMute'})box.FocusLost:Connect(function()local v=self.
+FilterValues[key]or{}v[side]=tonumber(box.Text)self.FilterValues[key]=(v.Min or
+v.Max)and v or nil self:_refresh()end)end elseif spec.Type=='Select'then local
+values={'Any'}for _,v in spec.Values or{}do table.insert(values,v)end local
+current=self.FilterValues[key]or'Any'local b=Util.New('TextButton',{Text=
+tostring(current),FontFace=Theme.Fonts.Medium,TextSize=12,AutoButtonColor=false,
+Size=UDim2.new(0.5,0,0,22),Position=UDim2.new(0.5,0,0,0),ZIndex=z,Parent=row})
+Util.Corner(5,b)Theme.Paint(b,{BackgroundColor3='Surface2',TextColor3='Text'})b.
+Activated:Connect(function()local idx=(table.find(values,self.FilterValues[key]
+or'Any')or 1)%#values+1 self.FilterValues[key]=values[idx]~='Any'and values[idx]
+or nil b.Text=tostring(values[idx])self:_refresh()end)elseif spec.Type=='Switch'
+then local on=self.FilterValues[key]==true local b=Util.New('TextButton',{Text=
+on and'ON'or'OFF',FontFace=Theme.Fonts.Bold,TextSize=10,AutoButtonColor=false,
+Size=UDim2.fromOffset(40,20),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0
+,0,0),ZIndex=z,Parent=row})Util.Corner(5,b)Theme.Paint(b,{BackgroundColor3=on
+and'Accent'or'Surface3',TextColor3=on and'AccentInk'or'TextMute'})b.Activated:
+Connect(function()local now=not(self.FilterValues[key]==true)self.FilterValues[
+key]=now or nil b.Text=now and'ON'or'OFF'Theme.Paint(b,{BackgroundColor3=now and
+'Accent'or'Surface3',TextColor3=now and'AccentInk'or'TextMute'},0.1)self:
+_refresh()end)end end local reset=Util.New('TextButton',{Text=Locale.T(
+'ResetFilters'),FontFace=Theme.Fonts.SemiBold,TextSize=12,AutoButtonColor=false,
+Size=UDim2.new(1,0,0,26),LayoutOrder=99,ZIndex=z,Parent=popup.Content})Util.
+Corner(6,reset)Theme.Paint(reset,{BackgroundColor3='Surface3',TextColor3='Text'}
+)reset.Activated:Connect(function()popup:Close()self:ClearFilters()end)return
+popup end function Table:_view()local out={}for i,row in self.Rows do local ok=
+true if self.Filter then local s,r=pcall(self.Filter,row)ok=s and r~=false end
+if ok and#self.FilterSpecs>0 then ok=self:_passesFilters(row)end if ok and self.
+Query~=''then local hay={}for _,col in self.Columns do table.insert(hay,
+tostring(row[col.Key]or''))end ok=Util.Fuzzy(self.Query,table.concat(hay,' '))~=
+nil end if ok then table.insert(out,row)end end if self.SortKey then local key,
+desc=self.SortKey,self.Descending table.sort(out,function(a,b)local va,vb=a[key]
+,b[key]if type(va)~=type(vb)then va,vb=tostring(va),tostring(vb)end if va==nil
+or vb==nil then return vb==nil and va~=nil end if desc then return va>vb end
+return va<vb end)end return out end function Table:SetRows(rows)self.Rows=table.
+clone(rows or{})self:_refresh()return self end function Table:AddRow(row)table.
+insert(self.Rows,row)self:_refresh()return self end function Table:RemoveRow(
+which)for i=#self.Rows,1,-1 do if i==which or(type(which)=='function'and which(
+self.Rows[i]))or self.Rows[i]==which then table.remove(self.Rows,i)end end self:
+_refresh()return self end function Table:Clear()return self:SetRows({})end
+function Table:GetRows()return table.clone(self.Rows)end function Table:
+GetSelected()return self.Value end function Table:SortBy(key,descending)self.
+SortKey,self.Descending=key,descending==true self:_refresh()return self end
+function Table:SetFilter(fn)self.Filter=fn self:_refresh()return self end
+function Table:SetQuery(text)self.Query=text or''self:_refresh()return self end
+function Table:_build(parent)local frame=Util.New('Frame',{Name='Table',
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,self.Height),Parent=parent})self.
+Frame=frame local y=0 if self.SearchEnabled then local filterW=#self.FilterSpecs
+>0 and 34 or 0 local search=Util.New('TextBox',{Text='',PlaceholderText=Locale.
+T('Search')..'\u{2026}',ClearTextOnFocus=false,FontFace=Theme.Fonts.Regular,
+TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-8-filterW,
+0,26),Position=UDim2.fromOffset(4,0),Parent=frame})if filterW>0 then local fb=
+Util.New('ImageButton',{AutoButtonColor=false,Size=UDim2.fromOffset(28,26),
+AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-4,0,0),Parent=frame})Util.
+Corner(6,fb)Theme.Paint(fb,{BackgroundColor3='Surface2'})local fi=Util.New(
+'ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('filter')or'',Size=UDim2.
+fromOffset(14,14),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,
+0.5),Parent=fb})Theme.Paint(fi,{ImageColor3='TextDim'})local count=Util.Label({
+Text='',FontFace=Theme.Fonts.Bold,TextSize=9,TextXAlignment=Enum.TextXAlignment.
+Center,Size=UDim2.fromOffset(13,13),AnchorPoint=Vector2.new(1,0),Position=UDim2.
+new(1,3,0,-3),BackgroundTransparency=0,Visible=false,Parent=fb})Util.Round(count
+)Theme.Paint(count,{BackgroundColor3='Accent',TextColor3='AccentInk'})self.
+_filterButton,self._filterCount=fb,count fb.Activated:Connect(function()self:
+OpenFilters(fb)end)end Util.Corner(5,search)Util.Padding(search,0,8,0,26)Theme.
+Paint(search,{BackgroundColor3='Surface2',TextColor3='Text',PlaceholderColor3=
+'TextMute'})local icon=Util.New('ImageLabel',{BackgroundTransparency=1,Image=
+Icons.Get('search')or'',Size=UDim2.fromOffset(13,13),Position=UDim2.new(0,-19,
+0.5,-6),Parent=search})Theme.Paint(icon,{ImageColor3='TextMute'})search:
+GetPropertyChangedSignal('Text'):Connect(function()self.Query=search.Text self:
+_refresh()end)y=32 end local header=Util.New('Frame',{BackgroundTransparency=1,
+Size=UDim2.new(1,-8,0,22),Position=UDim2.fromOffset(4,y),Parent=frame})local x=0
+self._headers={}for _,col in self.Columns do local w=col.Width or(1/#self.
+Columns)local h=Util.New('TextButton',{Text=col.Name or tostring(col.Key),
+FontFace=Theme.Fonts.SemiBold,TextSize=11,AutoButtonColor=false,
+BackgroundTransparency=1,TextXAlignment=col.Align=='Center'and Enum.
+TextXAlignment.Center or(col.Align=='Right'and Enum.TextXAlignment.Right or Enum
+.TextXAlignment.Left),Size=UDim2.new(w,-6,1,0),Position=UDim2.new(x,8,0,0),
+Parent=header})Theme.Paint(h,{TextColor3='TextMute'})h.Activated:Connect(
+function()if self.SortKey==col.Key then self.Descending=not self.Descending else
+self.SortKey,self.Descending=col.Key,false end self:_refresh()end)self._headers[
+col.Key]={Button=h,Name=col.Name or tostring(col.Key)}x+=w end y+=24 local list=
+Util.New('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,Size=UDim2
+.new(1,0,1,-y),Position=UDim2.fromOffset(0,y),CanvasSize=UDim2.new(),
+ScrollBarThickness=2,Parent=frame})Theme.Paint(list,{ScrollBarImageColor3=
+'StrokeHi'})self._list=list local empty=Util.Label({Text=Locale.T('Empty'),
+FontFace=Theme.Fonts.Regular,TextSize=12,TextXAlignment=Enum.TextXAlignment.
+Center,Size=UDim2.new(1,0,0,40),Visible=false,Parent=list})Theme.Paint(empty,{
+TextColor3='TextMute'})self._empty=empty self._pool={}list:
 GetPropertyChangedSignal('CanvasPosition'):Connect(function()self:_drawVisible()
 end)list:GetPropertyChangedSignal('AbsoluteSize'):Connect(function()self:
 _drawVisible()end)end function Table:_refresh()if not self._list then return end
-self._viewRows=self:_view()self._list.CanvasSize=UDim2.fromOffset(0,#self.
-_viewRows*(self.RowHeight+4))self._empty.Visible=#self._viewRows==0 for key,h in
-self._headers or{}do h.Button.Text=h.Name..(self.SortKey==key and(self.
-Descending and'  \u{2193}'or'  \u{2191}')or'')Theme.Paint(h.Button,{TextColor3=
-self.SortKey==key and'Text'or'TextMute'})end self:_drawVisible()end function
-Table:_drawVisible()local list=self._list local rows=self._viewRows or{}local s=
-Shared.Scale or 1 local h=self.RowHeight+4 local top=list.CanvasPosition.Y local
-first=math.max(1,math.floor(top/h)+1)local last=math.min(#rows,first+math.ceil(
-list.AbsoluteSize.Y/s/h)+1)local used={}for i=first,last do local row=rows[i]
-local item=self._pool[#used+1]if not item then item=self:_newRow()self._pool[#
-used+1]=item end used[#used+1]=item item.Row=row item.Frame.Visible=true item.
-Frame.Position=UDim2.fromOffset(4,(i-1)*h)for c,col in self.Columns do item.
-Cells[c].Text=tostring(row[col.Key]==nil and''or row[col.Key])end Theme.Paint(
-item.Frame,{BackgroundColor3=self.Value==row and'Surface3'or'Surface2'})end for
-i=#used+1,#self._pool do self._pool[i].Frame.Visible=false end end function
-Table:_newRow()local item={Cells={}}local frame=Util.New('TextButton',{Text='',
-AutoButtonColor=false,Size=UDim2.new(1,-10,0,self.RowHeight),Parent=self._list})
-Util.Corner(5,frame)Theme.Paint(frame,{BackgroundColor3='Surface2'})local x=0
-local actionsWidth=#self.Actions*22 for c,col in self.Columns do local w=col.
-Width or(1/#self.Columns)local cell=Util.Label({FontFace=c==1 and Theme.Fonts.
-SemiBold or Theme.Fonts.Regular,TextSize=12,TextTruncate=Enum.TextTruncate.AtEnd
-,TextXAlignment=col.Align=='Center'and Enum.TextXAlignment.Center or(col.Align==
-'Right'and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left),Size=UDim2.
-new(w,c==#self.Columns and-actionsWidth-10 or-6,1,0),Position=UDim2.new(x,8,0,0)
-,Parent=frame})Theme.Paint(cell,{TextColor3=c==1 and'Text'or'TextDim'})item.
-Cells[c]=cell x+=w end for a,action in self.Actions do local b=Util.New(
-'ImageButton',{BackgroundTransparency=1,Image=Icons.Get(action.Icon)or'',Size=
-UDim2.fromOffset(15,15),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-8-(
-a-1)*22,0.5,0),ZIndex=2,Parent=frame})Theme.Paint(b,{ImageColor3='TextDim'})if
-action.Tooltip then Shared.Overlay.Hover(b,function()return action.Tooltip end)
-end b.Activated:Connect(function()if item.Row then Util.SafeCall(action.Callback
-,item.Row)end end)end frame.MouseEnter:Connect(function()Theme.Paint(frame,{
-BackgroundColor3='Surface3'},0.08)end)frame.MouseLeave:Connect(function()Theme.
-Paint(frame,{BackgroundColor3=self.Value==item.Row and'Surface3'or'Surface2'},
-0.12)end)frame.Activated:Connect(function()self.Value=item.Row self:
-_drawVisible()self.Changed:Fire(item.Row)if self.OnSelect then Util.SafeCall(
-self.OnSelect,item.Row)end self:_fireCallbacks()end)item.Frame=frame return item
-end function Table:_render()self:_refresh()end local Card=Base.extend('Card')
-classes.Card=Card noState(Card)function Card.new(section,options)local self=Base
-.new(Card,section,{Name=options.Title or options.Name or'',Callback=options.
-Callback,Visible=options.Visible})self.Subtitle=options.Subtitle self.Body=
-options.Body or options.Content self.Image=options.Image self.Model=options.
-Model self.ProgressValue=options.Progress self.Badge=options.Badge self.Height=
-options.Height or 96 return self:_register()end function Card:_build(parent)
-local card=Util.New('TextButton',{Name='Card',Text='',AutoButtonColor=false,Size
-=UDim2.new(1,0,0,self.Height),ClipsDescendants=true,Parent=parent})self.Frame=
-card Util.Corner(8,card)Theme.Paint(card,{BackgroundColor3='Surface2'})local
-stroke=Util.Stroke(card)Theme.Paint(stroke,{Color='Stroke'})local left=12 local
-media=self.Height-16 if self.Model and typeof(self.Model)=='Instance'then local
-vp=Util.New('ViewportFrame',{BackgroundTransparency=1,Size=UDim2.fromOffset(
-media,media),Position=UDim2.fromOffset(8,8),Ambient=Color3.fromRGB(200,200,200),
-LightColor=Color3.new(1,1,1),Parent=card})Util.Corner(6,vp)Shared.Lib:
-_fillViewport(vp,self.Model)left=media+18 elseif Icons.Get(self.Image)then local
-img=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get(self.Image),
-ScaleType=Enum.ScaleType.Crop,Size=UDim2.fromOffset(media,media),Position=UDim2.
-fromOffset(8,8),Parent=card})Util.Corner(6,img)left=media+18 end local title=
-Util.Label({Text=self.Name,FontFace=Theme.Fonts.SemiBold,TextSize=14,
-TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-left-10,0,18),Position=
-UDim2.fromOffset(left,10),Parent=card})Theme.Paint(title,{TextColor3='Text'})
-local sub=Util.Label({Text=self.Subtitle or'',FontFace=Theme.Fonts.Regular,
-TextSize=11,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-left-10,0,14)
-,Position=UDim2.fromOffset(left,29),Parent=card})Theme.Paint(sub,{TextColor3=
-'TextMute'})local body=Util.Label({Text=self.Body or'',FontFace=Theme.Fonts.
-Regular,TextSize=12,TextWrapped=true,TextYAlignment=Enum.TextYAlignment.Top,Size
-=UDim2.new(1,-left-10,1,-64),Position=UDim2.fromOffset(left,46),Parent=card})
-Theme.Paint(body,{TextColor3='TextDim'})if self.ProgressValue then local cur,max
-=self.ProgressValue[1]or 0,self.ProgressValue[2]or 1 local track=Util.New(
-'Frame',{Size=UDim2.new(1,-left-60,0,3),Position=UDim2.new(0,left,1,-12),Parent=
-card})Util.Round(track)Theme.Paint(track,{BackgroundColor3='Surface3'})local
-fill=Util.New('Frame',{Size=UDim2.fromScale(math.clamp(cur/math.max(max,1),0,1),
-1),Parent=track})Util.Round(fill)Theme.Paint(fill,{BackgroundColor3='Accent'})
-local label=Util.Label({Text=cur..' / '..max,FontFace=Theme.Fonts.Mono,TextSize=
-11,TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(0,50,0,14),Position=
-UDim2.new(1,-60,1,-19),Parent=card})Theme.Paint(label,{TextColor3='TextDim'})end
-if self.Badge then local badge=Util.Label({Text=self.Badge,FontFace=Theme.Fonts.
-Bold,TextSize=9,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,16),
-AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-10,0,10),
-BackgroundTransparency=0,Parent=card})Util.Padding(badge,0,6,0,6)Util.Corner(4,
-badge)Theme.Paint(badge,{BackgroundColor3='Accent',TextColor3='AccentInk'})end
-card.MouseEnter:Connect(function()Theme.Paint(stroke,{Color='StrokeHi'},0.12)end
-)card.MouseLeave:Connect(function()Theme.Paint(stroke,{Color='Stroke'},0.15)end)
-card.Activated:Connect(function()self:_fireCallbacks()end)self._titleLabel,self.
-_subLabel,self._bodyLabel=title,sub,body end function Card:_callbackArgs()return
-self end function Card:SetTitle(t)self.Name=t if self._titleLabel then self.
-_titleLabel.Text=t end return self end function Card:SetSubtitle(t)self.Subtitle
-=t if self._subLabel then self._subLabel.Text=t or''end return self end function
-Card:SetBody(t)self.Body=t if self._bodyLabel then self._bodyLabel.Text=t or''
-end return self end local Image=Base.extend('Image')classes.Image=Image noState(
+self._viewRows=self:_view()if self._filterCount then local n=self:ActiveFilters(
+)self._filterCount.Visible=n>0 self._filterCount.Text=tostring(n)end self._list.
+CanvasSize=UDim2.fromOffset(0,#self._viewRows*(self.RowHeight+4))self._empty.
+Visible=#self._viewRows==0 for key,h in self._headers or{}do h.Button.Text=h.
+Name..(self.SortKey==key and(self.Descending and'  \u{2193}'or'  \u{2191}')or'')
+Theme.Paint(h.Button,{TextColor3=self.SortKey==key and'Text'or'TextMute'})end
+self:_drawVisible()end function Table:_drawVisible()local list=self._list local
+rows=self._viewRows or{}local s=Shared.Scale or 1 local h=self.RowHeight+4 local
+top=list.CanvasPosition.Y local first=math.max(1,math.floor(top/h)+1)local last=
+math.min(#rows,first+math.ceil(list.AbsoluteSize.Y/s/h)+1)local used={}for i=
+first,last do local row=rows[i]local item=self._pool[#used+1]if not item then
+item=self:_newRow()self._pool[#used+1]=item end used[#used+1]=item item.Row=row
+item.Frame.Visible=true item.Frame.Position=UDim2.fromOffset(4,(i-1)*h)for c,col
+in self.Columns do item.Cells[c].Text=tostring(row[col.Key]==nil and''or row[col
+.Key])end Theme.Paint(item.Frame,{BackgroundColor3=self.Value==row and'Surface3'
+or'Surface2'})end for i=#used+1,#self._pool do self._pool[i].Frame.Visible=false
+end end function Table:_newRow()local item={Cells={}}local frame=Util.New(
+'TextButton',{Text='',AutoButtonColor=false,Size=UDim2.new(1,-10,0,self.
+RowHeight),Parent=self._list})Util.Corner(5,frame)Theme.Paint(frame,{
+BackgroundColor3='Surface2'})local x=0 local actionsWidth=#self.Actions*22 for c
+,col in self.Columns do local w=col.Width or(1/#self.Columns)local cell=Util.
+Label({FontFace=c==1 and Theme.Fonts.SemiBold or Theme.Fonts.Regular,TextSize=12
+,TextTruncate=Enum.TextTruncate.AtEnd,TextXAlignment=col.Align=='Center'and Enum
+.TextXAlignment.Center or(col.Align=='Right'and Enum.TextXAlignment.Right or
+Enum.TextXAlignment.Left),Size=UDim2.new(w,c==#self.Columns and-actionsWidth-10
+or-6,1,0),Position=UDim2.new(x,8,0,0),Parent=frame})Theme.Paint(cell,{TextColor3
+=c==1 and'Text'or'TextDim'})item.Cells[c]=cell x+=w end for a,action in self.
+Actions do local b=Util.New('ImageButton',{BackgroundTransparency=1,Image=Icons.
+Get(action.Icon)or'',Size=UDim2.fromOffset(15,15),AnchorPoint=Vector2.new(1,0.5)
+,Position=UDim2.new(1,-8-(a-1)*22,0.5,0),ZIndex=2,Parent=frame})Theme.Paint(b,{
+ImageColor3='TextDim'})if action.Tooltip then Shared.Overlay.Hover(b,function()
+return action.Tooltip end)end b.Activated:Connect(function()if item.Row then
+Util.SafeCall(action.Callback,item.Row)end end)end frame.MouseEnter:Connect(
+function()Theme.Paint(frame,{BackgroundColor3='Surface3'},0.08)end)frame.
+MouseLeave:Connect(function()Theme.Paint(frame,{BackgroundColor3=self.Value==
+item.Row and'Surface3'or'Surface2'},0.12)end)frame.Activated:Connect(function()
+self.Value=item.Row self:_drawVisible()self.Changed:Fire(item.Row)if self.
+OnSelect then Util.SafeCall(self.OnSelect,item.Row)end self:_fireCallbacks()end)
+item.Frame=frame return item end function Table:_render()self:_refresh()end
+local Card=Base.extend('Card')classes.Card=Card noState(Card)function Card.new(
+section,options)local self=Base.new(Card,section,{Name=options.Title or options.
+Name or'',Callback=options.Callback,Visible=options.Visible})self.Subtitle=
+options.Subtitle self.Body=options.Body or options.Content self.Image=options.
+Image self.Model=options.Model self.ProgressValue=options.Progress self.Badge=
+options.Badge self.Height=options.Height or 96 return self:_register()end
+function Card:_build(parent)local card=Util.New('TextButton',{Name='Card',Text=
+'',AutoButtonColor=false,Size=UDim2.new(1,0,0,self.Height),ClipsDescendants=true
+,Parent=parent})self.Frame=card Util.Corner(8,card)Theme.Paint(card,{
+BackgroundColor3='Surface2'})local stroke=Util.Stroke(card)Theme.Paint(stroke,{
+Color='Stroke'})local left=12 local media=self.Height-16 if self.Model and
+typeof(self.Model)=='Instance'then local vp=Util.New('ViewportFrame',{
+BackgroundTransparency=1,Size=UDim2.fromOffset(media,media),Position=UDim2.
+fromOffset(8,8),Ambient=Color3.fromRGB(200,200,200),LightColor=Color3.new(1,1,1)
+,Parent=card})Util.Corner(6,vp)Shared.Lib:_fillViewport(vp,self.Model)left=media
++18 elseif Icons.Get(self.Image)then local img=Util.New('ImageLabel',{
+BackgroundTransparency=1,Image=Icons.Get(self.Image),ScaleType=Enum.ScaleType.
+Crop,Size=UDim2.fromOffset(media,media),Position=UDim2.fromOffset(8,8),Parent=
+card})Util.Corner(6,img)left=media+18 end local title=Util.Label({Text=self.Name
+,FontFace=Theme.Fonts.SemiBold,TextSize=14,TextTruncate=Enum.TextTruncate.AtEnd,
+Size=UDim2.new(1,-left-10,0,18),Position=UDim2.fromOffset(left,10),Parent=card})
+Theme.Paint(title,{TextColor3='Text'})local sub=Util.Label({Text=self.Subtitle
+or'',FontFace=Theme.Fonts.Regular,TextSize=11,TextTruncate=Enum.TextTruncate.
+AtEnd,Size=UDim2.new(1,-left-10,0,14),Position=UDim2.fromOffset(left,29),Parent=
+card})Theme.Paint(sub,{TextColor3='TextMute'})local body=Util.Label({Text=self.
+Body or'',FontFace=Theme.Fonts.Regular,TextSize=12,TextWrapped=true,
+TextYAlignment=Enum.TextYAlignment.Top,Size=UDim2.new(1,-left-10,1,-64),Position
+=UDim2.fromOffset(left,46),Parent=card})Theme.Paint(body,{TextColor3='TextDim'})
+if self.ProgressValue then local cur,max=self.ProgressValue[1]or 0,self.
+ProgressValue[2]or 1 local track=Util.New('Frame',{Size=UDim2.new(1,-left-60,0,3
+),Position=UDim2.new(0,left,1,-12),Parent=card})Util.Round(track)Theme.Paint(
+track,{BackgroundColor3='Surface3'})local fill=Util.New('Frame',{Size=UDim2.
+fromScale(math.clamp(cur/math.max(max,1),0,1),1),Parent=track})Util.Round(fill)
+Theme.Paint(fill,{BackgroundColor3='Accent'})local label=Util.Label({Text=cur..
+' / '..max,FontFace=Theme.Fonts.Mono,TextSize=11,TextXAlignment=Enum.
+TextXAlignment.Right,Size=UDim2.new(0,50,0,14),Position=UDim2.new(1,-60,1,-19),
+Parent=card})Theme.Paint(label,{TextColor3='TextDim'})end if self.Badge then
+local badge=Util.Label({Text=self.Badge,FontFace=Theme.Fonts.Bold,TextSize=9,
+AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,16),AnchorPoint=
+Vector2.new(1,0),Position=UDim2.new(1,-10,0,10),BackgroundTransparency=0,Parent=
+card})Util.Padding(badge,0,6,0,6)Util.Corner(4,badge)Theme.Paint(badge,{
+BackgroundColor3='Accent',TextColor3='AccentInk'})end card.MouseEnter:Connect(
+function()Theme.Paint(stroke,{Color='StrokeHi'},0.12)end)card.MouseLeave:
+Connect(function()Theme.Paint(stroke,{Color='Stroke'},0.15)end)card.Activated:
+Connect(function()self:_fireCallbacks()end)self._titleLabel,self._subLabel,self.
+_bodyLabel=title,sub,body end function Card:_callbackArgs()return self end
+function Card:SetTitle(t)self.Name=t if self._titleLabel then self._titleLabel.
+Text=t end return self end function Card:SetSubtitle(t)self.Subtitle=t if self.
+_subLabel then self._subLabel.Text=t or''end return self end function Card:
+SetBody(t)self.Body=t if self._bodyLabel then self._bodyLabel.Text=t or''end
+return self end local Image=Base.extend('Image')classes.Image=Image noState(
 Image)function Image.new(section,options)local self=Base.new(Image,section,{Name
 =options.Caption or'Image'})self.Value=options.Image self.Height=options.Height
 or 120 self.ScaleType=options.ScaleType or Enum.ScaleType.Fit self.Caption=
@@ -2346,218 +2747,319 @@ _render()if self._text then self._text.Text=self.Value end end return classes
 end function __DARKLUA_BUNDLE_MODULES.s()local v=__DARKLUA_BUNDLE_MODULES.cache.
 s if not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.s=v end return v
 .c end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
-local Signal=__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()
-local Tween=__DARKLUA_BUNDLE_MODULES.d()local Theme=__DARKLUA_BUNDLE_MODULES.g()
-local Icons=__DARKLUA_BUNDLE_MODULES.i()local Shared=__DARKLUA_BUNDLE_MODULES.k(
-)local Section={}Section.__index=Section function Section.new(page,options)
-options=type(options)=='string'and{Name=options}or(options or{})local self=
-setmetatable({},Section)self.Page=page self.Tab=page and page.Tab self.Window=
-page and page.Window self.Name=options.Name or options.Title or''self.Icon=
-options.Icon self.Side=Section._side(options.Side or options.Position)self.
-Collapsible=options.Collapsible==true self.Collapsed=options.Collapsed==true
-self.HasToggle=options.Toggle==true or options.Enabled~=nil and options.Toggle~=
-false self.Enabled=options.Enabled~=false self.Flag=options.Flag self.Callback=
-options.Callback self.Elements={}self.Children={}self.Maid=Maid.new()self.
-Changed=Signal.new()self._counter=0 self.Visible=options.Visible~=false if self.
-HasToggle then Section._registerToggle(self)end return self end function Section
-._side(side)if side==2 or side=='Right'or side=='right'then return'Right'elseif
-side=='Full'or side=='full'or side==0 then return'Full'end return'Left'end
-function Section._registerToggle(self)local Lib=Shared.Lib local proxy={Type=
-'SectionToggle',Name=self.Name,Flag=self.Flag,Value=self.Enabled,Default=self.
-Enabled,Changed=self.Changed,Section=self}function proxy._serialize()return self
-.Enabled end function proxy._deserialize(_,v,silent)self:SetEnabled(v==true,
-silent)end function proxy.Get()return self.Enabled end function proxy.Set(_,v)
-self:SetEnabled(v)end function proxy.IsVisible()return true end self._proxy=
-proxy if self.Flag then Lib.Elements[self.Flag]=proxy Lib.Flags[self.Flag]=self.
-Enabled end end function Section.newFloating(owner,options)local self=Section.
-new(nil,options)self.Owner=owner self.Window=owner.Window self.Tab=owner.Tab
-self.Page=owner.Section and owner.Section.Page self.Floating=true self.Name=
-options.Name or owner.Name return self end function Section:IsDisabled()if self.
-HasToggle and not self.Enabled then return true end if self.ParentSection then
-return self.ParentSection:IsDisabled()end if self.Owner and self.Owner.IsLocked
-then return self.Owner:IsLocked()end return false end function Section:_add(
-element)self._counter+=1 element._order=self._counter table.insert(self.Elements
-,element)if element.Type=='Toggle'then element.Changed:Connect(function()self:
-_updateCount()end)task.defer(function()self:_updateCount()end)end if self.
-Floating then if self._mounted then element:_mount(self.Body,element._order)end
-return end if self.Window then self.Window:_enqueue(element)end end function
-Section:_remove(element)local i=table.find(self.Elements,element)if i then table
-.remove(self.Elements,i)end end function Section:GetElements()return table.
-clone(self.Elements)end function Section:Find(name)for _,el in self.Elements do
-if el.Name==name or el.Flag==name then return el end end for _,child in self.
-Children do local found=child:Find(name)if found then return found end end
-return nil end function Section:Clear()for _,el in table.clone(self.Elements)do
-el:Destroy()end return self end function Section:_ensureMounted()if self.
-_mounted then return end if self.ParentSection then self.ParentSection:
-_ensureMounted()self:_buildChild()return end self.Page:_ensureMounted()self:
-_build(self.Page:_column(self.Side))end function Section:_build(parent)self.
-_mounted=true local frame=Util.New('Frame',{Name='Section_'..self.Name,
-AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),LayoutOrder=self.
-Order or 0,Visible=self.Visible,Parent=parent})Util.Corner(8,frame)Theme.Paint(
-frame,{BackgroundColor3='Surface'})local stroke=Util.Stroke(frame)Theme.Paint(
-stroke,{Color='Stroke'})self.Frame,self.Stroke=frame,stroke local header=Util.
-New('TextButton',{Name='Header',Text='',AutoButtonColor=false,
-BackgroundTransparency=1,Size=UDim2.new(1,0,0,34),Visible=self.Name~=''or self.
-HasToggle,Parent=frame})local x=12 local icon=Icons.Get(self.Icon)if icon then
-local img=Util.New('ImageLabel',{BackgroundTransparency=1,Image=icon,Size=UDim2.
-fromOffset(13,13),Position=UDim2.new(0,12,0.5,-6),Parent=header})Theme.Paint(img
-,{ImageColor3='TextDim'})x=31 end local title=Util.Label({Text=string.upper(self
-.Name),FontFace=Theme.Fonts.Bold,TextSize=11,Size=UDim2.new(1,-x-50,1,0),
-Position=UDim2.fromOffset(x,0),TextTruncate=Enum.TextTruncate.AtEnd,Parent=
-header})Theme.Paint(title,{TextColor3='TextDim'})self._title=title local count=
-Util.Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=10,TextXAlignment=Enum.
-TextXAlignment.Right,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.new(0,0,1,0),
-AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,(self.HasToggle and-36 or-12)-
-(self.Collapsible and 22 or 0),0,0),Parent=header})Theme.Paint(count,{TextColor3
-='TextMute'})self._count=count local line=Util.New('Frame',{BorderSizePixel=0,
-Size=UDim2.new(1,-16,0,1),Position=UDim2.new(0,8,1,-1),Parent=header})Theme.
-Paint(line,{BackgroundColor3='Stroke'})if self.HasToggle then local box=Util.
-New('TextButton',{Text='',AutoButtonColor=false,Size=UDim2.fromOffset(16,16),
-AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-12,0.5,0),Parent=header})
-Util.Corner(4,box)local boxStroke=Util.Stroke(box)local check=Util.New(
-'ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('check')or'',Size=UDim2.
-fromOffset(11,11),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,
-0.5),Parent=box})Theme.Paint(check,{ImageColor3='AccentInk'})self._box,self.
-_boxStroke,self._check=box,boxStroke,check box.Activated:Connect(function()if
-self.Owner==nil then self:SetEnabled(not self.Enabled)end end)end if self.
-Collapsible then local chev=Util.New('ImageLabel',{BackgroundTransparency=1,
-Image=Icons.Get('chevron-down')or'',Size=UDim2.fromOffset(13,13),AnchorPoint=
-Vector2.new(1,0.5),Position=UDim2.new(1,self.HasToggle and-36 or-12,0.5,0),
-Parent=header})Theme.Paint(chev,{ImageColor3='TextMute'})self._chevron=chev
-header.Activated:Connect(function()self:SetCollapsed(not self.Collapsed)end)end
-header.LayoutOrder=1 Util.List(frame,0)local wrap=Util.New('Frame',{Name='Wrap',
-BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0
-,0),LayoutOrder=2,Parent=frame})local body=Util.New('Frame',{Name='Body',
-BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0
-,0),Parent=wrap})Util.Padding(body,6,6,8,6)Util.List(body,2)self.Body,self.Wrap=
+local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=__DARKLUA_BUNDLE_MODULES.g()
+local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j(
+)local Shared=__DARKLUA_BUNDLE_MODULES.k()local Base=__DARKLUA_BUNDLE_MODULES.n(
+)local Players=Env.Service('Players')local PlayerList=Base.extend('PlayerList')
+local builtIn={Spectate={Icon='eye',Tooltip='Spectate',Callback=function(player,
+list)local cam=workspace.CurrentCamera local hum=player.Character and player.
+Character:FindFirstChildOfClass('Humanoid')if list._spectating==player then list
+:StopSpectating()elseif hum then list._spectating=player cam.CameraSubject=hum
+end end},Teleport={Icon='map-pin',Tooltip='Teleport',Callback=function(player)
+local me=Players.LocalPlayer.Character local root=me and me:FindFirstChild(
+'HumanoidRootPart')local target=player.Character and player.Character:
+FindFirstChild('HumanoidRootPart')if root and target then root.CFrame=target.
+CFrame*CFrame.new(0,0,3)end end},Copy={Icon='copy',Tooltip='Copy name',Callback=
+function(player)Env.Clipboard(player.Name)Shared.Lib:Notify({Content=Locale.T(
+'Copied')..': '..player.Name,Type='success',Duration=2})end}}function PlayerList
+.new(section,options)local self=Base.new(PlayerList,section,options)self.Height=
+options.Height or 260 self.ExcludeSelf=options.ExcludeSelf~=false self.
+SearchEnabled=options.Search~=false self.OnSelect=options.OnSelect self.Actions=
+{}for _,a in options.Actions or{'Spectate','Teleport','Copy'}do table.insert(
+self.Actions,type(a)=='string'and builtIn[a]or a)end self.Query=''self.Value=nil
+self:_register()self.Maid:Connect(Players.PlayerAdded,function()self:Refresh()
+end)self.Maid:Connect(Players.PlayerRemoving,function(p)if self._spectating==p
+then self:StopSpectating()end task.defer(function()self:Refresh()end)end)return
+self end function PlayerList:GetSelected()return self.Value end function
+PlayerList:StopSpectating()self._spectating=nil local me=Players.LocalPlayer.
+Character local hum=me and me:FindFirstChildOfClass('Humanoid')if hum then
+workspace.CurrentCamera.CameraSubject=hum end return self end function
+PlayerList:_contextItems()return{}end function PlayerList:_applyState()if self.
+Frame then self.Frame.Visible=self.Visible and self._depsOk~=false end end
+function PlayerList:_build(parent)local frame=Util.New('Frame',{Name=
+'PlayerList',BackgroundTransparency=1,Size=UDim2.new(1,0,0,self.Height),Parent=
+parent})self.Frame=frame local y=0 if self.SearchEnabled then local search=Util.
+New('TextBox',{Text='',PlaceholderText=Locale.T('Search')..'\u{2026}',
+ClearTextOnFocus=false,FontFace=Theme.Fonts.Regular,TextSize=12,TextXAlignment=
+Enum.TextXAlignment.Left,Size=UDim2.new(1,-8,0,26),Position=UDim2.fromOffset(4,0
+),Parent=frame})Util.Corner(6,search)Util.Padding(search,0,8,0,26)Theme.Paint(
+search,{BackgroundColor3='Surface2',TextColor3='Text',PlaceholderColor3=
+'TextMute'})local icon=Util.New('ImageLabel',{BackgroundTransparency=1,Image=
+Icons.Get('search')or'',Size=UDim2.fromOffset(13,13),Position=UDim2.new(0,-19,
+0.5,-6),Parent=search})Theme.Paint(icon,{ImageColor3='TextMute'})search:
+GetPropertyChangedSignal('Text'):Connect(function()self.Query=search.Text self:
+Refresh()end)y=32 end local list=Util.New('ScrollingFrame',{
+BackgroundTransparency=1,BorderSizePixel=0,Size=UDim2.new(1,0,1,-y),Position=
+UDim2.fromOffset(0,y),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.
+AutomaticSize.Y,ScrollBarThickness=2,Parent=frame})Theme.Paint(list,{
+ScrollBarImageColor3='StrokeHi'})Util.List(list,4)Util.Padding(list,0,4,0,4)self
+._list=list self._rows={}task.spawn(function()while self.Frame and not self.
+_destroyed do self:_updateDistances()task.wait(0.5)end end)self:Refresh()end
+function PlayerList:_updateDistances()local me=Players.LocalPlayer.Character
+local root=me and me:FindFirstChild('HumanoidRootPart')for player,row in self.
+_rows or{}do local target=player.Character and player.Character:FindFirstChild(
+'HumanoidRootPart')row.Distance.Text=(root and target)and(math.floor((root.
+Position-target.Position).Magnitude)..' st')or'-'row.Eye.Visible=self.
+_spectating==player end end function PlayerList:Refresh()if not self._list then
+return self end for _,row in self._rows do row.Frame:Destroy()end self._rows={}
+local players=Players:GetPlayers()table.sort(players,function(a,b)return string.
+lower(a.DisplayName)<string.lower(b.DisplayName)end)for i,player in players do
+if not(self.ExcludeSelf and player==Players.LocalPlayer)and Util.Fuzzy(self.
+Query,player.DisplayName..' '..player.Name)then local row=Util.New('TextButton',
+{Text='',AutoButtonColor=false,Size=UDim2.new(1,0,0,40),LayoutOrder=i,Parent=
+self._list})Util.Corner(7,row)Theme.Paint(row,{BackgroundColor3=self.Value==
+player and'Surface3'or'Surface2'})local avatar=Util.New('ImageLabel',{Image=
+Shared.Lib.Anonymous and''or('rbxthumb://type=AvatarHeadShot&id='..player.UserId
+..'&w=48&h=48'),Size=UDim2.fromOffset(28,28),Position=UDim2.new(0,7,0.5,-14),
+Parent=row})Util.Round(avatar)Theme.Paint(avatar,{BackgroundColor3='Surface3'})
+local name=Util.Label({Text=player.DisplayName,FontFace=Theme.Fonts.SemiBold,
+TextSize=12,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-150,0,15),
+Position=UDim2.fromOffset(43,5),Parent=row})Theme.Paint(name,{TextColor3='Text'}
+)local user=Util.Label({Text='@'..player.Name,FontFace=Theme.Fonts.Regular,
+TextSize=10,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-150,0,13),
+Position=UDim2.fromOffset(43,21),Parent=row})Theme.Paint(user,{TextColor3=
+'TextMute'})local eye=Util.New('ImageLabel',{BackgroundTransparency=1,Image=
+Icons.Get('eye')or'',Size=UDim2.fromOffset(11,11),Position=UDim2.new(0,27,0,4),
+Visible=false,Parent=row})Theme.Paint(eye,{ImageColor3='Accent'})local dist=Util
+.Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=11,TextXAlignment=Enum.
+TextXAlignment.Right,Size=UDim2.new(0,60,1,0),Position=UDim2.new(1,-60-#self.
+Actions*24,0,0),Parent=row})Theme.Paint(dist,{TextColor3='TextDim'})for a,action
+in self.Actions do local b=Util.New('ImageButton',{BackgroundTransparency=1,
+Image=Icons.Get(action.Icon)or'',Size=UDim2.fromOffset(15,15),AnchorPoint=
+Vector2.new(1,0.5),Position=UDim2.new(1,-10-(#self.Actions-a)*24,0.5,0),ZIndex=2
+,Parent=row})Theme.Paint(b,{ImageColor3='TextDim'})b.MouseEnter:Connect(function
+()Theme.Paint(b,{ImageColor3='Text'},0.1)end)b.MouseLeave:Connect(function()
+Theme.Paint(b,{ImageColor3='TextDim'},0.1)end)if action.Tooltip then Shared.
+Overlay.Hover(b,function()return action.Tooltip end)end b.Activated:Connect(
+function()Util.SafeCall(action.Callback,player,self)self:_updateDistances()end)
+end row.Activated:Connect(function()self.Value=player for p,r in self._rows do
+Theme.Paint(r.Frame,{BackgroundColor3=p==player and'Surface3'or'Surface2'},0.1)
+end self.Changed:Fire(player)if self.OnSelect then Util.SafeCall(self.OnSelect,
+player)end self:_fireCallbacks()end)self._rows[player]={Frame=row,Distance=dist,
+Eye=eye}end end self:_updateDistances()return self end function PlayerList:
+_callbackArgs()return self.Value end return{PlayerList=PlayerList}end function
+__DARKLUA_BUNDLE_MODULES.t()local v=__DARKLUA_BUNDLE_MODULES.cache.t if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.t=v end return v.c end end
+do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal
+=__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
+__DARKLUA_BUNDLE_MODULES.d()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
+__DARKLUA_BUNDLE_MODULES.i()local Shared=__DARKLUA_BUNDLE_MODULES.k()local
+Section={}Section.__index=Section function Section.new(page,options)options=
+type(options)=='string'and{Name=options}or(options or{})local self=setmetatable(
+{},Section)self.Page=page self.Tab=page and page.Tab self.Window=page and page.
+Window self.Name=options.Name or options.Title or''self.Icon=options.Icon self.
+Side=Section._side(options.Side or options.Position)self.Collapsible=options.
+Collapsible==true self.Collapsed=options.Collapsed==true self.HasToggle=options.
+Toggle==true or options.Enabled~=nil and options.Toggle~=false self.Enabled=
+options.Enabled~=false self.Flag=options.Flag self.Callback=options.Callback
+self.Elements={}self.Children={}self.Maid=Maid.new()self.Changed=Signal.new()
+self._counter=0 self.Visible=options.Visible~=false self.Risky=options.Risky==
+true if self.HasToggle then Section._registerToggle(self)end return self end
+function Section._side(side)if side==2 or side=='Right'or side=='right'then
+return'Right'elseif side=='Full'or side=='full'or side==0 then return'Full'end
+return'Left'end function Section._registerToggle(self)local Lib=Shared.Lib local
+proxy={Type='SectionToggle',Name=self.Name,Flag=self.Flag,Value=self.Enabled,
+Default=self.Enabled,Changed=self.Changed,Section=self}function proxy._serialize
+()return self.Enabled end function proxy._deserialize(_,v,silent)self:
+SetEnabled(v==true,silent)end function proxy.Get()return self.Enabled end
+function proxy.Set(_,v)self:SetEnabled(v)end function proxy.IsVisible()return
+true end self._proxy=proxy if self.Flag then Lib.Elements[self.Flag]=proxy Lib.
+Flags[self.Flag]=self.Enabled end end function Section.newFloating(owner,options
+)local self=Section.new(nil,options)self.Owner=owner self.Window=owner.Window
+self.Tab=owner.Tab self.Page=owner.Section and owner.Section.Page self.Floating=
+true self.Name=options.Name or owner.Name return self end function Section:
+IsDisabled()if self.HasToggle and not self.Enabled then return true end if self.
+ParentSection then return self.ParentSection:IsDisabled()end if self.Owner and
+self.Owner.IsLocked then return self.Owner:IsLocked()end return false end
+function Section:_add(element)self._counter+=1 element._order=self._counter
+table.insert(self.Elements,element)if element.Risky then self:_markRisky()end if
+element.Type=='Toggle'then element.Changed:Connect(function()self:_updateCount()
+end)task.defer(function()self:_updateCount()end)end if self.Floating then if
+self._mounted then element:_mount(self.Body,element._order)end return end if
+self.Window then self.Window:_enqueue(element)end end function Section:_remove(
+element)local i=table.find(self.Elements,element)if i then table.remove(self.
+Elements,i)end end function Section:GetElements()return table.clone(self.
+Elements)end function Section:Find(name)for _,el in self.Elements do if el.Name
+==name or el.Flag==name then return el end end for _,child in self.Children do
+local found=child:Find(name)if found then return found end end return nil end
+function Section:Clear()for _,el in table.clone(self.Elements)do el:Destroy()end
+return self end function Section:_ensureMounted()if self._mounted then return
+end if self.ParentSection then self.ParentSection:_ensureMounted()self:
+_buildChild()return end self.Page:_ensureMounted()self:_build(self.Page:_column(
+self.Side))end function Section:_build(parent)self._mounted=true local frame=
+Util.New('Frame',{Name='Section_'..self.Name,AutomaticSize=Enum.AutomaticSize.Y,
+Size=UDim2.new(1,0,0,0),LayoutOrder=self.Order or 0,Visible=self.Visible,Parent=
+parent})Util.Corner(8,frame)Theme.Paint(frame,{BackgroundColor3='Surface'})local
+stroke=Util.Stroke(frame)Theme.Paint(stroke,{Color='Stroke'})self.Frame,self.
+Stroke=frame,stroke local header=Util.New('TextButton',{Name='Header',Text='',
+AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.new(1,0,0,34),Visible=
+self.Name~=''or self.HasToggle,Parent=frame})local x=12 local icon=Icons.Get(
+self.Icon)if icon then local img=Util.New('ImageLabel',{BackgroundTransparency=1
+,Image=icon,Size=UDim2.fromOffset(13,13),Position=UDim2.new(0,12,0.5,-6),Parent=
+header})Theme.Paint(img,{ImageColor3='TextDim'})x=31 end local title=Util.Label(
+{Text=string.upper(self.Name),FontFace=Theme.Fonts.Bold,TextSize=11,Size=UDim2.
+new(1,-x-50,1,0),Position=UDim2.fromOffset(x,0),TextTruncate=Enum.TextTruncate.
+AtEnd,Parent=header})Theme.Paint(title,{TextColor3='TextDim'})self._title=title
+local count=Util.Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=10,
+TextXAlignment=Enum.TextXAlignment.Right,AutomaticSize=Enum.AutomaticSize.X,Size
+=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,(self.
+HasToggle and-36 or-12)-(self.Collapsible and 22 or 0),0,0),Parent=header})Theme
+.Paint(count,{TextColor3='TextMute'})self._count=count local line=Util.New(
+'Frame',{BorderSizePixel=0,Size=UDim2.new(1,-16,0,1),Position=UDim2.new(0,8,1,-1
+),Parent=header})Theme.Paint(line,{BackgroundColor3='Stroke'})if self.HasToggle
+then local box=Util.New('TextButton',{Text='',AutoButtonColor=false,Size=UDim2.
+fromOffset(16,16),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-12,0.5,0)
+,Parent=header})Util.Corner(4,box)local boxStroke=Util.Stroke(box)local check=
+Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('check')or'',
+Size=UDim2.fromOffset(11,11),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromScale(0.5,0.5),Parent=box})Theme.Paint(check,{ImageColor3='AccentInk'})self.
+_box,self._boxStroke,self._check=box,boxStroke,check box.Activated:Connect(
+function()if self.Owner==nil then self:SetEnabled(not self.Enabled)end end)end
+if self.Collapsible then local chev=Util.New('ImageLabel',{
+BackgroundTransparency=1,Image=Icons.Get('chevron-down')or'',Size=UDim2.
+fromOffset(13,13),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,self.
+HasToggle and-36 or-12,0.5,0),Parent=header})Theme.Paint(chev,{ImageColor3=
+'TextMute'})self._chevron=chev header.Activated:Connect(function()self:
+SetCollapsed(not self.Collapsed)end)end header.LayoutOrder=1 Util.List(frame,0)
+local wrap=Util.New('Frame',{Name='Wrap',BackgroundTransparency=1,AutomaticSize=
+Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),LayoutOrder=2,Parent=frame})local
+body=Util.New('Frame',{Name='Body',BackgroundTransparency=1,AutomaticSize=Enum.
+AutomaticSize.Y,Size=UDim2.new(1,0,0,0),Parent=wrap})Util.Padding(body,6,6,8,6)
+local list=Util.List(body,2)list:SetAttribute('BaseGap',2)self.Body,self.Wrap=
 body,wrap local dim=Util.New('TextButton',{Name='Dimmer',Text='',AutoButtonColor
 =false,BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=30,Visible=
 false,Parent=wrap})Theme.Paint(dim,{BackgroundColor3='Surface'})Util.Corner(8,
-dim)self._dim=dim self:_paintState(false)self:_updateCount()if self.Collapsed
-then self:SetCollapsed(true,true)end end function Section:_paintState(animate)
-local t=animate and 0.18 or 0 if self._box then Theme.Paint(self._box,{
-BackgroundColor3=self.Enabled and'Accent'or'Surface3'},t)Theme.Paint(self.
-_boxStroke,{Color=self.Enabled and'Accent'or'StrokeHi'},t)self._check.
-ImageTransparency=self.Enabled and 0 or 1 Theme.Paint(self._title,{TextColor3=
-self.Enabled and'Text'or'TextDim'},t)end if self._dim then local off=self.
-HasToggle and not self.Enabled self._dim.Visible=off Tween.Play(self._dim,{
-BackgroundTransparency=off and 0.45 or 1},t)end end function Section:SetEnabled(
-enabled,silent)enabled=enabled and true or false if self.Enabled==enabled then
-return self end self.Enabled=enabled local Lib=Shared.Lib if self.Flag then Lib.
-Flags[self.Flag]=enabled end if self._proxy then self._proxy.Value=enabled end
-self:_paintState(true)for _,el in self:AllElements()do el:_applyState()end if
-not silent and self.Callback then Util.SafeCall(self.Callback,enabled)end self.
-Changed:Fire(enabled)if self._proxy then Lib:_onElementChanged(self._proxy,
-enabled,not enabled)end return self end function Section:_updateCount()if self.
-ParentSection then return self.ParentSection:_updateCount()end if not self.
-_count then return end local on,total=0,0 for _,el in self:AllElements()do if el
-.Type=='Toggle'then total+=1 if el.Value then on+=1 end end end self._count.Text
-=total>=2 and(on..'/'..total)or''Theme.Paint(self._count,{TextColor3=on>0 and
-'TextDim'or'TextMute'})end function Section:IsEnabled()return self.Enabled end
-function Section:AllElements()local out=table.clone(self.Elements)for _,child in
-self.Children do for _,el in child:AllElements()do table.insert(out,el)end end
-return out end function Section:SetCollapsed(collapsed,instant)self.Collapsed=
-collapsed if not self.Body then return self end(self.Wrap or self.Body).Visible=
-not collapsed if self._chevron then Tween.Play(self._chevron,{Rotation=collapsed
-and-90 or 0},instant and 0 or 0.18)end return self end function Section:Collapse
-()return self:SetCollapsed(true)end function Section:Expand()return self:
-SetCollapsed(false)end function Section:SetName(name)self.Name=name if self.
-_title then self._title.Text=string.upper(name)end return self end Section.
-SetTitle=Section.SetName function Section:SetVisible(visible)self.Visible=
-visible if self.Frame then self.Frame.Visible=visible end return self end
-function Section:_reveal()if self.ParentSection then self.ParentSection:_reveal(
-)if self.ParentSection._tabs then self.ParentSection:SelectTab(self)end end if
-self.Page then self.Page:Select()end if self.Collapsed then self:SetCollapsed(
-false)end end function Section:Tabs(names,options)options=options or{}self._tabs
-={}self._tabIcons=options.Icons or{}local out={}for i,name in names do local
-child=Section.new(nil,{Name=name})child.ParentSection=self child.Window=self.
-Window child.Tab=self.Tab child.Page=self.Page child.Owner=nil child.TabIndex=i
-child.Floating=self.Floating table.insert(self._tabs,child)table.insert(self.
-Children,child)table.insert(out,child)end self._tabFlag=options.Flag self.
-_activeTab=self._tabs[1]local default=options.Default for _,t in self._tabs do
-if t.Name==default then self._activeTab=t end end if self._tabFlag then local
-Lib=Shared.Lib local proxy={Type='SectionTabs',Name=self.Name,Flag=self._tabFlag
-,Changed=Signal.new()}function proxy._serialize()return self._activeTab and self
-._activeTab.Name end function proxy._deserialize(_,v)self:SelectTab(v)end
-function proxy.Get()return self._activeTab and self._activeTab.Name end function
-proxy.Set(_,v)self:SelectTab(v)end function proxy.IsVisible()return true end
-self._tabProxy=proxy Lib.Elements[self._tabFlag]=proxy Lib.Flags[self._tabFlag]=
-proxy.Get()end if self._mounted then self:_buildTabBar()end return table.unpack(
-out)end function Section:_buildTabBar()if self._tabBar or not self._tabs then
-return end local bar=Util.New('Frame',{Name='TabBar',Size=UDim2.new(1,0,0,30),
-LayoutOrder=-1,Parent=self.Body})Util.Corner(6,bar)Theme.Paint(bar,{
-BackgroundColor3='Bg2'})Theme.Paint(Util.Stroke(bar),{Color='Stroke'})local
-indicator=Util.New('Frame',{Name='Indicator',Size=UDim2.new(1/#self._tabs,-6,1,-
-6),Position=UDim2.fromOffset(3,3),Parent=bar})Util.Corner(5,indicator)Theme.
-Paint(indicator,{BackgroundColor3='Surface3'})Theme.Paint(Util.Stroke(indicator)
-,{Color='StrokeHi'})self._tabBar,self._tabIndicator,self._tabButtons=bar,
-indicator,{}for i,child in self._tabs do local b=Util.New('TextButton',{Text='',
-AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.new(1/#self._tabs,0,1,
-0),Position=UDim2.fromScale((i-1)/#self._tabs,0),ZIndex=2,Parent=bar})local
-holder=Util.New('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.
-AutomaticSize.X,Size=UDim2.fromScale(0,1),AnchorPoint=Vector2.new(0.5,0),
-Position=UDim2.fromScale(0.5,0),ZIndex=2,Parent=b})Util.List(holder,5,Enum.
-FillDirection.Horizontal,Enum.HorizontalAlignment.Center,Enum.VerticalAlignment.
-Center)local iconId=Icons.Get(self._tabIcons[i])local img if iconId then img=
-Util.New('ImageLabel',{BackgroundTransparency=1,Image=iconId,Size=UDim2.
-fromOffset(13,13),ZIndex=2,Parent=holder})end local label=Util.Label({Text=child
-.Name,FontFace=Theme.Fonts.SemiBold,TextSize=12,AutomaticSize=Enum.AutomaticSize
-.X,Size=UDim2.fromScale(0,1),LayoutOrder=2,ZIndex=2,Parent=holder})self.
-_tabButtons[child]={Label=label,Icon=img}b.Activated:Connect(function()self:
-SelectTab(child)end)end self:_paintTabs(false)end function Section:_paintTabs(
-animate)if not self._tabBar then return end local index=self._activeTab and self
-._activeTab.TabIndex or 1 Tween.Play(self._tabIndicator,{Position=UDim2.new((
-index-1)/#self._tabs,3,0,3)},animate and 0.25 or 0,Enum.EasingStyle.Back)for
-child,refs in self._tabButtons do local on=child==self._activeTab Theme.Paint(
-refs.Label,{TextColor3=on and'Text'or'TextMute'},animate and 0.15 or 0)if refs.
-Icon then Theme.Paint(refs.Icon,{ImageColor3=on and'Accent'or'TextMute'},animate
-and 0.15 or 0)end if child.Body then child.Body.Visible=on end end end function
-Section:SelectTab(which)if not self._tabs then return self end for _,child in
-self._tabs do if child==which or child.Name==which or child.TabIndex==which then
-if self._activeTab~=child then self._activeTab=child self:_paintTabs(true)if
-self._tabProxy then Shared.Lib.Flags[self._tabFlag]=child.Name Shared.Lib:
-_onElementChanged(self._tabProxy,child.Name,nil)end end end end return self end
-function Section:GetTab()return self._activeTab and self._activeTab.Name end
-function Section:_buildChild()if self._mounted then return end self._mounted=
-true local parent=self.ParentSection parent:_buildTabBar()local body=Util.New(
-'Frame',{Name='Tab_'..self.Name,BackgroundTransparency=1,AutomaticSize=Enum.
-AutomaticSize.Y,Size=UDim2.new(1,0,0,0),LayoutOrder=self.TabIndex,Visible=parent
-._activeTab==self,Parent=parent.Body})Util.Padding(body,4,0,0,0)Util.List(body,2
-)self.Body=body self.Frame=body end function Section:Toggle(anchor)if self.
-_popup and self._popup.Open then self._popup:Close()return end self:Open(anchor)
-end function Section:Open(anchor)if not self.Floating then return self end local
-Overlay=Shared.Overlay local popup=Overlay.Popup({Anchor=anchor,Width=260,
-MaxHeight=380,Side='Right',Padding=6,Spacing=2,OnClose=function()self._mounted=
-false self.Body=nil for _,el in self:AllElements()do el._mounted=false el.Frame=
-nil for _,link in el.Links do link._mounted=false end end for _,child in self.
-Children do child._mounted=false child.Body=nil end self._tabBar=nil end})self.
-_popup=popup local z=popup.Frame.ZIndex local title=Util.Label({Text=string.
-upper(self.Name),FontFace=Theme.Fonts.Bold,TextSize=11,Size=UDim2.new(1,0,0,24),
-LayoutOrder=-2,ZIndex=z,Parent=popup.Content})Util.Padding(title,0,0,0,6)Theme.
-Paint(title,{TextColor3='TextDim'})self.Body=popup.Content self._mounted=true if
-self._tabs then self:_buildTabBar()end for _,el in self.Elements do el:_mount(
-self.Body,el._order)end for _,child in self.Children do child:_buildChild()for _
-,el in child.Elements do el:_mount(child.Body,el._order)end end self:_paintTabs(
-false)for _,d in popup.Content:GetDescendants()do if d:IsA('GuiObject')then d.
-ZIndex=z+(d.ZIndex>1 and d.ZIndex-1 or 0)end end return self end function
-Section:Close()if self._popup then self._popup:Close()end return self end
-function Section:Destroy()self:Clear()for _,child in self.Children do child:
-Destroy()end if self._popup then self._popup:Close()end self.Maid:Clean()if self
-.Frame and not self.Floating then self.Frame:Destroy()end if self.Page then
-local i=table.find(self.Page.Sections,self)if i then table.remove(self.Page.
-Sections,i)end end end local constructors={Toggle='Toggle',Checkbox='Toggle',
-Button='Button',ButtonGroup='ButtonGroup',Buttons='ButtonGroup',Label='Label',
-Text='Label',Paragraph='Paragraph',Divider='Divider',Separator='Divider',Spacer=
-'Spacer',Navigate='Navigate',Link='Navigate',Slider='Slider',Dropdown='Dropdown'
-,Input='Input',TextBox='Input',Textbox='Input',Keybind='Keybind',Bind='Keybind',
-ColorPicker='ColorPicker',Colorpicker='ColorPicker',Color='ColorPicker',Progress
-='Progress',ProgressBar='Progress',Stat='Stat',StatGrid='StatGrid',Graph='Graph'
-,Sparkline='Graph',Chart='Graph',Table='Table',Catalog='Table',List='Table',Card
-='Card',Image='Image',Console='Console',Log='Console',Code='Code'}for method,
-className in constructors do local function make(self,options)local class=Shared
-.Lib._classes[className]if type(options)~='table'and className~='Label'and
-className~='Divider'and className~='Paragraph'and className~='Spacer'then
-options={Name=options}end if className=='Toggle'and method=='Checkbox'then
+dim)self._dim=dim self:_paintState(false)self:_updateCount()if self.Risky then
+self:_markRisky()end if self.Collapsed then self:SetCollapsed(true,true)end end
+function Section:_paintState(animate)local t=animate and 0.18 or 0 if self._box
+then Theme.Paint(self._box,{BackgroundColor3=self.Enabled and'Accent'or
+'Surface3'},t)Theme.Paint(self._boxStroke,{Color=self.Enabled and'Accent'or
+'StrokeHi'},t)self._check.ImageTransparency=self.Enabled and 0 or 1 Theme.Paint(
+self._title,{TextColor3=self.Enabled and'Text'or'TextDim'},t)end if self._dim
+then local off=self.HasToggle and not self.Enabled self._dim.Visible=off Tween.
+Play(self._dim,{BackgroundTransparency=off and 0.45 or 1},t)end end function
+Section:SetEnabled(enabled,silent)enabled=enabled and true or false if self.
+Enabled==enabled then return self end self.Enabled=enabled local Lib=Shared.Lib
+if self.Flag then Lib.Flags[self.Flag]=enabled end if self._proxy then self.
+_proxy.Value=enabled end self:_paintState(true)for _,el in self:AllElements()do
+el:_applyState()end if not silent and self.Callback then Util.SafeCall(self.
+Callback,enabled)end self.Changed:Fire(enabled)if self._proxy then Lib:
+_onElementChanged(self._proxy,enabled,not enabled)end return self end function
+Section:_markRisky()if self.ParentSection then return self.ParentSection:
+_markRisky()end self.Risky=true if self.Frame and not self._riskStripe and not
+self.Floating then local stripe=Util.New('Frame',{Name='Risky',Size=UDim2.new(0,
+2,1,-24),Position=UDim2.fromOffset(0,12),BorderSizePixel=0,ZIndex=5,Parent=self.
+Frame})Util.Round(stripe)Theme.Paint(stripe,{BackgroundColor3='Risky'})self.
+_riskStripe=stripe end end function Section:_updateCount()if self.ParentSection
+then return self.ParentSection:_updateCount()end if not self._count then return
+end local on,total=0,0 for _,el in self:AllElements()do if el.Type=='Toggle'then
+total+=1 if el.Value then on+=1 end end end self._count.Text=total>=2 and(on..
+'/'..total)or''Theme.Paint(self._count,{TextColor3=on>0 and'TextDim'or'TextMute'
+})end function Section:IsEnabled()return self.Enabled end function Section:
+AllElements()local out=table.clone(self.Elements)for _,child in self.Children do
+for _,el in child:AllElements()do table.insert(out,el)end end return out end
+function Section:SetCollapsed(collapsed,instant)self.Collapsed=collapsed if not
+self.Body then return self end(self.Wrap or self.Body).Visible=not collapsed if
+self._chevron then Tween.Play(self._chevron,{Rotation=collapsed and-90 or 0},
+instant and 0 or 0.18)end return self end function Section:Collapse()return self
+:SetCollapsed(true)end function Section:Expand()return self:SetCollapsed(false)
+end function Section:SetName(name)self.Name=name if self._title then self._title
+.Text=string.upper(name)end return self end Section.SetTitle=Section.SetName
+function Section:SetVisible(visible)self.Visible=visible if self.Frame then self
+.Frame.Visible=visible end return self end function Section:_reveal()if self.
+ParentSection then self.ParentSection:_reveal()if self.ParentSection._tabs then
+self.ParentSection:SelectTab(self)end end if self.Page then self.Page:Select()
+end if self.Collapsed then self:SetCollapsed(false)end end function Section:Tabs
+(names,options)options=options or{}self._tabs={}self._tabIcons=options.Icons or{
+}local out={}for i,name in names do local child=Section.new(nil,{Name=name})
+child.ParentSection=self child.Window=self.Window child.Tab=self.Tab child.Page=
+self.Page child.Owner=nil child.TabIndex=i child.Floating=self.Floating table.
+insert(self._tabs,child)table.insert(self.Children,child)table.insert(out,child)
+end self._tabFlag=options.Flag self._activeTab=self._tabs[1]local default=
+options.Default for _,t in self._tabs do if t.Name==default then self._activeTab
+=t end end if self._tabFlag then local Lib=Shared.Lib local proxy={Type=
+'SectionTabs',Name=self.Name,Flag=self._tabFlag,Changed=Signal.new()}function
+proxy._serialize()return self._activeTab and self._activeTab.Name end function
+proxy._deserialize(_,v)self:SelectTab(v)end function proxy.Get()return self.
+_activeTab and self._activeTab.Name end function proxy.Set(_,v)self:SelectTab(v)
+end function proxy.IsVisible()return true end self._tabProxy=proxy Lib.Elements[
+self._tabFlag]=proxy Lib.Flags[self._tabFlag]=proxy.Get()end if self._mounted
+then self:_buildTabBar()end return table.unpack(out)end function Section:
+_buildTabBar()if self._tabBar or not self._tabs then return end local bar=Util.
+New('Frame',{Name='TabBar',Size=UDim2.new(1,0,0,30),LayoutOrder=-1,Parent=self.
+Body})Util.Corner(6,bar)Theme.Paint(bar,{BackgroundColor3='Bg2'})Theme.Paint(
+Util.Stroke(bar),{Color='Stroke'})local indicator=Util.New('Frame',{Name=
+'Indicator',Size=UDim2.new(1/#self._tabs,-6,1,-6),Position=UDim2.fromOffset(3,3)
+,Parent=bar})Util.Corner(5,indicator)Theme.Paint(indicator,{BackgroundColor3=
+'Surface3'})Theme.Paint(Util.Stroke(indicator),{Color='StrokeHi'})self._tabBar,
+self._tabIndicator,self._tabButtons=bar,indicator,{}for i,child in self._tabs do
+local b=Util.New('TextButton',{Text='',AutoButtonColor=false,
+BackgroundTransparency=1,Size=UDim2.new(1/#self._tabs,0,1,0),Position=UDim2.
+fromScale((i-1)/#self._tabs,0),ZIndex=2,Parent=bar})local holder=Util.New(
+'Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
+fromScale(0,1),AnchorPoint=Vector2.new(0.5,0),Position=UDim2.fromScale(0.5,0),
+ZIndex=2,Parent=b})Util.List(holder,5,Enum.FillDirection.Horizontal,Enum.
+HorizontalAlignment.Center,Enum.VerticalAlignment.Center)local iconId=Icons.Get(
+self._tabIcons[i])local img if iconId then img=Util.New('ImageLabel',{
+BackgroundTransparency=1,Image=iconId,Size=UDim2.fromOffset(13,13),ZIndex=2,
+Parent=holder})end local label=Util.Label({Text=child.Name,FontFace=Theme.Fonts.
+SemiBold,TextSize=12,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,1
+),LayoutOrder=2,ZIndex=2,Parent=holder})self._tabButtons[child]={Label=label,
+Icon=img}b.Activated:Connect(function()self:SelectTab(child)end)end self:
+_paintTabs(false)end function Section:_paintTabs(animate)if not self._tabBar
+then return end local index=self._activeTab and self._activeTab.TabIndex or 1
+Tween.Play(self._tabIndicator,{Position=UDim2.new((index-1)/#self._tabs,3,0,3)},
+animate and 0.25 or 0,Enum.EasingStyle.Back)for child,refs in self._tabButtons
+do local on=child==self._activeTab Theme.Paint(refs.Label,{TextColor3=on and
+'Text'or'TextMute'},animate and 0.15 or 0)if refs.Icon then Theme.Paint(refs.
+Icon,{ImageColor3=on and'Accent'or'TextMute'},animate and 0.15 or 0)end if child
+.Body then child.Body.Visible=on end end end function Section:SelectTab(which)if
+not self._tabs then return self end for _,child in self._tabs do if child==which
+or child.Name==which or child.TabIndex==which then if self._activeTab~=child
+then self._activeTab=child self:_paintTabs(true)if self._tabProxy then Shared.
+Lib.Flags[self._tabFlag]=child.Name Shared.Lib:_onElementChanged(self._tabProxy,
+child.Name,nil)end end end end return self end function Section:GetTab()return
+self._activeTab and self._activeTab.Name end function Section:_buildChild()if
+self._mounted then return end self._mounted=true local parent=self.ParentSection
+parent:_buildTabBar()local body=Util.New('Frame',{Name='Tab_'..self.Name,
+BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0
+,0),LayoutOrder=self.TabIndex,Visible=parent._activeTab==self,Parent=parent.Body
+})Util.Padding(body,4,0,0,0)Util.List(body,2)self.Body=body self.Frame=body end
+function Section:Toggle(anchor)if self._popup and self._popup.Open then self.
+_popup:Close()return end self:Open(anchor)end function Section:Open(anchor)if
+not self.Floating then return self end local Overlay=Shared.Overlay local popup=
+Overlay.Popup({Anchor=anchor,Width=260,MaxHeight=380,Side='Right',Padding=6,
+Spacing=2,OnClose=function()self._mounted=false self.Body=nil for _,el in self:
+AllElements()do el._mounted=false el.Frame=nil for _,link in el.Links do link.
+_mounted=false end end for _,child in self.Children do child._mounted=false
+child.Body=nil end self._tabBar=nil end})self._popup=popup local z=popup.Frame.
+ZIndex local title=Util.Label({Text=string.upper(self.Name),FontFace=Theme.Fonts
+.Bold,TextSize=11,Size=UDim2.new(1,0,0,24),LayoutOrder=-2,ZIndex=z,Parent=popup.
+Content})Util.Padding(title,0,0,0,6)Theme.Paint(title,{TextColor3='TextDim'})
+self.Body=popup.Content self._mounted=true if self._tabs then self:_buildTabBar(
+)end for _,el in self.Elements do el:_mount(self.Body,el._order)end for _,child
+in self.Children do child:_buildChild()for _,el in child.Elements do el:_mount(
+child.Body,el._order)end end self:_paintTabs(false)for _,d in popup.Content:
+GetDescendants()do if d:IsA('GuiObject')then d.ZIndex=z+(d.ZIndex>1 and d.ZIndex
+-1 or 0)end end return self end function Section:Close()if self._popup then self
+._popup:Close()end return self end function Section:Destroy()self:Clear()for _,
+child in self.Children do child:Destroy()end if self._popup then self._popup:
+Close()end self.Maid:Clean()if self.Frame and not self.Floating then self.Frame:
+Destroy()end if self.Page then local i=table.find(self.Page.Sections,self)if i
+then table.remove(self.Page.Sections,i)end end end local constructors={Toggle=
+'Toggle',Checkbox='Toggle',Button='Button',ButtonGroup='ButtonGroup',Buttons=
+'ButtonGroup',Label='Label',Text='Label',Paragraph='Paragraph',Divider='Divider'
+,Separator='Divider',Spacer='Spacer',Navigate='Navigate',Link='Navigate',Slider=
+'Slider',Dropdown='Dropdown',Input='Input',TextBox='Input',Textbox='Input',
+Keybind='Keybind',Bind='Keybind',ColorPicker='ColorPicker',Colorpicker=
+'ColorPicker',Color='ColorPicker',Progress='Progress',ProgressBar='Progress',
+Stat='Stat',StatGrid='StatGrid',Graph='Graph',Sparkline='Graph',Chart='Graph',
+Table='Table',Catalog='Table',List='Table',Card='Card',Image='Image',Console=
+'Console',Log='Console',Code='Code',PlayerList='PlayerList',Players='PlayerList'
+}for method,className in constructors do local function make(self,options)local
+class=Shared.Lib._classes[className]if type(options)~='table'and className~=
+'Label'and className~='Divider'and className~='Paragraph'and className~='Spacer'
+then options={Name=options}end if className=='Toggle'and method=='Checkbox'then
 options.Style=options.Style or'Checkbox'end return class.new(self,options or{})
 end if method~='Toggle'then Section[method]=make end Section['Add'..method]=make
 Section['Create'..method]=make end local originalToggle=Section.Toggle function
@@ -2576,13 +3078,13 @@ return Shared.Lib._classes.PlayerDropdown(self,options or{})end Section.
 AddPlayerDropdown=Section.PlayerDropdown function Section:Custom(name,options)
 local class=Shared.Lib._custom[name]assert(class,
 "[Proximity] unknown custom element '"..tostring(name).."'")return class.new(
-self,options or{})end return Section end function __DARKLUA_BUNDLE_MODULES.t()
-local v=__DARKLUA_BUNDLE_MODULES.cache.t if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.t=v end return v.c end end do local function 
+self,options or{})end return Section end function __DARKLUA_BUNDLE_MODULES.u()
+local v=__DARKLUA_BUNDLE_MODULES.cache.u if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.u=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
 __DARKLUA_BUNDLE_MODULES.b()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Shared
-=__DARKLUA_BUNDLE_MODULES.k()local Section=__DARKLUA_BUNDLE_MODULES.t()local
+=__DARKLUA_BUNDLE_MODULES.k()local Section=__DARKLUA_BUNDLE_MODULES.u()local
 Page={}Page.__index=Page function Page.new(tab,options)options=type(options)==
 'string'and{Name=options}or(options or{})local self=setmetatable({},Page)self.
 Tab=tab self.Window=tab.Window self.Name=options.Name or tab.Name self.Icon=
@@ -2605,10 +3107,13 @@ fromScale(1,1),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,
 ScrollBarThickness=3,ScrollingDirection=Enum.ScrollingDirection.Y,
 VerticalScrollBarInset=Enum.ScrollBarInset.ScrollBar,Visible=window.CurrentPage
 ==self,Parent=window.Content})Theme.Paint(scroller,{ScrollBarImageColor3=
-'StrokeHi'})Util.Padding(scroller,12,12,14,12)Util.List(scroller,10)self.Frame=
-scroller local full=Util.New('Frame',{Name='Full',BackgroundTransparency=1,
-AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),LayoutOrder=1,Parent=
-scroller})Util.List(full,10)local row=Util.New('Frame',{Name='Columns',
+'StrokeHi'})local remember=Util.Debounce(0.8,function()if window.State=='Ready'
+then Shared.Lib:SetSetting(window:_scrollKey(self),math.floor(scroller.
+CanvasPosition.Y))end end)scroller:GetPropertyChangedSignal('CanvasPosition'):
+Connect(remember)Util.Padding(scroller,12,12,14,12)Util.List(scroller,10)self.
+Frame=scroller local full=Util.New('Frame',{Name='Full',BackgroundTransparency=1
+,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),LayoutOrder=1,Parent
+=scroller})Util.List(full,10)local row=Util.New('Frame',{Name='Columns',
 BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0
 ,0),LayoutOrder=2,Parent=scroller})local left=Util.New('Frame',{Name='Left',
 BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(0.5,-
@@ -2672,8 +3177,8 @@ do if page.Frame then page.Frame:Destroy()end end if self.Button then self.
 Button:Destroy()end local tabs=self.Window.Tabs local i=table.find(tabs,self)if
 i then table.remove(tabs,i)end if self.Window.CurrentTab==self and tabs[1]then
 self.Window:SelectTab(tabs[1])end end return{Page=Page,Tab=Tab}end function
-__DARKLUA_BUNDLE_MODULES.u()local v=__DARKLUA_BUNDLE_MODULES.cache.u if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.u=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.v()local v=__DARKLUA_BUNDLE_MODULES.cache.v if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.v=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
@@ -2784,27 +3289,208 @@ self.Fill,{Size=UDim2.fromScale(1,1)},0.15)task.delay(Tween.Speed>0 and 0.18 or
 Sine)if callback then callback()end task.delay(0.4,function()self:Destroy()end)
 end)end function Skeleton:Destroy()if self.Conn then self.Conn:Disconnect()self.
 Conn=nil end if self.Root then self.Root:Destroy()self.Root=nil end end return
-Skeleton end function __DARKLUA_BUNDLE_MODULES.v()local v=
-__DARKLUA_BUNDLE_MODULES.cache.v if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.v=v end return v.c end end do local function 
-__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
-__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
-__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
-__DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
-__DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
-Shared=__DARKLUA_BUNDLE_MODULES.k()local PageModule=__DARKLUA_BUNDLE_MODULES.u()
-local Skeleton=__DARKLUA_BUNDLE_MODULES.v()local UIS=Env.Service(
-'UserInputService')local RunService=Env.Service('RunService')Env.Service(
-'Players')local Tab=PageModule.Tab local Window={}Window.__index=Window local
-DEFAULT_SIZE=Vector2.new(740,500)local MOBILE_SIZE=Vector2.new(600,380)function
-Window.new(Lib,options)options=options or{}local self=setmetatable({},Window)
-self.Library=Lib self.Options=options self.Title=Util.Opt(options,'Title','Name'
-)or'Proximity'self.Subtitle=Util.Opt(options,'Subtitle','SubTitle','SubName',
-'Description')or('v'..Lib.Version)self.Logo=Util.Opt(options,'Logo','Icon')self.
-Keybind=Keys.Normalize(Util.Opt(options,'Keybind','MenuKey','Key')or'RightShift'
-)self.SidebarWidth=options.SidebarWidth or 196 local touch=UIS.TouchEnabled and
-not UIS.KeyboardEnabled local size=options.Size if typeof(size)=='UDim2'then
-size=Vector2.new(size.X.Offset,size.Y.Offset)end self.BaseSize=size or(touch and
+Skeleton end function __DARKLUA_BUNDLE_MODULES.w()local v=
+__DARKLUA_BUNDLE_MODULES.cache.w if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.w=v end return v.c end end do local function 
+__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
+__DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
+Shared=__DARKLUA_BUNDLE_MODULES.k()local Icons=__DARKLUA_BUNDLE_MODULES.i()local
+RunService=Env.Service('RunService')local Loader={}Loader.__index=Loader local
+SPHERE,RING=560,240 local RADIUS,RING_IN,RING_OUT=92,128,168 local FOCAL=700
+local TILT_Z,TILT_X=math.rad(18),math.rad(75)local LIGHT=Vector3.new(0.72,0.55,
+0.42).Unit local SHADES={}for i=0,11 do local v=i/11 SHADES[i]=Color3.new(v,v,v)
+end local function rotY(v,a)local c,s=math.cos(a),math.sin(a)return Vector3.new(
+v.X*c+v.Z*s,v.Y,-v.X*s+v.Z*c)end local function rotX(v,a)local c,s=math.cos(a),
+math.sin(a)return Vector3.new(v.X,v.Y*c-v.Z*s,v.Y*s+v.Z*c)end local function 
+rotZ(v,a)local c,s=math.cos(a),math.sin(a)return Vector3.new(v.X*c-v.Y*s,v.X*s+v
+.Y*c,v.Z)end function Loader.new(window,options)options=options or{}local self=
+setmetatable({},Loader)self.Window=window self.Started=os.clock()self.Points={}
+self.Angle=0 self.Display=0 self.Samples={}local root=Util.New('Frame',{Name=
+'ProximityLoader',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=300,
+Parent=Shared.Gui.Root})self.Root=root local dim=Util.New('Frame',{
+BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=1,Size=UDim2.
+fromScale(1,1),ZIndex=300,Parent=root})Util.Gradient(dim,nil,NumberSequence.new(
+{NumberSequenceKeypoint.new(0,0.15),NumberSequenceKeypoint.new(0.5,0),
+NumberSequenceKeypoint.new(1,0.15)}),90)Tween.Play(dim,{BackgroundTransparency=
+options.Dim or 0.25},0.6,Enum.EasingStyle.Sine)self.Dim=dim local stage=Util.
+New('Frame',{BackgroundTransparency=1,AnchorPoint=Vector2.new(0.5,0.5),Position=
+UDim2.fromScale(0.5,0.47),Size=UDim2.fromOffset(420,420),ZIndex=301,Parent=root}
+)local view=workspace.CurrentCamera.ViewportSize Util.New('UIScale',{Scale=math.
+clamp(math.min(view.X,view.Y)/820,0.55,1.15),Parent=stage})self.Stage=stage self
+.Center=Vector2.new(210,210)local halo=Util.New('Frame',{AnchorPoint=Vector2.
+new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(250,250),
+BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,ZIndex=301,Parent=
+stage})Util.Round(halo)Util.Gradient(halo,nil,NumberSequence.new({
+NumberSequenceKeypoint.new(0,0.97),NumberSequenceKeypoint.new(0.5,0.99),
+NumberSequenceKeypoint.new(1,1)}),45)Tween.Play(halo,{BackgroundTransparency=0},
+1.2)self.Halo=halo local rng=Random.new(42)local golden=math.pi*(3-math.sqrt(5))
+for i=0,SPHERE-1 do local y=1-(i/(SPHERE-1))*2 local r=math.sqrt(1-y*y)local
+theta=golden*i local base=Vector3.new(math.cos(theta)*r,y,math.sin(theta)*r)*
+RADIUS table.insert(self.Points,{Base=base,Kind='Sphere'})end for _=1,RING do
+local t=rng:NextNumber()*math.pi*2 local rr=RING_IN+(RING_OUT-RING_IN)*(rng:
+NextNumber()^1.6)local base=Vector3.new(math.cos(t)*rr,(rng:NextNumber()-0.5)*3,
+math.sin(t)*rr)table.insert(self.Points,{Base=base,Kind='Ring',Glint=rng:
+NextNumber()<0.08})end for _,p in self.Points do local size=p.Kind=='Ring'and(p.
+Glint and 3 or 2)or 3 p.Frame=Util.New('Frame',{BorderSizePixel=0,AnchorPoint=
+Vector2.new(0.5,0.5),Size=UDim2.fromOffset(size,size),BackgroundColor3=Color3.
+new(1,1,1),BackgroundTransparency=1,ZIndex=302,Parent=stage})local a=rng:
+NextNumber()*math.pi*2 local d=260+rng:NextNumber()*420 p.From=self.Center+
+Vector2.new(math.cos(a)*d,math.sin(a)*d)p.Delay=rng:NextNumber()*0.7 p.Seed=rng:
+NextNumber()*10 end local flare=Util.New('Frame',{AnchorPoint=Vector2.new(0.5,
+0.5),Size=UDim2.fromOffset(9,9),BackgroundColor3=Color3.new(1,1,1),
+BackgroundTransparency=1,ZIndex=305,Parent=stage})Util.Round(flare)local streak=
+Util.New('Frame',{AnchorPoint=Vector2.new(0,0.5),Size=UDim2.fromOffset(150,1),
+BorderSizePixel=0,BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,
+ZIndex=305,Parent=stage})Util.Gradient(streak,nil,NumberSequence.new({
+NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}))local streak2=
+streak:Clone()streak2.AnchorPoint=Vector2.new(1,0.5)streak2.Size=UDim2.
+fromOffset(60,1)streak2.Parent=stage streak2:FindFirstChildOfClass('UIGradient')
+.Rotation=180 self.Flare,self.Streak,self.Streak2=flare,streak,streak2 local
+artSize=RADIUS*2/0.75 local art=Util.New('ImageLabel',{Name='Planet',
+BackgroundTransparency=1,ImageTransparency=1,Size=UDim2.fromOffset(artSize,
+artSize),AnchorPoint=Vector2.new(0.475,0.5),Position=UDim2.fromOffset(self.
+Center.X,self.Center.Y),ScaleType=Enum.ScaleType.Fit,ZIndex=303,Parent=stage})
+Util.New('UICorner',{CornerRadius=UDim.new(0.5,0),Parent=art})Util.Gradient(art,
+nil,NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.
+new(0.08,0),NumberSequenceKeypoint.new(0.92,0),NumberSequenceKeypoint.new(1,1)})
+,0)local rim=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.fromOffset(
+RADIUS*2+4,RADIUS*2+4),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromOffset(self.Center.X,self.Center.Y),ZIndex=304,Parent=stage})Util.Round(rim)
+local rimStroke=Util.Stroke(rim,Color3.new(1,1,1),1.6,1)local rimGradient=Util.
+Gradient(rimStroke,nil,NumberSequence.new({NumberSequenceKeypoint.new(0,1),
+NumberSequenceKeypoint.new(0.42,1),NumberSequenceKeypoint.new(0.5,0.1),
+NumberSequenceKeypoint.new(0.58,1),NumberSequenceKeypoint.new(1,1)}))self.Art,
+self.Rim,self.RimStroke,self.RimGradient=art,rim,rimStroke,rimGradient self.
+Solid=0 task.spawn(function()local image for attempt=1,3 do local ok,id=pcall(
+Icons.Get,
+[[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-512.png]]
+)if ok and id then image=id break end task.wait(attempt)end if image and self.
+Root then art.Image=image pcall(function()game:GetService('ContentProvider'):
+PreloadAsync({art})end)self.ArtReady=true end end)local info=Util.New('Frame',{
+BackgroundTransparency=1,AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0
+,0.47,0),Size=UDim2.fromOffset(280,60),ZIndex=301,Parent=root})info.Position=
+UDim2.new(0.5,0,0.47,210*(stage:FindFirstChildOfClass('UIScale').Scale)+6)local
+title=Util.Label({Text=window.Title,FontFace=Theme.Fonts.SemiBold,TextSize=14,
+TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(1,-60,0,18),
+TextTransparency=1,ZIndex=301,Parent=info})title.TextColor3=Color3.new(1,1,1)
+local pct=Util.Label({Text='0%',FontFace=Theme.Fonts.MonoBold,TextSize=13,
+TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(1,0,0,18),
+TextTransparency=1,ZIndex=301,Parent=info})pct.TextColor3=Color3.new(1,1,1)local
+track=Util.New('Frame',{Size=UDim2.new(1,0,0,3),Position=UDim2.fromOffset(0,24),
+BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=1,BorderSizePixel=0,
+ZIndex=301,Parent=info})Util.Round(track)local fill=Util.New('Frame',{Size=UDim2
+.fromScale(0,1),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=302,
+Parent=track})Util.Round(fill)local glow=Util.New('Frame',{AnchorPoint=Vector2.
+new(1,0.5),Position=UDim2.fromScale(1,0.5),Size=UDim2.fromOffset(16,7),
+BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0.6,BorderSizePixel=0,
+ZIndex=302,Parent=fill})Util.Round(glow)local status=Util.Label({Text=Locale.T(
+'Preparing'),FontFace=Theme.Fonts.Regular,TextSize=12,TextXAlignment=Enum.
+TextXAlignment.Left,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-70,0,
+16),Position=UDim2.fromOffset(0,34),TextTransparency=1,ZIndex=301,Parent=info})
+status.TextColor3=Color3.fromRGB(170,170,178)local eta=Util.Label({Text='',
+FontFace=Theme.Fonts.Mono,TextSize=11,TextXAlignment=Enum.TextXAlignment.Right,
+Size=UDim2.new(1,0,0,16),Position=UDim2.fromOffset(0,34),TextTransparency=1,
+ZIndex=301,Parent=info})eta.TextColor3=Color3.fromRGB(120,120,128)self.Info,self
+.Pct,self.Fill,self.Track,self.Status,self.Eta,self.TitleLabel=info,pct,fill,
+track,status,eta,title task.delay(0.5,function()if self.Root then for _,l in{
+title,pct,status,eta}do Tween.Play(l,{TextTransparency=0},0.5)end Tween.Play(
+track,{BackgroundTransparency=0.85},0.5)end end)self.Conn=RunService.
+RenderStepped:Connect(function(dt)self:_step(dt)end)return self end function
+Loader:_project(v)local scale=FOCAL/(FOCAL-v.Z)return self.Center+Vector2.new(v.
+X*scale,-v.Y*scale),scale end function Loader:_step(dt)local t=os.clock()-self.
+Started if self.ArtReady and not self.Exploding and t>1.5 then self.Solid=math.
+min(1,self.Solid+dt/0.9)elseif self.Exploding then self.Solid=math.max(0,self.
+Solid-dt/0.12)end local solid=self.Solid local eased=solid*solid*(3-2*solid)if
+self.Art then self.Art.ImageTransparency=1-eased self.Art.Rotation=math.sin(t*
+0.35)*2.5 self.Art.Size=UDim2.fromOffset(RADIUS*2/0.75*(1+math.sin(t*0.8)*0.012)
+,RADIUS*2/0.75*(1+math.sin(t*0.8)*0.012))self.RimStroke.Transparency=1-eased*
+0.85 self.RimGradient.Rotation=(t*40)%360 self.Halo.Size=UDim2.fromOffset(250+
+math.sin(t*1.2)*14,250+math.sin(t*1.2)*14)end self.Angle+=dt*(self.Exploding and
+0.2 or 0.42)local spin=self.Angle local fx,fyMax=nil,-math.huge for _,p in self.
+Points do local v if p.Kind=='Sphere'then v=rotZ(rotY(p.Base,spin),TILT_Z)else v
+=rotZ(rotX(rotY(p.Base,spin*0.6),TILT_X),TILT_Z)end local screen=self:_project(v
+)local alpha,shade=1,11 if p.Kind=='Sphere'then local n=v/RADIUS if n.Z<-5E-2
+then alpha=1 else local diffuse=math.max(0,n:Dot(LIGHT))local rim=(1-math.abs(n.
+Z))^2.2 local light=math.clamp(diffuse^1.6*0.35+rim*diffuse*1.6,0,1)shade=math.
+floor(math.clamp(0.08+light,0,1)*11)alpha=math.clamp(0.55-light*0.6-n.Z*0.15,0,
+0.9)if light>0.6 and v.Y>fyMax then fyMax=v.Y fx=screen end end else local
+behind=v.Z<0 and(v.X*v.X+v.Y*v.Y)<(RADIUS*1.02)^2 if behind then alpha=1 else
+local lit=math.clamp(0.35+(v.X/RING_OUT)*0.45+(v.Z/RING_OUT)*0.2,0,1)shade=math.
+floor(math.clamp(0.25+lit*0.75+(p.Glint and 0.3 or 0),0,1)*11)alpha=math.clamp(
+0.75-lit*0.6-(p.Glint and 0.3 or 0),0,0.95)end end local k=math.clamp((t-p.Delay
+)/1.1,0,1)local e=1-(1-k)^3 local pos=p.From:Lerp(screen,e)local fade=1-e*(1-
+alpha)if self.Exploding then local et=os.clock()-self.ExplodeAt if not p.Dir
+then local away=(screen-self.Center)p.Dir=(away.Magnitude>1 and away.Unit or
+Vector2.new(1,0))*(180+p.Seed*70)+Vector2.new((p.Seed-5)*8,(p.Seed%3-1.5)*12)end
+pos=screen+p.Dir*(1-(1-math.min(et/0.9,1))^3)*1.6 fade=math.clamp(alpha+et/0.85,
+0,1)end local f=p.Frame f.Position=UDim2.fromOffset(pos.X,pos.Y)if not self.
+Exploding and eased>0 then fade=fade+(1-fade)*eased*(p.Glint and 0.55 or 1)end f
+.BackgroundTransparency=fade f.BackgroundColor3=SHADES[shade]f.ZIndex=p.Kind==
+'Ring'and(v.Z>=0 and 304 or 302)or 303 end local ready=t>1.2 and not self.
+Exploding if fx and ready then self.Flare.Position=UDim2.fromOffset(fx.X,fx.Y)
+self.Streak.Position=UDim2.fromOffset(fx.X,fx.Y)self.Streak2.Position=UDim2.
+fromOffset(fx.X,fx.Y)local pulse=0.25+0.15*math.sin(t*2.4)+eased*0.15 self.Flare
+.BackgroundTransparency=pulse self.Streak.BackgroundTransparency=0.2+pulse self.
+Streak2.BackgroundTransparency=0.45+pulse end self:_progress(t)end function
+Loader:_progress(t)if self.Exploding then return end local window=self.Window
+local actual=window:GetLoadProgress()if window.State~='Loading'then actual=math.
+max(actual,0.98)end self.Display=math.max(self.Display,math.min(actual,0.99))
+local shown=self._shown or 0 shown+=(self.Display-shown)*0.15 self._shown=shown
+self.Fill.Size=UDim2.fromScale(shown,1)self.Pct.Text=math.floor(shown*100+0.5)..
+'%'table.insert(self.Samples,{t,self.Display})while#self.Samples>2 and self.
+Samples[1][1]<t-1.5 do table.remove(self.Samples,1)end local first=self.Samples[
+1]local rate=(self.Display-first[2])/math.max(t-first[1],0.05)if rate>0.002 and
+self.Display<0.98 then local left=(1-self.Display)/rate self.Eta.Text=left<1 and
+'<1 s'or('~'..math.ceil(left)..' s')else self.Eta.Text=string.format('%.1f s',t)
+end end function Loader:SetStage(text)if self.Status and text then self.Status.
+Text=text end end function Loader:Finish(onOpen)if self.Exploding then return
+end local function burst()self.Exploding=true self.ExplodeAt=os.clock()self.Fill
+.Size=UDim2.fromScale(1,1)self.Pct.Text='100%'self.Status.Text=Locale.T('Ready')
+self.Eta.Text=''local stage=self.Stage local flash=Util.New('Frame',{AnchorPoint
+=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(
+180,180),BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0.1,ZIndex=
+306,Parent=stage})Util.Round(flash)Tween.Play(flash,{Size=UDim2.fromOffset(40,40
+),BackgroundTransparency=1},0.45)local wave=Util.New('Frame',{AnchorPoint=
+Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(190
+,190),BackgroundTransparency=1,ZIndex=306,Parent=stage})Util.Round(wave)local ws
+=Util.Stroke(wave,Color3.new(1,1,1),2,0)Tween.Play(wave,{Size=UDim2.fromOffset(
+1100,1100)},0.9,Enum.EasingStyle.Quart)Tween.Play(ws,{Transparency=1,Thickness=
+0.5},0.9)Tween.Play(self.Halo,{BackgroundTransparency=1},0.4)if self.Art then
+Tween.Play(self.Art,{ImageTransparency=1,Size=UDim2.fromOffset(RADIUS*3.4,RADIUS
+*3.4)},0.18)Tween.Play(self.RimStroke,{Transparency=1},0.15)end for _,o in{self.
+Flare,self.Streak,self.Streak2}do Tween.Play(o,{BackgroundTransparency=1},0.25)
+end for _,l in{self.TitleLabel,self.Pct,self.Status,self.Eta}do Tween.Play(l,{
+TextTransparency=1},0.35)end Tween.Play(self.Track,{BackgroundTransparency=1},
+0.35)Tween.Play(self.Fill,{BackgroundTransparency=1},0.35)Tween.Play(self.Dim,{
+BackgroundTransparency=1},0.9,Enum.EasingStyle.Sine)task.delay(0.22,function()if
+onOpen then onOpen(stage.AbsolutePosition+stage.AbsoluteSize/2-Shared.Gui.Root.
+AbsolutePosition)end end)task.delay(1.1,function()self:Destroy()end)end task.
+spawn(function()local start=os.clock()while(self._shown or 0)<0.97 and os.clock(
+)-start<0.6 do self.Display=1 RunService.RenderStepped:Wait()end burst()end)end
+function Loader:Destroy()if self.Conn then self.Conn:Disconnect()self.Conn=nil
+end if self.Root then self.Root:Destroy()self.Root=nil end end return Loader end
+function __DARKLUA_BUNDLE_MODULES.x()local v=__DARKLUA_BUNDLE_MODULES.cache.x if
+not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.x=v end return v.c
+end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
+local Signal=__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()
+local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()
+local Keys=__DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()
+local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j(
+)local Shared=__DARKLUA_BUNDLE_MODULES.k()local PageModule=
+__DARKLUA_BUNDLE_MODULES.v()local Skeleton=__DARKLUA_BUNDLE_MODULES.w()local
+Loader=__DARKLUA_BUNDLE_MODULES.x()local UIS=Env.Service('UserInputService')
+local RunService=Env.Service('RunService')Env.Service('Players')local Tab=
+PageModule.Tab local Window={}Window.__index=Window local DEFAULT_SIZE=Vector2.
+new(740,500)local MOBILE_SIZE=Vector2.new(600,380)function Window.new(Lib,
+options)options=options or{}local self=setmetatable({},Window)self.Library=Lib
+self.Options=options self.Title=Util.Opt(options,'Title','Name')or'Proximity'
+self.Subtitle=Util.Opt(options,'Subtitle','SubTitle','SubName','Description')or(
+'v'..Lib.Version)self.Logo=Util.Opt(options,'Logo','Icon')self.Keybind=Keys.
+Normalize(Util.Opt(options,'Keybind','MenuKey','Key')or'RightShift')self.
+SidebarWidth=options.SidebarWidth or 196 local touch=UIS.TouchEnabled and not
+UIS.KeyboardEnabled local size=options.Size if typeof(size)=='UDim2'then size=
+Vector2.new(size.X.Offset,size.Y.Offset)end self.BaseSize=size or(touch and
 MOBILE_SIZE or DEFAULT_SIZE)self.MinSize=options.MinSize or Vector2.new(560,360)
 self.Loading=type(options.Loading)=='table'and options.Loading or{Enabled=
 options.Loading~=false}self.Loading.Enabled=self.Loading.Enabled~=false self.
@@ -2813,10 +3499,16 @@ false self.Tabs={}self.State='Loading'self.Maid=Maid.new()self.Ready=Signal.new(
 )self.Opened=Signal.new()self.Closed=Signal.new()self.TabChanged=Signal.new()
 self.PageChanged=Signal.new()self._queue={}self._tasks={}self._declaring=true
 self._lastDeclare=os.clock()self._navOrder=0 self._history={}self._isOpen=false
-self._commands={}self.Touch=touch self:_build()if self.Loading.Enabled then self
-.Skeleton=Skeleton.new(self)end self:SetScale(options.Scale or Lib:GetSetting(
-'Scale','Auto'))self:Open()self:_bindInput()task.defer(function()self:_pump()end
-)return self end local LOGO_URL=
+self._commands={}self.Touch=touch self:_build()self.LoadingStyle=self.Loading.
+Style or'Planet'self:SetScale(options.Scale or Lib:GetSetting('Scale','Auto'))
+self:_setupToggleButton()if self.Loading.Enabled and self.LoadingStyle=='Planet'
+then self.Loader=Loader.new(self,self.Loading)self.Holder.Visible=false else if
+self.Loading.Enabled then self.Skeleton=Skeleton.new(self)end self:Open()end
+self:SetNavigation(options.Navigation or Lib:GetSetting('Navigation','Sidebar'))
+self:_applyEconomy()local bg=Lib:GetSetting('Background')if options.Background
+or type(bg)=='table'then self:SetBackground(options.Background or bg)end self:
+_bindInput()self:_bindNavigation()task.defer(function()self:_pump()end)return
+self end local LOGO_URL=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-256.png]]
 local PLANET_URL=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-512.png]]
@@ -2907,30 +3599,29 @@ BorderSizePixel=0,ZIndex=7,Parent=canvas})Theme.Paint(top,{BackgroundColor3=
 'Accent'})Util.Gradient(top,nil,NumberSequence.new({NumberSequenceKeypoint.new(0
 ,1),NumberSequenceKeypoint.new(0.5,0.55),NumberSequenceKeypoint.new(1,1)}))self:
 _buildBackdrop()self:_buildDecor()self:_buildSidebar()self:_buildMain()self:
-_buildResize()self:_buildBubble()self._modal=Util.New('TextButton',{Text='',
-BackgroundTransparency=1,Size=UDim2.fromOffset(0,0),Modal=true,Visible=false,
-Parent=holder})self.Maid:Connect(workspace.CurrentCamera:
-GetPropertyChangedSignal('ViewportSize'),function()if self._autoScale then self:
-SetScale('Auto')end self:_clampPosition()end)self.Maid:Give(holder)end function
-Window:_buildBackdrop()local layer=Util.New('Frame',{Name='Backdrop',
-BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=1,Parent=self.Canvas})
-self._backdrop=layer self:SetBackdrop(self.Options.Backdrop or self.Library:
-GetSetting('Backdrop','Stars'))end function Window:SetBackdrop(pattern)local
-spec=type(pattern)=='table'and pattern or{Pattern=pattern}local layer=self.
-_backdrop for _,c in layer:GetChildren()do c:Destroy()end if self._backdropConn
-then self._backdropConn:Disconnect()self._backdropConn=nil end self.
-BackdropPattern=spec.Pattern or'None'local alpha=spec.Transparency or 0.9 local
-rng=Random.new(7)if spec.Pattern=='Stars'then local stars={}for i=1,46 do local
-s=rng:NextNumber()<0.15 and 2 or 1 local star=Util.New('Frame',{Size=UDim2.
-fromOffset(s,s),Position=UDim2.fromScale(rng:NextNumber(),rng:NextNumber()),
-BorderSizePixel=0,BackgroundTransparency=alpha,ZIndex=1,Parent=layer})Theme.
-Paint(star,{BackgroundColor3='Accent'})table.insert(stars,{star,rng:NextNumber()
-*6,0.6+rng:NextNumber()*1.4})end self._backdropConn=RunService.Heartbeat:
-Connect(function()if not self._isOpen or Tween.Speed==0 then return end local t=
-os.clock()for _,item in stars do item[1].BackgroundTransparency=alpha+(1-alpha)*
-(0.5+0.5*math.sin(t*item[3]+item[2]))*0.9 end end)self.Maid:Give(self.
-_backdropConn)elseif spec.Pattern=='Grid'then for i=1,40 do local v=Util.New(
-'Frame',{Size=UDim2.new(0,1,1,0),Position=UDim2.fromOffset(i*32,0),
+_buildResize()self._modal=Util.New('TextButton',{Text='',BackgroundTransparency=
+1,Size=UDim2.fromOffset(0,0),Modal=true,Visible=false,Parent=holder})self.Maid:
+Connect(workspace.CurrentCamera:GetPropertyChangedSignal('ViewportSize'),
+function()if self._autoScale then self:SetScale('Auto')end self:_clampPosition()
+end)self.Maid:Give(holder)end function Window:_buildBackdrop()local layer=Util.
+New('Frame',{Name='Backdrop',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),
+ZIndex=1,Parent=self.Canvas})self._backdrop=layer self:SetBackdrop(self.Options.
+Backdrop or self.Library:GetSetting('Backdrop','Stars'))end function Window:
+SetBackdrop(pattern)local spec=type(pattern)=='table'and pattern or{Pattern=
+pattern}local layer=self._backdrop for _,c in layer:GetChildren()do c:Destroy()
+end if self._backdropConn then self._backdropConn:Disconnect()self._backdropConn
+=nil end self.BackdropPattern=spec.Pattern or'None'local alpha=spec.Transparency
+or 0.9 local rng=Random.new(7)if spec.Pattern=='Stars'then local stars={}for i=1
+,46 do local s=rng:NextNumber()<0.15 and 2 or 1 local star=Util.New('Frame',{
+Size=UDim2.fromOffset(s,s),Position=UDim2.fromScale(rng:NextNumber(),rng:
+NextNumber()),BorderSizePixel=0,BackgroundTransparency=alpha,ZIndex=1,Parent=
+layer})Theme.Paint(star,{BackgroundColor3='Accent'})table.insert(stars,{star,rng
+:NextNumber()*6,0.6+rng:NextNumber()*1.4})end self._backdropConn=RunService.
+Heartbeat:Connect(function()if not self._isOpen or Tween.Speed==0 then return
+end local t=os.clock()for _,item in stars do item[1].BackgroundTransparency=
+alpha+(1-alpha)*(0.5+0.5*math.sin(t*item[3]+item[2]))*0.9 end end)self.Maid:
+Give(self._backdropConn)elseif spec.Pattern=='Grid'then for i=1,40 do local v=
+Util.New('Frame',{Size=UDim2.new(0,1,1,0),Position=UDim2.fromOffset(i*32,0),
 BorderSizePixel=0,BackgroundTransparency=0.96,ZIndex=1,Parent=layer})Theme.
 Paint(v,{BackgroundColor3='Accent'})end for i=1,30 do local h=Util.New('Frame',{
 Size=UDim2.new(1,0,0,1),Position=UDim2.fromOffset(0,i*32),BorderSizePixel=0,
@@ -2947,72 +3638,77 @@ BackgroundColor3='Bg2'})side.BackgroundTransparency=0.15 local divider=Util.New(
 ZIndex=3,Parent=side})Theme.Paint(divider,{BackgroundColor3='Stroke'})self.
 Sidebar=side local brand=Util.New('Frame',{Name='Brand',BackgroundTransparency=1
 ,Size=UDim2.new(1,0,0,62),ZIndex=3,Parent=side})local logo=self:_drawLogo(brand,
-26)logo.Position=UDim2.fromOffset(16,18)local title=Util.Label({Text=self.Title,
-FontFace=Theme.Fonts.Bold,TextSize=15,Size=UDim2.new(1,-60,0,18),Position=UDim2.
-fromOffset(52,16),TextTruncate=Enum.TextTruncate.AtEnd,ZIndex=3,Parent=brand})
-Theme.Paint(title,{TextColor3='Text'})local sub=Util.Label({Text=self.Subtitle,
-FontFace=Theme.Fonts.Regular,TextSize=11,Size=UDim2.new(1,-60,0,14),Position=
-UDim2.fromOffset(52,34),TextTruncate=Enum.TextTruncate.AtEnd,ZIndex=3,Parent=
-brand})Theme.Paint(sub,{TextColor3='TextMute'})self._titleLabel,self._subLabel,
-self._brand=title,sub,brand self:_makeDraggable(brand)local search=Util.New(
-'TextButton',{Name='Search',Text='',AutoButtonColor=false,Size=UDim2.new(1,-20,0
-,30),Position=UDim2.fromOffset(10,64),ZIndex=3,Parent=side})Util.Corner(6,search
-)Theme.Paint(search,{BackgroundColor3='Surface'})local searchStroke=Util.Stroke(
-search)Theme.Paint(searchStroke,{Color='Stroke'})local sIcon=Util.New(
-'ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('search')or'',Size=UDim2.
-fromOffset(13,13),Position=UDim2.new(0,10,0.5,-6),ZIndex=3,Parent=search})Theme.
-Paint(sIcon,{ImageColor3='TextMute'})local sText=Util.Label({Text=Locale.T(
-'Search'),FontFace=Theme.Fonts.Regular,TextSize=12,Size=UDim2.new(1,-60,1,0),
-Position=UDim2.fromOffset(30,0),ZIndex=3,Parent=search})Theme.Paint(sText,{
-TextColor3='TextMute'})local kbd=Util.Label({Text='Ctrl K',FontFace=Theme.Fonts.
-Mono,TextSize=10,TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(1,-10,1
-,0),ZIndex=3,Parent=search})Theme.Paint(kbd,{TextColor3='TextMute'})search.
-MouseEnter:Connect(function()Theme.Paint(searchStroke,{Color='StrokeHi'},0.1)end
-)search.MouseLeave:Connect(function()Theme.Paint(searchStroke,{Color='Stroke'},
-0.1)end)search.Activated:Connect(function()self:OpenSearch()end)self._searchText
-=sText local profileH=self.Options.Profile==false and 0 or 56 local list=Util.
-New('ScrollingFrame',{Name='Tabs',BackgroundTransparency=1,BorderSizePixel=0,
-Size=UDim2.new(1,0,1,-104-profileH),Position=UDim2.fromOffset(0,102),CanvasSize=
-UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollBarThickness=0,ZIndex
-=3,Parent=side})Util.Padding(list,4,10,8,10)Util.List(list,2)self.TabList=list
-if profileH>0 then self:_buildProfile(side)end Locale.Changed:Connect(function()
-sText.Text=Locale.T('Search')end)end function Window:_buildProfile(side)local
-Lib=self.Library local card=Util.New('Frame',{Name='Profile',Size=UDim2.new(1,-
-20,0,44),Position=UDim2.new(0,10,1,-52),ZIndex=3,Parent=side})Util.Corner(8,card
-)Theme.Paint(card,{BackgroundColor3='Surface'})Theme.Paint(Util.Stroke(card),{
-Color='Stroke'})local avatar=Util.New('ImageLabel',{Size=UDim2.fromOffset(28,28)
-,Position=UDim2.new(0,8,0.5,-14),ZIndex=3,Parent=card})Util.Round(avatar)Theme.
-Paint(avatar,{BackgroundColor3='Surface3'})local q=Util.Label({Text='?',FontFace
-=Theme.Fonts.Bold,TextSize=14,TextXAlignment=Enum.TextXAlignment.Center,Size=
-UDim2.fromScale(1,1),ZIndex=4,Parent=avatar})Theme.Paint(q,{TextColor3='TextDim'
-})local name=Util.Label({FontFace=Theme.Fonts.SemiBold,TextSize=12,TextTruncate=
-Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-52,0,15),Position=UDim2.fromOffset(44,
-7),ZIndex=3,Parent=card})Theme.Paint(name,{TextColor3='Text'})local status=Util.
-Label({FontFace=Theme.Fonts.Regular,TextSize=10,TextTruncate=Enum.TextTruncate.
-AtEnd,Size=UDim2.new(1,-52,0,13),Position=UDim2.fromOffset(44,23),ZIndex=3,
-Parent=card})Theme.Paint(status,{TextColor3='TextMute'})local function refresh()
-local id=Lib:GetIdentity()name.Text=id.DisplayName status.Text=self.Options.
-Status or Lib.Status or('@'..id.Name)avatar.Image=id.Avatar or''q.Visible=id.
-Avatar==nil end self._refreshProfile=refresh Lib.IdentityChanged:Connect(refresh
-)refresh()end function Window:Category(name)if type(name)=='table'then name=name
-.Name or name[1]end self._navOrder+=1 local label=Util.Label({Text=string.upper(
-tostring(name)),FontFace=Theme.Fonts.Bold,TextSize=10,Size=UDim2.new(1,0,0,24),
-LayoutOrder=self._navOrder,ZIndex=3,Parent=self.TabList})Util.Padding(label,8,0,
-0,8)Theme.Paint(label,{TextColor3='TextMute'})return label end Window.Divider=
-Window.Category Window.Group=Window.Category Window.DrawCategory=Window.Category
-Window.AddTabDivider=Window.Category function Window:Tab(options)local tab=Tab.
-new(self,options)table.insert(self.Tabs,tab)self._navOrder+=1 tab.Order=tab.
-Order or self._navOrder self:_buildTabButton(tab)if self.Skeleton and not tab.
-Hidden then self.Skeleton:AddTab(tab)end if not self.CurrentTab then self:
-SelectTab(tab)end self._lastDeclare=os.clock()return tab end Window.AddTab=
-Window.Tab Window.DrawTab=Window.Tab Window.CreateTab=Window.Tab Window.Page=
-Window.Tab function Window:_buildTabButton(tab)local button=Util.New(
-'TextButton',{Name='Tab_'..tab.Name,Text='',AutoButtonColor=false,
-BackgroundTransparency=1,Size=UDim2.new(1,0,0,32),LayoutOrder=tab.Order,Visible=
-tab.Visible,ZIndex=3,Parent=self.TabList})Util.Corner(6,button)Theme.Paint(
-button,{BackgroundColor3='Surface2'})local bar=Util.New('Frame',{Size=UDim2.
-fromOffset(2,0),AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,0,0.5,0),
-BorderSizePixel=0,ZIndex=4,Parent=button})Util.Round(bar)Theme.Paint(bar,{
+26)logo.Position=UDim2.fromOffset(16,18)self._brandLogo=logo local title=Util.
+Label({Text=self.Title,FontFace=Theme.Fonts.Bold,TextSize=15,Size=UDim2.new(1,-
+60,0,18),Position=UDim2.fromOffset(52,16),TextTruncate=Enum.TextTruncate.AtEnd,
+ZIndex=3,Parent=brand})Theme.Paint(title,{TextColor3='Text'})local sub=Util.
+Label({Text=self.Subtitle,FontFace=Theme.Fonts.Regular,TextSize=11,Size=UDim2.
+new(1,-60,0,14),Position=UDim2.fromOffset(52,34),TextTruncate=Enum.TextTruncate.
+AtEnd,ZIndex=3,Parent=brand})Theme.Paint(sub,{TextColor3='TextMute'})self.
+_titleLabel,self._subLabel,self._brand=title,sub,brand self:_makeDraggable(brand
+)local search=Util.New('TextButton',{Name='Search',Text='',AutoButtonColor=false
+,Size=UDim2.new(1,-20,0,30),Position=UDim2.fromOffset(10,64),ZIndex=3,Parent=
+side})Util.Corner(6,search)Theme.Paint(search,{BackgroundColor3='Surface'})local
+searchStroke=Util.Stroke(search)Theme.Paint(searchStroke,{Color='Stroke'})local
+sIcon=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('search')
+or'',Size=UDim2.fromOffset(13,13),Position=UDim2.new(0,10,0.5,-6),ZIndex=3,
+Parent=search})Theme.Paint(sIcon,{ImageColor3='TextMute'})local sText=Util.
+Label({Text=Locale.T('Search'),FontFace=Theme.Fonts.Regular,TextSize=12,Size=
+UDim2.new(1,-60,1,0),Position=UDim2.fromOffset(30,0),ZIndex=3,Parent=search})
+Theme.Paint(sText,{TextColor3='TextMute'})local kbd=Util.Label({Text='Ctrl K',
+FontFace=Theme.Fonts.Mono,TextSize=10,TextXAlignment=Enum.TextXAlignment.Right,
+Size=UDim2.new(1,-10,1,0),ZIndex=3,Parent=search})Theme.Paint(kbd,{TextColor3=
+'TextMute'})search.MouseEnter:Connect(function()Theme.Paint(searchStroke,{Color=
+'StrokeHi'},0.1)end)search.MouseLeave:Connect(function()Theme.Paint(searchStroke
+,{Color='Stroke'},0.1)end)search.Activated:Connect(function()self:OpenSearch()
+end)self._searchText,self._searchIcon,self._searchKbd,self._searchButton=sText,
+sIcon,kbd,search local profileH=self.Options.Profile==false and 0 or 56 local
+list=Util.New('ScrollingFrame',{Name='Tabs',BackgroundTransparency=1,
+BorderSizePixel=0,Size=UDim2.new(1,0,1,-104-profileH),Position=UDim2.fromOffset(
+0,102),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,
+ScrollBarThickness=0,ZIndex=3,Parent=side})Util.Padding(list,4,10,8,10)Util.
+List(list,2)self.TabList=list if profileH>0 then self:_buildProfile(side)end
+Locale.Changed:Connect(function()sText.Text=Locale.T('Search')end)end function
+Window:_buildProfile(side)local Lib=self.Library local card=Util.New('Frame',{
+Name='Profile',Size=UDim2.new(1,-20,0,44),Position=UDim2.new(0,10,1,-52),ZIndex=
+3,Parent=side})Util.Corner(8,card)Theme.Paint(card,{BackgroundColor3='Surface'})
+Theme.Paint(Util.Stroke(card),{Color='Stroke'})local avatar=Util.New(
+'ImageLabel',{Size=UDim2.fromOffset(28,28),Position=UDim2.new(0,8,0.5,-14),
+ZIndex=3,Parent=card})Util.Round(avatar)Theme.Paint(avatar,{BackgroundColor3=
+'Surface3'})local q=Util.Label({Text='?',FontFace=Theme.Fonts.Bold,TextSize=14,
+TextXAlignment=Enum.TextXAlignment.Center,Size=UDim2.fromScale(1,1),ZIndex=4,
+Parent=avatar})Theme.Paint(q,{TextColor3='TextDim'})local name=Util.Label({
+FontFace=Theme.Fonts.SemiBold,TextSize=12,TextTruncate=Enum.TextTruncate.AtEnd,
+Size=UDim2.new(1,-52,0,15),Position=UDim2.fromOffset(44,7),ZIndex=3,Parent=card}
+)Theme.Paint(name,{TextColor3='Text'})local status=Util.Label({FontFace=Theme.
+Fonts.Regular,TextSize=10,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,
+-52,0,13),Position=UDim2.fromOffset(44,23),ZIndex=3,Parent=card})Theme.Paint(
+status,{TextColor3='TextMute'})self._profile={Card=card,Avatar=avatar,Name=name,
+Status=status}local function refresh()local id=Lib:GetIdentity()name.Text=id.
+DisplayName status.Text=self.Options.Status or Lib.Status or('@'..id.Name)avatar
+.Image=id.Avatar or''q.Visible=id.Avatar==nil end self._refreshProfile=refresh
+Lib.IdentityChanged:Connect(refresh)refresh()end function Window:Category(name)
+if type(name)=='table'then name=name.Name or name[1]end self._navOrder+=1 local
+label=Util.Label({Text=string.upper(tostring(name)),FontFace=Theme.Fonts.Bold,
+TextSize=10,Size=UDim2.new(1,0,0,24),LayoutOrder=self._navOrder,ZIndex=3,Parent=
+self.TabList})Util.Padding(label,8,0,0,8)Theme.Paint(label,{TextColor3=
+'TextMute'})label:SetAttribute('Text',string.upper(tostring(name)))self.
+_categories=self._categories or{}table.insert(self._categories,label)if self.
+Navigation=='Rail'then label.Text=''label.Size=UDim2.new(1,0,0,10)end return
+label end Window.Divider=Window.Category Window.Group=Window.Category Window.
+DrawCategory=Window.Category Window.AddTabDivider=Window.Category function
+Window:Tab(options)local tab=Tab.new(self,options)table.insert(self.Tabs,tab)
+self._navOrder+=1 tab.Order=tab.Order or self._navOrder self:_buildTabButton(tab
+)if self.Skeleton and not tab.Hidden then self.Skeleton:AddTab(tab)end if not
+self.CurrentTab then self:SelectTab(tab)end self._lastDeclare=os.clock()return
+tab end Window.AddTab=Window.Tab Window.DrawTab=Window.Tab Window.CreateTab=
+Window.Tab Window.Page=Window.Tab function Window:_buildTabButton(tab)local
+button=Util.New('TextButton',{Name='Tab_'..tab.Name,Text='',AutoButtonColor=
+false,BackgroundTransparency=1,Size=UDim2.new(1,0,0,32),LayoutOrder=tab.Order,
+Visible=tab.Visible,ZIndex=3,Parent=self.TabList})Util.Corner(6,button)Theme.
+Paint(button,{BackgroundColor3='Surface2'})local bar=Util.New('Frame',{Size=
+UDim2.fromOffset(2,0),AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,0,0.5,
+0),BorderSizePixel=0,ZIndex=4,Parent=button})Util.Round(bar)Theme.Paint(bar,{
 BackgroundColor3='Accent'})local icon=Util.New('ImageLabel',{
 BackgroundTransparency=1,Image=Icons.Get(tab.Icon)or'',Size=UDim2.fromOffset(16,
 16),Position=UDim2.new(0,10,0.5,-8),ZIndex=4,Parent=button})local hasIcon=Icons.
@@ -3025,9 +3721,12 @@ AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,16),AnchorPoint=
 Vector2.new(1,0.5),Position=UDim2.new(1,-8,0.5,0),Visible=tab.Badge~=nil,
 BackgroundTransparency=0,ZIndex=4,Parent=button})Util.Padding(badge,0,5,0,5)Util
 .Corner(4,badge)Theme.Paint(badge,{BackgroundColor3='Accent',TextColor3=
-'AccentInk'})tab.Button,tab._icon,tab._label,tab._bar,tab._badge=button,icon,
-label,bar,badge button.MouseEnter:Connect(function()if self.CurrentTab~=tab then
-Tween.Play(button,{BackgroundTransparency=0.6},0.12)Theme.Paint(label,{
+'AccentInk'})local glow=Util.Stroke(button,nil,1,1)Theme.Paint(glow,{Color=
+'Accent'})tab.Button,tab._icon,tab._label,tab._bar,tab._badge,tab._glow=button,
+icon,label,bar,badge,glow Shared.Overlay.Hover(button,function()return self.
+Navigation=='Rail'and tab.Name or nil end)if self.Navigation=='Rail'then self:
+_railTab(tab)end button.MouseEnter:Connect(function()if self.CurrentTab~=tab
+then Tween.Play(button,{BackgroundTransparency=0.6},0.12)Theme.Paint(label,{
 TextColor3='Text'},0.12)end end)button.MouseLeave:Connect(function()if self.
 CurrentTab~=tab then Tween.Play(button,{BackgroundTransparency=1},0.15)Theme.
 Paint(label,{TextColor3='TextDim'},0.15)end end)button.Activated:Connect(
@@ -3037,7 +3736,8 @@ _paintTab(tab,animate)local on=self.CurrentTab==tab local t=animate and 0.18 or
 BackgroundTransparency=on and 0 or 1},t)Theme.Paint(tab._label,{TextColor3=on
 and'Text'or'TextDim'},t)Theme.Paint(tab._icon,{ImageColor3=on and'Accent'or
 'TextMute'},t)Tween.Play(tab._bar,{Size=UDim2.fromOffset(2,on and 16 or 0)},on
-and 0.3 or 0.15,on and Enum.EasingStyle.Back or Enum.EasingStyle.Quint)end
+and 0.3 or 0.15,on and Enum.EasingStyle.Back or Enum.EasingStyle.Quint)if tab.
+_glow then Tween.Play(tab._glow,{Transparency=on and 0.82 or 1},t)end end
 function Window:_buildMain()local main=Util.New('Frame',{Name='Main',
 BackgroundTransparency=1,Size=UDim2.new(1,-self.SidebarWidth,1,0),Position=UDim2
 .fromOffset(self.SidebarWidth,0),ZIndex=2,Parent=self.Canvas})self.Main=main
@@ -3063,8 +3763,17 @@ _headerButton('home',10,function()if self.HomeTab then self.HomeTab:Select()end
 end,'Home')self._homeButton.Visible=false self._settingsButton=self:
 _headerButton('settings',11,function()if self.SettingsTabRef then self.
 SettingsTabRef:Select()end end,'Settings')self._settingsButton.Visible=false
-self:_headerButton('minus',20,function()self:Close()end,'Hide')local line=Util.
-New('Frame',{Size=UDim2.new(1,-24,0,1),Position=UDim2.new(0,12,1,-1),
+self._bell=self:_headerButton('bell',12,function()self:OpenNotifications()end,
+'NotificationCenter')local badge=Util.Label({Text='',FontFace=Theme.Fonts.Bold,
+TextSize=9,TextXAlignment=Enum.TextXAlignment.Center,Size=UDim2.fromOffset(14,14
+),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,2,0,-2),
+BackgroundTransparency=0,Visible=false,ZIndex=6,Parent=self._bell})Util.Round(
+badge)Theme.Paint(badge,{BackgroundColor3='Accent',TextColor3='AccentInk'})self.
+_bellBadge=badge self.Library.NotificationsChanged:Connect(function()local n=
+self.Library.Unread or 0 badge.Visible=n>0 badge.Text=n>9 and'9+'or tostring(n)
+end)self:_headerButton('minimize-2',19,function()self:SetMini(true)end,
+'MiniMode')self:_headerButton('minus',20,function()self:Close()end,'Hide')local
+line=Util.New('Frame',{Size=UDim2.new(1,-24,0,1),Position=UDim2.new(0,12,1,-1),
 BorderSizePixel=0,ZIndex=3,Parent=header})Theme.Paint(line,{BackgroundColor3=
 'Stroke'})local pills=Util.New('Frame',{Name='Pills',BackgroundTransparency=1,
 Size=UDim2.new(1,-24,0,34),Position=UDim2.fromOffset(12,60),Visible=false,ZIndex
@@ -3161,15 +3870,14 @@ clamp(holder.Position.Y.Offset,half.Y*0.2+4,view.Y-half.Y*0.3)holder.Position=
 UDim2.fromOffset(x,y)end function Window:_saveState()local p=self.Holder.
 Position self.Library:SetSetting('Window.'..self.Title,{X=p.X.Scale==0 and p.X.
 Offset or nil,Y=p.X.Scale==0 and p.Y.Offset or nil,W=self.Size.X,H=self.Size.Y,
-Tab=self.CurrentTab and self.CurrentTab.Name})end function Window:_buildBubble()
-local want=self.Options.ToggleButton if want==nil then want=UIS.TouchEnabled end
-if not want then return end local bubble=Util.New('TextButton',{Name='Bubble',
-Text='',AutoButtonColor=false,Size=UDim2.fromOffset(46,46),Position=UDim2.new(0,
-20,0.3,0),Parent=Shared.Gui.Widgets})Util.Round(bubble)Theme.Paint(bubble,{
-BackgroundColor3='Bg'})Theme.Paint(Util.Stroke(bubble),{Color='StrokeHi'})local
-logo=self:_drawLogo(bubble,26)logo.AnchorPoint=Vector2.new(0.5,0.5)logo.Position
-=UDim2.fromScale(0.5,0.5)local moved,start,startPos=false,nil,nil bubble.
-InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.
+Tab=self.CurrentTab and self.CurrentTab.Name})end function Window:_buildBubble(
+force)if not force then return end local bubble=Util.New('TextButton',{Name=
+'Bubble',Text='',AutoButtonColor=false,Size=UDim2.fromOffset(46,46),Position=
+UDim2.new(0,20,0.3,0),Parent=Shared.Gui.Widgets})Util.Round(bubble)Theme.Paint(
+bubble,{BackgroundColor3='Bg'})Theme.Paint(Util.Stroke(bubble),{Color='StrokeHi'
+})local logo=self:_drawLogo(bubble,26)logo.AnchorPoint=Vector2.new(0.5,0.5)logo.
+Position=UDim2.fromScale(0.5,0.5)local moved,start,startPos=false,nil,nil bubble
+.InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.
 MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then moved,start,
 startPos=false,Vector2.new(input.Position.X,input.Position.Y),bubble.
 AbsolutePosition-bubble.Parent.AbsolutePosition end end)self.Maid:Connect(UIS.
@@ -3182,190 +3890,341 @@ startPos.Y+d.Y,4,view.Y-50))end end end)self.Maid:Connect(UIS.InputEnded,
 function(input)if start and(input.UserInputType==Enum.UserInputType.MouseButton1
 or input.UserInputType==Enum.UserInputType.Touch)then if not moved then self:
 Toggle()end start=nil end end)self.Bubble=bubble self.Maid:Give(bubble)end
-function Window:GetTab(name)for _,tab in self.Tabs do if tab.Name==name or tab==
-name then return tab end end return nil end function Window:GetTabs()return
-table.clone(self.Tabs)end function Window:SelectTab(which)local tab=type(which)
-=='table'and which or self:GetTab(which)if type(which)=='number'then tab=self.
-Tabs[which]end if not tab then return self end local page=tab._lastPage if not
-page then for _,p in tab.Pages do if not p.Hidden then page=p break end end end
-page=page or tab:_defaultPage()self:_selectPage(page)return self end function
-Window:_selectPage(page,fromBack)local tab=page.Tab local previous=self.
-CurrentPage if previous==page then return end if previous and not fromBack and
-page.Hidden then table.insert(self._history,previous)elseif not page.Hidden then
-table.clear(self._history)end local oldTab=self.CurrentTab self.CurrentTab,self.
-CurrentPage=tab,page tab._lastPage=not page.Hidden and page or tab._lastPage if
-previous and previous.Frame then previous.Frame.Visible=false end page:
-_ensureMounted()local frame=page.Frame frame.Visible=true if Tween.Speed>0 and
-self.State~='Loading'then frame.Position=UDim2.fromOffset(0,8)Tween.Play(frame,{
-Position=UDim2.fromOffset(0,0)},0.25)end if oldTab~=tab then if oldTab then self
-:_paintTab(oldTab,true)end self:_paintTab(tab,true)self.TabChanged:Fire(tab,
-oldTab)tab.Selected:Fire()end page.Selected:Fire()self.PageChanged:Fire(page,
-previous)self:_refreshHeader()if self.State=='Ready'then self:_saveState()end
-end function Window:Back()local last=table.remove(self._history)if last then
-self:_selectPage(last,true)elseif self.CurrentPage and self.CurrentPage.Hidden
-then self:SelectTab(self.CurrentTab)end return self end function Window:
-_refreshHeader()local tab,page=self.CurrentTab,self.CurrentPage if not tab then
-return end local inner=page and page.Hidden self._back.Visible=inner==true local
-x=inner and 42 or 18 self._title.Position=UDim2.fromOffset(x,(tab.Description or
-(inner and page.Description))and 10 or 18)self._desc.Position=UDim2.fromOffset(x
-,31)self._title.Text=inner and(tab.Name..'  \u{203a}  '..page.Name)or tab.Name
-local d=inner and page.Description or tab.Description self._desc.Text=d or''self
-._desc.Visible=d~=nil self:_refreshPills()end function Window:_refreshPills()
-local tab=self.CurrentTab for _,c in self._pills:GetChildren()do if c:IsA(
-'GuiObject')then c:Destroy()end end local visible={}for _,p in tab and tab.Pages
-or{}do if not p.Hidden then table.insert(visible,p)end end local show=#visible>1
-and not(self.CurrentPage and self.CurrentPage.Hidden)self._pills.Visible=show
-self.Content.Size=UDim2.new(1,0,1,show and-96 or-58)self.Content.Position=UDim2.
-fromOffset(0,show and 96 or 58)if not show then return end for i,page in visible
-do local on=page==self.CurrentPage local pill=Util.New('TextButton',{Text='',
-AutoButtonColor=false,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0
-,26),LayoutOrder=i,ZIndex=4,Parent=self._pills})Util.Corner(13,pill)Util.
-Padding(pill,0,12,0,12)Theme.Paint(pill,{BackgroundColor3=on and'Accent'or
-'Surface2'})local stroke=Util.Stroke(pill)Theme.Paint(stroke,{Color=on and
-'Accent'or'Stroke'})local holder=Util.New('Frame',{BackgroundTransparency=1,
-AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,1),ZIndex=4,Parent=
-pill})Util.List(holder,5,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.
-Left,Enum.VerticalAlignment.Center)local iconId=Icons.Get(page.Icon)if iconId
-then local img=Util.New('ImageLabel',{BackgroundTransparency=1,Image=iconId,Size
-=UDim2.fromOffset(13,13),ZIndex=4,Parent=holder})Theme.Paint(img,{ImageColor3=on
-and'AccentInk'or'TextDim'})end local label=Util.Label({Text=page.Name,FontFace=
-Theme.Fonts.SemiBold,TextSize=12,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
-fromScale(0,1),LayoutOrder=2,ZIndex=4,Parent=holder})Theme.Paint(label,{
-TextColor3=on and'AccentInk'or'TextDim'})pill.Activated:Connect(function()page:
-Select()end)end end function Window:_enqueue(element)table.insert(self._queue,
-element)local tab=element.Tab if tab then tab._total+=1 if self.Skeleton then
-self.Skeleton:AddTab(tab)end end self._lastDeclare=os.clock()if not self.
-_pumping then self._pumping=true task.defer(function()self:_pump()end)end end
-function Window:_pump()self._pumping=true local budget=self.Loading.Budget or
-0.004 while#self._queue>0 and not self._destroyed do local start=os.clock()while
-#self._queue>0 and os.clock()-start<budget do local el=table.remove(self._queue,
-1)if not el._destroyed then self._buildingTab=el.Tab local ok,err=pcall(function
-()local section=el.Section section:_ensureMounted()el:_mount(section.Body,el.
-_order)end)if not ok then warn("[Proximity] failed to build '"..tostring(el.Name
-).."': "..tostring(err))if el.Tab then el.Tab._errors=(el.Tab._errors or 0)+1
-end end end if el.Tab then el.Tab._done+=1 end end if self.Skeleton then local
-tab=self._buildingTab self.Skeleton:Update(tab and(Locale.T('Building')..
-' \u{b7} '..tab.Name..'  '..tab._done..'/'..tab._total)or nil)end task.wait()end
-self._buildingTab=nil self._pumping=false if self.Skeleton then self.Skeleton:
-Update()end self:_checkReady()end function Window:GetLoadProgress()local total,
-done=0,0 for _,tab in self.Tabs do total+=tab._total done+=tab._done end local
-elements=total for _,t in self._tasks do local weight=math.max(t.Weight,elements
-/#self._tasks)total+=weight done+=weight*(t.Finished and 1 or t.Amount)end if
-total==0 then return 0 end return done/total end function Window:_checkReady()if
-self.State~='Loading'or self._checking then return end local function blocked()
-if#self._queue>0 then return true end for _,t in self._tasks do if not t.
-Finished then return true end end if self._explicitReady then return false end
-if not self.AutoReady then return true end return os.clock()-self._lastDeclare<
-0.2 end if blocked()then if self.AutoReady or self._explicitReady then self.
-_checking=true task.delay(0.1,function()self._checking=false self:_checkReady()
-end)end return end self:_finishLoading()end function Window:_finishLoading()if
-self.State~='Loading'then return end self.State='Finishing'self._declaring=false
-local Lib=self.Library task.spawn(function()if self.Options.AutoLoad~=false and
-Lib:GetAutoLoad()and not Lib._autoLoaded then Lib._autoLoaded=true if self.
-Skeleton then self.Skeleton:Update(Locale.T('ApplyingConfig')..' \u{b7} '..Lib:
-GetAutoLoad())end Lib:LoadAutoConfig()Lib.CurrentConfig=Lib:GetAutoLoad()end
-local elapsed=self.Skeleton and(os.clock()-self.Skeleton.Started)or 0 local wait
-=(self.Loading.MinTime or 0)-elapsed if wait>0 and Tween.Speed>0 then task.wait(
-wait)end self:_reveal()end)end function Window:_reveal(force)if self.State==
-'Ready'then return end self.State='Ready'self._declaring=false local Lib=self.
-Library Lib._autoSaveArmed=true local saved=Lib:GetSetting('Window.'..self.Title
-)if type(saved)=='table'and saved.Tab and not self._restoredTab then self.
+function Window:_railTab(tab)local rail=self.Navigation=='Rail'tab._label.
+Visible=not rail tab._icon.Position=rail and UDim2.new(0.5,-8,0.5,-8)or UDim2.
+new(0,10,0.5,-8)tab._badge.Visible=not rail and tab.Badge~=nil end function
+Window:SetNavigation(mode)mode=mode=='Rail'and'Rail'or'Sidebar'self.Navigation=
+mode local rail=mode=='Rail'local width=rail and 64 or self.SidebarWidth local t
+=self.State=='Ready'and 0.25 or 0 Tween.Play(self.Sidebar,{Size=UDim2.new(0,
+width,1,0)},t)Tween.Play(self.Main,{Size=UDim2.new(1,-width,1,0),Position=UDim2.
+fromOffset(width,0)},t)self._titleLabel.Visible=not rail self._subLabel.Visible=
+not rail if self._brandLogo then Tween.Play(self._brandLogo,{Position=UDim2.
+fromOffset(rail and 19 or 16,18)},t)end self._searchText.Visible=not rail self.
+_searchKbd.Visible=not rail self._searchIcon.Position=rail and UDim2.new(0.5,-6,
+0.5,-6)or UDim2.new(0,10,0.5,-6)for _,label in self._categories or{}do label.
+Text=rail and''or(label:GetAttribute('Text')or label.Text)label.Size=UDim2.new(1
+,0,0,rail and 10 or 24)end for _,tab in self.Tabs do self:_railTab(tab)end if
+self._profile then self._profile.Name.Visible=not rail self._profile.Status.
+Visible=not rail self._profile.Avatar.Position=rail and UDim2.new(0.5,-14,0.5,-
+14)or UDim2.new(0,8,0.5,-14)end return self end function Window:GetNavigation()
+return self.Navigation end function Window:SetMini(on)on=on and true or false if
+self.Mini==on then return self end self.Mini=on local holder=self.Holder if not
+self._miniBar then local bar=Util.New('TextButton',{Name='MiniBar',Text='',
+AutoButtonColor=false,Size=UDim2.fromScale(1,1),Visible=false,ZIndex=70,Parent=
+self.Canvas})Theme.Paint(bar,{BackgroundColor3='Bg'})local logo=self:_drawLogo(
+bar,26)logo.Position=UDim2.new(0,14,0.5,-13)local title=Util.Label({Text=self.
+Title,FontFace=Theme.Fonts.Bold,TextSize=13,Position=UDim2.fromOffset(50,9),Size
+=UDim2.new(1,-90,0,16),ZIndex=71,Parent=bar})Theme.Paint(title,{TextColor3=
+'Text'})local stats=Util.Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=11,
+Position=UDim2.fromOffset(50,27),Size=UDim2.new(1,-90,0,14),ZIndex=71,Parent=bar
+})Theme.Paint(stats,{TextColor3='TextMute'})local expand=Util.New('ImageLabel',{
+BackgroundTransparency=1,Image=Icons.Get('maximize-2')or'',Size=UDim2.
+fromOffset(15,15),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-16,0.5,0)
+,ZIndex=71,Parent=bar})Theme.Paint(expand,{ImageColor3='TextDim'})bar.Activated:
+Connect(function()self:SetMini(false)end)self:_makeDraggable(bar)task.spawn(
+function()while bar.Parent do if bar.Visible then stats.Text=self.Library.
+Providers.FPS()..' fps  \u{b7}  '..self.Library.Providers.Ping()..'  \u{b7}  '..
+os.date('%H:%M')end task.wait(0.5)end end)self._miniBar=bar end if on then self.
+_fullSize=self.Size self._miniBar.Visible=true self._miniBar.
+BackgroundTransparency=1 Tween.Play(self._miniBar,{BackgroundTransparency=0},0.2
+)Tween.Play(holder,{Size=UDim2.fromOffset(250,52)},0.35,Enum.EasingStyle.Quint)
+Shared.Overlay.CloseAll()else local size=self._fullSize or self.Size Tween.Play(
+holder,{Size=UDim2.fromOffset(size.X,size.Y)},0.35,Enum.EasingStyle.Quint)Tween.
+Play(self._miniBar,{BackgroundTransparency=1},0.2)task.delay(0.2,function()if
+not self.Mini then self._miniBar.Visible=false end end)end return self end
+function Window:SetBackground(spec)if self._bgLayer then self._bgLayer:Destroy()
+self._bgLayer=nil end if type(spec)~='table'or(not spec.Image and not spec.
+Gradient)then return self end local layer=Util.New('Frame',{Name='Background',
+BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=0,Parent=self.Canvas})
+self._bgLayer=layer if spec.Gradient then local a,b=Util.ToColor(spec.Gradient[1
+])or Color3.new(0,0,0),Util.ToColor(spec.Gradient[2])or Color3.new(0,0,0)local g
+=Util.New('Frame',{Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.new(1,1,1),
+ZIndex=0,Parent=layer})Util.Gradient(g,ColorSequence.new(a,b),nil,spec.Rotation
+or 90)end if spec.Image then local img=Util.New('ImageLabel',{
+BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ScaleType=Enum.ScaleType.Crop
+,ImageTransparency=1,ZIndex=0,Parent=layer})loadImage(spec.Image,function(id)img
+.Image=id Tween.Play(img,{ImageTransparency=0},0.5)end)end Util.New('Frame',{
+Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.new(0,0,0),
+BackgroundTransparency=1-(spec.Dim or 0.55),ZIndex=0,Parent=layer})return self
+end function Window:_setupToggleButton()local mode=self.Options.ToggleButton if
+mode==false then return end if mode=='Bubble'then self:_buildBubble(true)else
+local ok,button=pcall(self.Library._topbarButton,self.Library,self)if ok and
+button then self.TopbarButton=button else self:_buildBubble(true)end end end
+function Window:_applyEconomy()local eco=self.Library.Economy self._economy=eco
+if eco then self:SetBackdrop('None')if self._decor then self._decor.Visible=
+false end elseif self.BackdropPattern=='None'and self.Library:GetSetting(
+'Backdrop','Stars')~='None'then self:SetBackdrop(self.Library:GetSetting(
+'Backdrop','Stars'))if self._decor then self._decor.Visible=true end end end
+function Window:_scrollKey(page)return'Scroll.'..self.Title..'/'..page.Tab.Name
+..'/'..page.Name end function Window:_restoreScroll()for _,tab in self.Tabs do
+for _,page in tab.Pages do local y=self.Library:GetSetting(self:_scrollKey(page)
+)if y and page.Frame then task.delay(0.15,function()page.Frame.CanvasPosition=
+Vector2.new(0,y)end)end end end end function Window:_afterReady()local Lib=self.
+Library local log=self.Options.Changelog if type(log)=='table'and log.Version
+and Lib:GetSetting('Seen.'..self.Title)~=log.Version then Lib:SetSetting('Seen.'
+..self.Title,log.Version)local notes={}for _,line in log.Notes or log do if
+type(line)=='string'then table.insert(notes,'\u{2022}  '..line)end end task.
+spawn(function()self:Dialog({Title=Locale.T('WhatsNew',log.Version),Content=
+table.concat(notes,string.char(10)),Buttons={{Text=Locale.T('Ok'),Style=
+'Primary'}}})end)end if self.Options.CheckUpdates~=false and Lib.VersionUrl then
+Lib:CheckForUpdates()end if self.Options.Version and self.Options.VersionUrl
+then Lib:CheckForUpdates(self.Options.VersionUrl,self.Options.Version,self.Title
+)end end function Window:OpenNotifications()local Lib=self.Library Lib.Unread=0
+Lib.NotificationsChanged:Fire()local items={}local history=Lib.
+NotificationHistory for i=#history,math.max(1,#history-14),-1 do local n=history
+[i]local ago=os.time()-n.Time local when=ago<60 and(ago..'s')or(ago<3600 and(ago
+//60 ..'m')or(ago//3600 ..'h'))table.insert(items,{Text=(n.Title and(n.Title..
+': ')or'')..(n.Content or''),Hint=when,Icon=({success='check-circle',warning=
+'alert-triangle',error='x-circle'})[n.Type]or'info'})end if#items==0 then table.
+insert(items,{Text=Locale.T('NoNotifications'),Icon='bell'})else table.insert(
+items,{Separator=true})table.insert(items,{Text=Locale.T('ClearAll'),Icon=
+'trash-2',Callback=function()table.clear(Lib.NotificationHistory)end})end Shared
+.Overlay.Menu(items,{Anchor=self._bell,Align='End',Width=300})end function
+Window:_focusables()local page=self.CurrentPage local list={}if not page then
+return list end for _,section in page.Sections do if not section.Collapsed then
+for _,el in section:AllElements()do local sec=el.Section local tabOk=not sec.
+ParentSection or sec.ParentSection._activeTab==sec if el.Frame and el.Frame.
+Parent and el._navActivate and tabOk and el:IsVisible()and not el:IsLocked()and
+el.Frame.AbsoluteSize.Y>0 then table.insert(list,el)end end end end table.sort(
+list,function(a,b)local ax,bx=a.Frame.AbsolutePosition.X,b.Frame.
+AbsolutePosition.X if math.abs(ax-bx)>40 then return ax<bx end return a.Frame.
+AbsolutePosition.Y<b.Frame.AbsolutePosition.Y end)return list end function
+Window:_setFocus(el)if self._focusRing then self._focusRing:Destroy()self.
+_focusRing=nil end self._focused=el if not el or not el.Frame then return end
+local ring=Util.New('Frame',{Name='Focus',BackgroundTransparency=1,Size=UDim2.
+new(1,4,1,4),Position=UDim2.fromOffset(-2,-2),ZIndex=40,Parent=el.Frame})Util.
+Corner(7,ring)local stroke=Util.Stroke(ring,nil,1.5)Theme.Paint(stroke,{Color=
+'Accent'})self._focusRing=ring if el.Section and el.Section.Page then el.Section
+.Page:ScrollTo(el.Frame)end end function Window:_bindNavigation()local up={[Enum
+.KeyCode.Up]=-1,[Enum.KeyCode.DPadUp]=-1,[Enum.KeyCode.Down]=1,[Enum.KeyCode.
+DPadDown]=1}local side={[Enum.KeyCode.Left]=-1,[Enum.KeyCode.DPadLeft]=-1,[Enum.
+KeyCode.Right]=1,[Enum.KeyCode.DPadRight]=1}local activate={[Enum.KeyCode.Return
+]=true,[Enum.KeyCode.Space]=true,[Enum.KeyCode.ButtonA]=true}self.Maid:Connect(
+UIS.InputBegan,function(input)if not self._isOpen or self.Mini or UIS:
+GetFocusedTextBox()or Shared.KeybindListening or self._palette then return end
+local key=input.KeyCode local list if up[key]then list=self:_focusables()if#list
+==0 then return end local i=table.find(list,self._focused)or(up[key]>0 and 0 or#
+list+1)i=math.clamp(i+up[key],1,#list)self:_setFocus(list[i])elseif side[key]and
+self._focused then if self._focused._navAdjust then self._focused:_navAdjust(
+side[key])end elseif activate[key]and self._focused and self._focused.Frame and
+self._focused.Frame.Parent then if key==Enum.KeyCode.Space and not self._focused
+.Frame then return end self._focused:_navActivate()elseif key==Enum.KeyCode.Tab
+or key==Enum.KeyCode.ButtonR1 or key==Enum.KeyCode.ButtonL1 then local back=key
+==Enum.KeyCode.ButtonL1 or UIS:IsKeyDown(Enum.KeyCode.LeftShift)local visible={}
+for _,tab in self.Tabs do if tab.Visible then table.insert(visible,tab)end end
+table.sort(visible,function(a,b)return(a.Order or 0)<(b.Order or 0)end)local i=
+table.find(visible,self.CurrentTab)or 1 i=(i-1+(back and-1 or 1))%#visible+1
+self:SelectTab(visible[i])self:_setFocus(nil)elseif key==Enum.KeyCode.ButtonB
+then if#Shared.Overlay.Stack>0 then Shared.Overlay.Stack[#Shared.Overlay.Stack]:
+Close()else self:Close()end end end)self.Maid:Connect(UIS.InputChanged,function(
+input)if input.UserInputType==Enum.UserInputType.MouseMovement and self.
+_focusRing then self:_setFocus(nil)end end)self.PageChanged:Connect(function()
+self:_setFocus(nil)end)end function Window:GetTab(name)for _,tab in self.Tabs do
+if tab.Name==name or tab==name then return tab end end return nil end function
+Window:GetTabs()return table.clone(self.Tabs)end function Window:SelectTab(which
+)local tab=type(which)=='table'and which or self:GetTab(which)if type(which)==
+'number'then tab=self.Tabs[which]end if not tab then return self end local page=
+tab._lastPage if not page then for _,p in tab.Pages do if not p.Hidden then page
+=p break end end end page=page or tab:_defaultPage()self:_selectPage(page)return
+self end function Window:_selectPage(page,fromBack)local tab=page.Tab local
+previous=self.CurrentPage if previous==page then return end if previous and not
+fromBack and page.Hidden then table.insert(self._history,previous)elseif not
+page.Hidden then table.clear(self._history)end local oldTab=self.CurrentTab self
+.CurrentTab,self.CurrentPage=tab,page tab._lastPage=not page.Hidden and page or
+tab._lastPage if previous and previous.Frame then previous.Frame.Visible=false
+end page:_ensureMounted()local frame=page.Frame frame.Visible=true if Tween.
+Speed>0 and self.State~='Loading'then frame.Position=UDim2.fromOffset(0,8)Tween.
+Play(frame,{Position=UDim2.fromOffset(0,0)},0.25)end if oldTab~=tab then if
+oldTab then self:_paintTab(oldTab,true)end self:_paintTab(tab,true)self.
+TabChanged:Fire(tab,oldTab)tab.Selected:Fire()end page.Selected:Fire()self.
+PageChanged:Fire(page,previous)self:_refreshHeader()if self.State=='Ready'then
+self:_saveState()end end function Window:Back()local last=table.remove(self.
+_history)if last then self:_selectPage(last,true)elseif self.CurrentPage and
+self.CurrentPage.Hidden then self:SelectTab(self.CurrentTab)end return self end
+function Window:_refreshHeader()local tab,page=self.CurrentTab,self.CurrentPage
+if not tab then return end local inner=page and page.Hidden self._back.Visible=
+inner==true local x=inner and 42 or 18 self._title.Position=UDim2.fromOffset(x,(
+tab.Description or(inner and page.Description))and 10 or 18)self._desc.Position=
+UDim2.fromOffset(x,31)self._title.Text=inner and(tab.Name..'  \u{203a}  '..page.
+Name)or tab.Name local d=inner and page.Description or tab.Description self.
+_desc.Text=d or''self._desc.Visible=d~=nil self:_refreshPills()end function
+Window:_refreshPills()local tab=self.CurrentTab for _,c in self._pills:
+GetChildren()do if c:IsA('GuiObject')then c:Destroy()end end local visible={}for
+_,p in tab and tab.Pages or{}do if not p.Hidden then table.insert(visible,p)end
+end local show=#visible>1 and not(self.CurrentPage and self.CurrentPage.Hidden)
+self._pills.Visible=show self.Content.Size=UDim2.new(1,0,1,show and-96 or-58)
+self.Content.Position=UDim2.fromOffset(0,show and 96 or 58)if not show then
+return end for i,page in visible do local on=page==self.CurrentPage local pill=
+Util.New('TextButton',{Text='',AutoButtonColor=false,AutomaticSize=Enum.
+AutomaticSize.X,Size=UDim2.fromOffset(0,26),LayoutOrder=i,ZIndex=4,Parent=self.
+_pills})Util.Corner(13,pill)Util.Padding(pill,0,12,0,12)Theme.Paint(pill,{
+BackgroundColor3=on and'Accent'or'Surface2'})local stroke=Util.Stroke(pill)Theme
+.Paint(stroke,{Color=on and'Accent'or'Stroke'})local holder=Util.New('Frame',{
+BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
+fromScale(0,1),ZIndex=4,Parent=pill})Util.List(holder,5,Enum.FillDirection.
+Horizontal,Enum.HorizontalAlignment.Left,Enum.VerticalAlignment.Center)local
+iconId=Icons.Get(page.Icon)if iconId then local img=Util.New('ImageLabel',{
+BackgroundTransparency=1,Image=iconId,Size=UDim2.fromOffset(13,13),ZIndex=4,
+Parent=holder})Theme.Paint(img,{ImageColor3=on and'AccentInk'or'TextDim'})end
+local label=Util.Label({Text=page.Name,FontFace=Theme.Fonts.SemiBold,TextSize=12
+,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,1),LayoutOrder=2,
+ZIndex=4,Parent=holder})Theme.Paint(label,{TextColor3=on and'AccentInk'or
+'TextDim'})pill.Activated:Connect(function()page:Select()end)end end function
+Window:_enqueue(element)table.insert(self._queue,element)local tab=element.Tab
+if tab then tab._total+=1 if self.Skeleton then self.Skeleton:AddTab(tab)end end
+self._lastDeclare=os.clock()if not self._pumping then self._pumping=true task.
+defer(function()self:_pump()end)end end function Window:_pump()self._pumping=
+true local budget=self.Loading.Budget or 0.004 while#self._queue>0 and not self.
+_destroyed do local start=os.clock()while#self._queue>0 and os.clock()-start<
+budget do local el=table.remove(self._queue,1)if not el._destroyed then self.
+_buildingTab=el.Tab local ok,err=pcall(function()local section=el.Section
+section:_ensureMounted()el:_mount(section.Body,el._order)end)if not ok then
+warn("[Proximity] failed to build '"..tostring(el.Name).."': "..tostring(err))if
+el.Tab then el.Tab._errors=(el.Tab._errors or 0)+1 end end end if el.Tab then el
+.Tab._done+=1 end end if self.Skeleton then local tab=self._buildingTab self.
+Skeleton:Update(tab and(Locale.T('Building')..' \u{b7} '..tab.Name..'  '..tab.
+_done..'/'..tab._total)or nil)end task.wait()end self._buildingTab=nil self.
+_pumping=false self:_setStage()self:_checkReady()end function Window:_setStage(
+text)if self.Skeleton then self.Skeleton:Update(text)end if self.Loader and text
+then self.Loader:SetStage(text)end end function Window:GetLoadProgress()local
+total,done=0,0 for _,tab in self.Tabs do total+=tab._total done+=tab._done end
+local elements=total for _,t in self._tasks do local weight=math.max(t.Weight,
+elements/#self._tasks)total+=weight done+=weight*(t.Finished and 1 or t.Amount)
+end if total==0 then return 0 end return done/total end function Window:
+_checkReady()if self.State~='Loading'or self._checking then return end local 
+function blocked()if#self._queue>0 then return true end for _,t in self._tasks
+do if not t.Finished then return true end end if self._explicitReady then return
+false end if not self.AutoReady then return true end return os.clock()-self.
+_lastDeclare<0.2 end if blocked()then if self.AutoReady or self._explicitReady
+then self._checking=true task.delay(0.1,function()self._checking=false self:
+_checkReady()end)end return end self:_finishLoading()end function Window:
+_finishLoading()if self.State~='Loading'then return end self.State='Finishing'
+self._declaring=false local Lib=self.Library task.spawn(function()if self.
+Options.AutoLoad~=false and Lib:GetAutoLoad()and not Lib._autoLoaded then Lib.
+_autoLoaded=true self:_setStage(Locale.T('ApplyingConfig')..' \u{b7} '..Lib:
+GetAutoLoad())Lib:LoadAutoConfig()Lib.CurrentConfig=Lib:GetAutoLoad()end local
+started=(self.Skeleton and self.Skeleton.Started)or(self.Loader and self.Loader.
+Started)local elapsed=started and(os.clock()-started)or 0 local wait=(self.
+Loading.MinTime or 0)-elapsed if wait>0 and Tween.Speed>0 then task.wait(wait)
+end self:_reveal()end)end function Window:_reveal(force)if self.State=='Ready'
+then return end self.State='Ready'self._declaring=false local Lib=self.Library
+Lib._autoSaveArmed=true local saved=Lib:GetSetting('Window.'..self.Title)if
+type(saved)=='table'and saved.Tab and not self._restoredTab then self.
 _restoredTab=true local tab=self:GetTab(saved.Tab)if tab then self:SelectTab(tab
 )end end local function rise()local page=self.CurrentPage if page and page.Frame
 and Tween.Speed>0 then page.Frame.Position=UDim2.fromOffset(0,6)Tween.Play(page.
-Frame,{Position=UDim2.fromOffset(0,0)},0.45)end end if self.Skeleton then local
-skeleton=self.Skeleton self.Skeleton=nil if force then skeleton.Stage.Text=
-Locale.T('Building')..'\u{2026}'end skeleton:Finish(rise)else rise()end self.
-Ready:Fire()Lib.WindowReady:Fire(self)end function Window:SetReady()self.
-_explicitReady=true self:_checkReady()return self end Window.Finish=Window.
-SetReady Window.Init=Window.SetReady function Window:IsReady()return self.State
-=='Ready'end function Window:OnReady(fn)if self.State=='Ready'then task.spawn(fn
-)return{Disconnect=function()end}end return self.Ready:Once(fn)end function
-Window:WaitUntilReady(timeout)if self.State~='Ready'then self.Ready:Wait(timeout
-)end return self.State=='Ready'end function Window:Task(name,weight)local window
-=self local t={Name=name,Weight=weight or 10,Amount=0,Finished=false}function t:
-Progress(p)self.Amount=math.clamp(p,0,1)if window.Skeleton then window.Skeleton:
-Update(self.Name..' \u{b7} '..math.floor(self.Amount*100)..'%')end return self
-end t.SetProgress=t.Progress function t:SetText(text)self.Name=text if window.
-Skeleton then window.Skeleton:Update(text)end return self end function t:Done()
-self.Finished,self.Amount=true,1 if window.Skeleton then window.Skeleton:Update(
-)end window:_checkReady()return self end t.Complete=t.Done function t:Fail(
-reason)warn("[Proximity] task '"..tostring(self.Name).."' failed: "..tostring(
-reason))self.Failed=reason return self:Done()end table.insert(self._tasks,t)if
-self.Skeleton then self.Skeleton:Update(name)end return t end function Window:
-Step(name,fn,weight)local t=self:Task(name,weight)task.spawn(function()local ok,
-err=pcall(fn,t)if ok then t:Done()else t:Fail(err)end end)return t end function
-Window:Open()if self._isOpen then return self end self._isOpen=true local holder
-=self.Holder holder.Visible=true self._modal.Visible=self.Options.UnlockMouse~=
-false local canvas=self.Canvas canvas.GroupTransparency=1 self._openScale.Scale=
-1 local s=self:GetScale()self._uiScale.Scale=s*0.96 Tween.Play(canvas,{
-GroupTransparency=self.GlassTransparency or 0},0.25)Tween.Play(self._uiScale,{
-Scale=s},0.3,Enum.EasingStyle.Back)Tween.Play(self._borderStroke,{Transparency=0
-},0.25)Tween.Play(self._rim,{Transparency=self.RimEnabled and 0 or 1},0.4)Tween.
-Play(self.Plate,{BackgroundTransparency=self.GlassTransparency or 0},0.25)self.
-Opened:Fire()return self end function Window:Close()if not self._isOpen then
-return self end self._isOpen=false self._modal.Visible=false Shared.Overlay.
-CloseAll()Shared.Overlay.HideTooltip()local s=self:GetScale()Tween.Play(self.
-Canvas,{GroupTransparency=1},0.18)Tween.Play(self._uiScale,{Scale=s*0.97},0.18)
-Tween.Play(self._borderStroke,{Transparency=1},0.18)Tween.Play(self._rim,{
-Transparency=1},0.18)Tween.Play(self.Plate,{BackgroundTransparency=1},0.18)task.
-delay(Tween.Speed>0 and 0.19 or 0,function()if not self._isOpen and self.Holder
-then self.Holder.Visible=false end end)self.Closed:Fire()if self.Options.
-HiddenHint~=false and not self._hintShown then self._hintShown=true self.Library
-:Notify({Content=Locale.T('Hidden',Keys.Display(self.Keybind)),Duration=3})end
-return self end Window.Minimize=Window.Close Window.Hide=Window.Close Window.
-Show=Window.Open function Window:Toggle()if self._isOpen then return self:Close(
-)end return self:Open()end function Window:SetOpen(open)return open and self:
-Open()or self:Close()end function Window:IsOpen()return self._isOpen end
-function Window:SetScale(value)if value=='Auto'or value==nil then self.
-_autoScale=true local view=workspace.CurrentCamera.ViewportSize value=math.min(1
-,(view.X-40)/self.Size.X,(view.Y-40)/self.Size.Y)value=math.max(value,0.5)else
-self._autoScale=false value=math.clamp(tonumber(value)or 1,0.5,2)end self.
-_scaleValue=value self._uiScale.Scale=value Shared.Scale=value Shared.Overlay.
-SetScale(value)return self end function Window:GetScale()return self._scaleValue
-or 1 end function Window:SetSize(size,keepScale)if typeof(size)=='UDim2'then
-size=Vector2.new(size.X.Offset,size.Y.Offset)end self.Size=Vector2.new(math.max(
-size.X,self.MinSize.X),math.max(size.Y,self.MinSize.Y))self.Holder.Size=UDim2.
-fromOffset(self.Size.X,self.Size.Y)if self._autoScale and not keepScale then
-self:SetScale('Auto')end return self end function Window:GetSize()return self.
-Size end function Window:SetPosition(pos)if typeof(pos)=='Vector2'then pos=UDim2
-.fromOffset(pos.X,pos.Y)end self.Holder.Position=pos return self end function
-Window:Center()self.Holder.Position=UDim2.fromScale(0.5,0.5)return self end
-function Window:SetTitle(text)self.Title=text self._titleLabel.Text=text return
-self end function Window:SetSubtitle(text)self.Subtitle=text self._subLabel.Text
-=text return self end function Window:SetKeybind(key)self.Keybind=Keys.
-Normalize(key)return self end Window.SetMenuKey=Window.SetKeybind function
-Window:GetKeybind()return self.Keybind end function Window:SetTransparency(value
-)self.GlassTransparency=math.clamp(tonumber(value)or 0,0,0.4)if self._isOpen
-then self.Canvas.GroupTransparency=self.GlassTransparency self.Plate.
-BackgroundTransparency=self.GlassTransparency end return self end function
-Window:SetRim(enabled)self.RimEnabled=enabled and true or false Tween.Play(self.
-_rim,{Transparency=(self.RimEnabled and self._isOpen)and 0 or 1},0.3)return self
-end function Window:SetDraggable(value)self.Options.Draggable=value return self
-end function Window:_bindInput()local Lib=self.Library self.Maid:Connect(UIS.
-InputBegan,function(input,processed)if UIS:GetFocusedTextBox()or Shared.
-KeybindListening then return end local name=Keys.FromInput(input)if name and
-name==self.Keybind and string.sub(name,1,2)~='MB'then self:Toggle()return end if
-not self._isOpen then return end local ctrl=UIS:IsKeyDown(Enum.KeyCode.
-LeftControl)or UIS:IsKeyDown(Enum.KeyCode.RightControl)if ctrl and input.KeyCode
-==Enum.KeyCode.K then self:OpenSearch()elseif ctrl and input.KeyCode==Enum.
-KeyCode.Z then Lib:Undo()elseif ctrl and input.KeyCode==Enum.KeyCode.Y then Lib:
-Redo()elseif ctrl and input.KeyCode==Enum.KeyCode.S then Lib:QuickSave(self)end
-end)end function Window:Command(options,callback)if type(options)=='string'then
-options={Name=options,Callback=callback}end table.insert(self._commands,options)
-return options end Window.AddCommand=Window.Command function Window:Notify(
-options)return self.Library:Notify(options)end function Window:GetElements()
-local out={}for _,tab in self.Tabs do for _,el in tab:GetElements()do table.
-insert(out,el)end end return out end function Window:Find(name)for _,el in self:
-GetElements()do if el.Name==name or el.Flag==name then return el end end return
-nil end function Window:Destroy()if self._destroyed then return end self.
-_destroyed=true if self.Skeleton then self.Skeleton:Destroy()end for _,tab in
-table.clone(self.Tabs)do for _,el in tab:GetElements()do pcall(el.Destroy,el)end
-end self.Maid:Clean()local list=self.Library.Windows local i=table.find(list,
-self)if i then table.remove(list,i)end end return Window end function
-__DARKLUA_BUNDLE_MODULES.w()local v=__DARKLUA_BUNDLE_MODULES.cache.w if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.w=v end return v.c end end
-do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+Frame,{Position=UDim2.fromOffset(0,0)},0.45)end end if self.Loader then local
+loader=self.Loader self.Loader=nil loader:Finish(function(point)self:Open({From=
+point})rise()end)elseif self.Skeleton then local skeleton=self.Skeleton self.
+Skeleton=nil if force then skeleton.Stage.Text=Locale.T('Building')..'\u{2026}'
+end skeleton:Finish(rise)else rise()end self:_restoreScroll()self.Ready:Fire()
+Lib.WindowReady:Fire(self)task.delay(1.4,function()self:_afterReady()end)end
+function Window:SetReady()self._explicitReady=true self:_checkReady()return self
+end Window.Finish=Window.SetReady Window.Init=Window.SetReady function Window:
+IsReady()return self.State=='Ready'end function Window:OnReady(fn)if self.State
+=='Ready'then task.spawn(fn)return{Disconnect=function()end}end return self.
+Ready:Once(fn)end function Window:WaitUntilReady(timeout)if self.State~='Ready'
+then self.Ready:Wait(timeout)end return self.State=='Ready'end function Window:
+Task(name,weight)local window=self local t={Name=name,Weight=weight or 10,Amount
+=0,Finished=false}function t:Progress(p)self.Amount=math.clamp(p,0,1)window:
+_setStage(self.Name..' \u{b7} '..math.floor(self.Amount*100)..'%')return self
+end t.SetProgress=t.Progress function t:SetText(text)self.Name=text window:
+_setStage(text)return self end function t:Done()self.Finished,self.Amount=true,1
+window:_setStage()window:_checkReady()return self end t.Complete=t.Done function
+t:Fail(reason)warn("[Proximity] task '"..tostring(self.Name).."' failed: "..
+tostring(reason))self.Failed=reason return self:Done()end table.insert(self.
+_tasks,t)self:_setStage(name)return t end function Window:Step(name,fn,weight)
+local t=self:Task(name,weight)task.spawn(function()local ok,err=pcall(fn,t)if ok
+then t:Done()else t:Fail(err)end end)return t end function Window:_anchorPoint()
+local target=self.TopbarButton or self.Bubble if target and target.Parent then
+return target.AbsolutePosition+target.AbsoluteSize/2-Shared.Gui.Windows.
+AbsolutePosition end return nil end function Window:Open(options)if self._isOpen
+or self._destroyed then return self end self._isOpen=true local holder=self.
+Holder holder.Visible=true self._modal.Visible=self.Options.UnlockMouse~=false
+local canvas=self.Canvas canvas.GroupTransparency=1 local s=self:GetScale()local
+rest=self._restPosition or holder.Position self._restPosition=rest local from=
+options and options.From or self:_anchorPoint()if from and Tween.Speed>0 then
+holder.Position=UDim2.fromOffset(from.X,from.Y)self._uiScale.Scale=s*0.05 Tween.
+Play(holder,{Position=rest},0.5,Enum.EasingStyle.Quint)Tween.Play(self._uiScale,
+{Scale=s},0.55,Enum.EasingStyle.Back)else holder.Position=rest self._uiScale.
+Scale=s*0.96 Tween.Play(self._uiScale,{Scale=s},0.3,Enum.EasingStyle.Back)end
+Tween.Play(canvas,{GroupTransparency=self.GlassTransparency or 0},0.3)Tween.
+Play(self._borderStroke,{Transparency=0},0.3)Tween.Play(self._rim,{Transparency=
+self.RimEnabled and 0 or 1},0.5)Tween.Play(self.Plate,{BackgroundTransparency=
+self.GlassTransparency or 0},0.3)self.Opened:Fire()return self end function
+Window:Close()if not self._isOpen then return self end self._isOpen=false self.
+_modal.Visible=false Shared.Overlay.CloseAll()Shared.Overlay.HideTooltip()local
+holder=self.Holder local s=self:GetScale()if not self._animating then self.
+_restPosition=holder.Position end local to=self:_anchorPoint()local time=Tween.
+Speed>0 and(to and 0.38 or 0.2)or 0 if to then Tween.Play(holder,{Position=UDim2
+.fromOffset(to.X,to.Y)},time,Enum.EasingStyle.Quint,Enum.EasingDirection.In)
+Tween.Play(self._uiScale,{Scale=s*0.05},time,Enum.EasingStyle.Quint,Enum.
+EasingDirection.In)else Tween.Play(self._uiScale,{Scale=s*0.97},time)end Tween.
+Play(self.Canvas,{GroupTransparency=1},time*0.9)Tween.Play(self._borderStroke,{
+Transparency=1},time*0.8)Tween.Play(self._rim,{Transparency=1},time*0.6)Tween.
+Play(self.Plate,{BackgroundTransparency=1},time*0.9)self._animating=true task.
+delay(time+0.02,function()self._animating=false if not self._isOpen and holder.
+Parent then holder.Visible=false holder.Position=self._restPosition or holder.
+Position end end)self.Closed:Fire()local Lib=self.Library if Lib.Dirty and Lib.
+CurrentConfig and not self._dirtyNoticed then self._dirtyNoticed=true Lib:
+Notify({Title=Locale.T('Unsaved'),Content=Locale.T('UnsavedHint',Lib.
+CurrentConfig),Type='warning',Duration=6,Actions={{Text=Locale.T('Save'),
+Callback=function()Lib:QuickSave(self)end}}})elseif self.Options.HiddenHint~=
+false and not self._hintShown then self._hintShown=true Lib:Notify({Content=
+Locale.T('Hidden',Keys.Display(self.Keybind)),Duration=3})end return self end
+Window.Minimize=Window.Close Window.Hide=Window.Close Window.Show=Window.Open
+function Window:Toggle()if self._isOpen then return self:Close()end return self:
+Open()end function Window:SetOpen(open)return open and self:Open()or self:Close(
+)end function Window:IsOpen()return self._isOpen end function Window:SetScale(
+value)if value=='Auto'or value==nil then self._autoScale=true local view=
+workspace.CurrentCamera.ViewportSize value=math.min(1,(view.X-40)/self.Size.X,(
+view.Y-40)/self.Size.Y)value=math.max(value,0.5)else self._autoScale=false value
+=math.clamp(tonumber(value)or 1,0.5,2)end self._scaleValue=value self._uiScale.
+Scale=value Shared.Scale=value Shared.Overlay.SetScale(value)return self end
+function Window:GetScale()return self._scaleValue or 1 end function Window:
+SetSize(size,keepScale)if typeof(size)=='UDim2'then size=Vector2.new(size.X.
+Offset,size.Y.Offset)end self.Size=Vector2.new(math.max(size.X,self.MinSize.X),
+math.max(size.Y,self.MinSize.Y))self.Holder.Size=UDim2.fromOffset(self.Size.X,
+self.Size.Y)if self._autoScale and not keepScale then self:SetScale('Auto')end
+return self end function Window:GetSize()return self.Size end function Window:
+SetPosition(pos)if typeof(pos)=='Vector2'then pos=UDim2.fromOffset(pos.X,pos.Y)
+end self.Holder.Position=pos return self end function Window:Center()self.Holder
+.Position=UDim2.fromScale(0.5,0.5)return self end function Window:SetTitle(text)
+self.Title=text self._titleLabel.Text=text return self end function Window:
+SetSubtitle(text)self.Subtitle=text self._subLabel.Text=text return self end
+function Window:SetKeybind(key)self.Keybind=Keys.Normalize(key)return self end
+Window.SetMenuKey=Window.SetKeybind function Window:GetKeybind()return self.
+Keybind end function Window:SetTransparency(value)self.GlassTransparency=math.
+clamp(tonumber(value)or 0,0,0.4)if self._isOpen then self.Canvas.
+GroupTransparency=self.GlassTransparency self.Plate.BackgroundTransparency=self.
+GlassTransparency end return self end function Window:SetRim(enabled)self.
+RimEnabled=enabled and true or false Tween.Play(self._rim,{Transparency=(self.
+RimEnabled and self._isOpen)and 0 or 1},0.3)return self end function Window:
+SetDraggable(value)self.Options.Draggable=value return self end function Window:
+_bindInput()local Lib=self.Library self.Maid:Connect(UIS.InputBegan,function(
+input,processed)if UIS:GetFocusedTextBox()or Shared.KeybindListening then return
+end local name=Keys.FromInput(input)if name and Keys.MatchesCombo(self.Keybind,
+name)and string.sub(name,1,2)~='MB'then self:Toggle()return end if not self.
+_isOpen then return end local ctrl=UIS:IsKeyDown(Enum.KeyCode.LeftControl)or UIS
+:IsKeyDown(Enum.KeyCode.RightControl)if ctrl and input.KeyCode==Enum.KeyCode.K
+then self:OpenSearch()elseif ctrl and input.KeyCode==Enum.KeyCode.Z then Lib:
+Undo()elseif ctrl and input.KeyCode==Enum.KeyCode.Y then Lib:Redo()elseif ctrl
+and input.KeyCode==Enum.KeyCode.S then Lib:QuickSave(self)end end)end function
+Window:Command(options,callback)if type(options)=='string'then options={Name=
+options,Callback=callback}end table.insert(self._commands,options)return options
+end Window.AddCommand=Window.Command function Window:Notify(options)return self.
+Library:Notify(options)end function Window:GetElements()local out={}for _,tab in
+self.Tabs do for _,el in tab:GetElements()do table.insert(out,el)end end return
+out end function Window:Find(name)for _,el in self:GetElements()do if el.Name==
+name or el.Flag==name then return el end end return nil end function Window:
+Destroy()if self._destroyed then return end self._destroyed=true if self.
+Skeleton then self.Skeleton:Destroy()end for _,tab in table.clone(self.Tabs)do
+for _,el in tab:GetElements()do pcall(el.Destroy,el)end end self.Maid:Clean()
+local list=self.Library.Windows local i=table.find(list,self)if i then table.
+remove(list,i)end end return Window end function __DARKLUA_BUNDLE_MODULES.y()
+local v=__DARKLUA_BUNDLE_MODULES.cache.y if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.y=v end return v.c end end do local function 
+__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
 =__DARKLUA_BUNDLE_MODULES.j()__DARKLUA_BUNDLE_MODULES.k()local UIS=Env.Service(
@@ -3517,9 +4376,9 @@ format('%d/%d  \u{b7}  %s',i,#steps,step.Title or''),Content=step.Text or step.
 Content,Buttons={{Text=Locale.T('Cancel')},{Text=i==#steps and Locale.T('Ok')or
 '\u{2192}',Style='Primary'}}})if ring then ring:Destroy()end if index~=2 then
 break end end if options.Key then Lib:SetSetting('Tour.'..options.Key,true)end
-end)return self end end end function __DARKLUA_BUNDLE_MODULES.x()local v=
-__DARKLUA_BUNDLE_MODULES.cache.x if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.x=v end return v.c end end do local function 
+end)return self end end end function __DARKLUA_BUNDLE_MODULES.z()local v=
+__DARKLUA_BUNDLE_MODULES.cache.z if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Env=
 __DARKLUA_BUNDLE_MODULES.e()__DARKLUA_BUNDLE_MODULES.f()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Locale
@@ -3578,26 +4437,58 @@ Lib:SetSetting('Rim',v)window:SetRim(v)end})look:Toggle({Name=T('Planet'),Icon=
 v)Lib:SetSetting('Decoration',v)window:SetDecoration(v)end})look:Toggle({Name=T(
 'ReducedMotion'),Icon='motion',Default=Lib:GetSetting('ReducedMotion',false),
 Save=false,Callback=function(v)Lib:SetSetting('ReducedMotion',v)Tween.Speed=v
-and 0 or 1 end})local ui=tab:LeftSection({Name=T('Interface'),Icon=
-'layout-dashboard'})ui:Keybind({Name=T('MenuKey'),Icon='keyboard',Default=window
-.Keybind,Modes={'Press'},Mode='Press',ShowInList=false,Save=false,Callback=
-function(key)Lib:SetSetting('MenuKey',key)window:SetKeybind(key)end})local langs
-,flags={},{en='\u{1f1ec}\u{1f1e7}',ru='\u{1f1f7}\u{1f1fa}',de=
-'\u{1f1e9}\u{1f1ea}',es='\u{1f1ea}\u{1f1f8}',fr='\u{1f1eb}\u{1f1f7}',uk=
-'\u{1f1fa}\u{1f1e6}',pt='\u{1f1e7}\u{1f1f7}',tr='\u{1f1f9}\u{1f1f7}'}local
-codeByName={}for _,code in Locale.List()do local name=Locale.Names[code]or code
-codeByName[name]=code table.insert(langs,name)end local prefixes={}for name,code
-in codeByName do prefixes[name]=flags[code]end ui:Dropdown({Name=T('Language'),
-Icon='language',Values=langs,Prefixes=prefixes,Default=Locale.Names[Locale.
-Current],Save=false,Callback=function(v)if v and codeByName[v]then Lib:
-SetLanguage(codeByName[v])end end})ui:Toggle({Name=T('Watermark'),Icon=
-'watermark',Default=Lib:GetSetting('Watermark',true),Save=false,Callback=
-function(v)Lib:SetSetting('Watermark',v)if Lib.WatermarkWidget then Lib.
-WatermarkWidget:SetVisible(v)end end})ui:Toggle({Name=T('KeybindList'),Icon=
-'keybinds',Default=Lib:GetSetting('KeybindList',true),Save=false,Callback=
+and 0 or 1 end})look:Dropdown({Name=T('Navigation'),Icon='sidebar',Values={
+'Sidebar','Rail'},Display=function(v)return T(v)end,Default=window.Navigation,
+Save=false,Callback=function(v)if v then Lib:SetSetting('Navigation',v)window:
+SetNavigation(v)end end})look:Dropdown({Name=T('Font'),Icon='type',Values=Lib:
+GetFonts(),Default=Lib:GetSetting('Font','Builder Sans'),Search=true,Save=false,
+Callback=function(v)if v then task.spawn(function()if not Lib:SetFont(v)then Lib
+:Notify({Content=T('FontFailed'),Type='warning',Duration=4})end end)end end})
+look:Dropdown({Name=T('Density'),Icon='align-justify',Values={'Compact','Normal'
+,'Comfortable','Touch'},Display=function(v)return T(v)end,Default=Lib.
+DensityName,Save=false,Callback=function(v)if v then Lib:SetDensity(v)end end})
+look:Dropdown({Name=T('ToggleStyle'),Icon='toggle-right',Values=Lib._classes.
+Toggle.Styles,Default=Lib.ToggleStyle,Save=false,Callback=function(v)if v then
+Lib:SetToggleStyle(v)end end})local bgSaved=Lib:GetSetting('Background')local
+bgInput=look:Input({Name=T('BackgroundImage'),Icon='image',Placeholder=
+'rbxassetid:// or https://',Default=type(bgSaved)=='table'and bgSaved.Image or''
+,Finished=true,Save=false})local bgDim=look:Slider({Name=T('BackgroundDim'),Icon
+='moon',Min=0,Max=90,Default=type(bgSaved)=='table'and math.floor((bgSaved.Dim
+or 0.55)*100)or 55,Suffix='%',Save=false})local function applyBg()local image=
+Util.Trim(bgInput:Get()or'')local spec=image~=''and{Image=image,Dim=bgDim:Get()/
+100}or nil Lib:SetSetting('Background',spec or false)window:SetBackground(spec)
+end bgInput:AddCallback(applyBg)bgDim:AddCallback(Util.Debounce(0.3,applyBg))
+bgDim:DependsOn(bgInput,function(v)return v~=nil and v~=''end)local ui=tab:
+LeftSection({Name=T('Interface'),Icon='layout-dashboard'})ui:Keybind({Name=T(
+'MenuKey'),Icon='keyboard',Default=window.Keybind,Modes={'Press'},Mode='Press',
+ShowInList=false,Save=false,Callback=function(key)Lib:SetSetting('MenuKey',key)
+window:SetKeybind(key)end})local langs,flags={},{en='\u{1f1ec}\u{1f1e7}',ru=
+'\u{1f1f7}\u{1f1fa}',de='\u{1f1e9}\u{1f1ea}',es='\u{1f1ea}\u{1f1f8}',fr=
+'\u{1f1eb}\u{1f1f7}',uk='\u{1f1fa}\u{1f1e6}',pt='\u{1f1e7}\u{1f1f7}',tr=
+'\u{1f1f9}\u{1f1f7}'}local codeByName={}for _,code in Locale.List()do local name
+=Locale.Names[code]or code codeByName[name]=code table.insert(langs,name)end
+local prefixes={}for name,code in codeByName do prefixes[name]=flags[code]end ui
+:Dropdown({Name=T('Language'),Icon='language',Values=langs,Prefixes=prefixes,
+Default=Locale.Names[Locale.Current],Save=false,Callback=function(v)if v and
+codeByName[v]then Lib:SetLanguage(codeByName[v])end end})ui:Toggle({Name=T(
+'Watermark'),Icon='watermark',Default=Lib:GetSetting('Watermark',true),Save=
+false,Callback=function(v)Lib:SetSetting('Watermark',v)if Lib.WatermarkWidget
+then Lib.WatermarkWidget:SetVisible(v)end end})ui:Toggle({Name=T('KeybindList'),
+Icon='keybinds',Default=Lib:GetSetting('KeybindList',true),Save=false,Callback=
 function(v)Lib:SetSetting('KeybindList',v)if Lib.KeybindListWidget then Lib.
-KeybindListWidget:SetVisible(v)end end})ui:Dropdown({Name=T('NotifyPosition'),
-Icon='notifications',Values={'TopRight','BottomRight','TopLeft','BottomLeft',
+KeybindListWidget:SetVisible(v)end end})ui:MultiDropdown({Name=T(
+'WatermarkItems'),Icon='list-checks',Values=Lib.WatermarkItemNames,Default=Lib:
+GetSetting('WatermarkItems',{'FPS','Ping','Time'}),Save=false,Callback=function(
+list)Lib:SetSetting('WatermarkItems',list)if Lib.WatermarkWidget then Lib.
+WatermarkWidget:SetItems(list)end end})ui:Toggle({Name=T('ShowInactive'),Icon=
+'eye',Default=Lib:GetSetting('BindsInactive',false),Save=false,Callback=function
+(v)Lib:SetSetting('BindsInactive',v)if Lib.KeybindListWidget then Lib.
+KeybindListWidget:ShowInactive(v)end end})ui:Dropdown({Name=T('SortBinds'),Icon=
+'arrow-up-down',Values={'Active','Name','Key'},Display=function(v)return T(
+'Sort'..v)end,Default=Lib:GetSetting('BindsSort','Active'),Save=false,Callback=
+function(v)if v then Lib:SetSetting('BindsSort',v)if Lib.KeybindListWidget then
+Lib.KeybindListWidget.Refresh()end end end})ui:Dropdown({Name=T('NotifyPosition'
+),Icon='notifications',Values={'TopRight','BottomRight','TopLeft','BottomLeft',
 'TopCenter'},Default=Lib:GetSetting('NotifyPosition','BottomRight'),Save=false,
 Callback=function(v)if v then Lib:SetSetting('NotifyPosition',v)Lib:
 SetNotifyPosition(v)end end})local anon=ui:Toggle({Name=T('Anonymous'),Icon=
@@ -3606,189 +4497,209 @@ false),Save=false,Callback=function(v)Lib:SetSetting('Anonymous',v)Lib:
 SetAnonymous(v)end})anon:Options(function(o)o:Input({Name=T('ShownName'),Default
 =Lib:GetSetting('AnonymousName','Hidden'),Finished=true,Save=false,Callback=
 function(v)Lib:SetSetting('AnonymousName',v)Lib:SetAnonymous(Lib.Anonymous,{Name
-=v})end})end)local editor=tab:RightSection({Name=T('ThemeEditor'),Icon='editor',
-Collapsible=true,Collapsed=true})for _,token in{'Bg','Surface','Surface2',
-'Stroke','StrokeHi','Text','TextDim','TextMute','Accent','AccentInk','Risky'}do
-editor:ColorPicker({Name=token,Default=Theme.Get(token),Save=false,Callback=
-function(c)Theme.SetToken(token,c,false)end})end editor:ButtonGroup({{Name=T(
-'Export'),Callback=function()Env.Clipboard(Theme.Export())Lib:Notify({Content=T(
-'Copied'),Type='success',Duration=2})end},{Name=T('Import'),Callback=function()
-task.spawn(function()local text=window:Prompt({Title=T('Import'),Placeholder=
-'{ \u{2026} }'})if text and Theme.Import(text)then Lib:Notify({Content=T(
-'Imported'),Type='success',Duration=2})end end)end}})local misc=tab:
-RightSection({Name=T('About'),Icon='planet'})misc:Stat({Name='Proximity',Value=
-'v'..Lib.Version,Icon='info'})misc:Stat({Name=T('Executor'),Value=Env.
-ExecutorName(),Icon='code'})if options.Tour then misc:Button({Name=T(
-'ReplayTour'),Icon='tour',Callback=function()window:Tour(options.Tour,{Force=
-true})end})end misc:Button({Name=T('Unload'),Style='Danger',Icon='power',Confirm
-=T('UnloadConfirm'),Callback=function()Lib:Unload()end})if options.Configs~=
-false then self:ConfigTab({Tab=tab})end return tab end function Window:ConfigTab
-(options)options=options or{}local Lib=self.Library local window=self local tab=
-options.Tab or self:Tab({Name=options.Name or T('Configs'),Icon=options.Icon or
-'folder',Order=999})local section=tab:RightSection({Name=T('Configs'),Icon=
-'folder'})local nameInput=section:Input({Name=T('ConfigName'),Icon='edit-3',
-Placeholder='legit',Save=false,Finished=true})local list list=section:Dropdown({
-Name=T('ConfigList'),Icon='configs',Values=Lib:ListConfigs(),Save=false,
-Deletable=true,Search=true,OnDelete=function(name)Lib:DeleteConfig(name)Lib:
-Notify({Title=T('Deleted'),Content=name,Type='info',Duration=2})end,Callback=
-function(v)if v then nameInput:Set(v,true)end end})local function selected()
-local n=Util.Trim(nameInput:Get()or'')if n==''then n=list:Get()end return n end
-Lib.ConfigsChanged:Connect(function()list:SetValues(Lib:ListConfigs(),true)end)
-section:ButtonGroup({{Name=T('Save'),Style='Primary',Callback=function()local
-name=selected()if not name or name==''then return end task.spawn(function()if
-Lib:ConfigExists(name)and not window:Confirm({Title=T('Save'),Content=T(
-'Overwrite',name)})then return end local ok=Lib:SaveConfig(name)if ok then Lib.
-CurrentConfig=Util.SafeName(name)Lib:_setDirty(false)list:Set(Util.SafeName(name
-),true)Lib:Notify({Title=T('Saved'),Content=name,Type='success',Duration=2.5})
-end end)end},{Name=T('Load'),Callback=function()local name=selected()if not name
-or not Lib:ConfigExists(name)then return end task.spawn(function()local diff=Lib
-:DiffConfig(name)if#diff>0 then local lines={}for i=1,math.min(#diff,8)do table.
-insert(lines,'\u{2022} '..diff[i].Flag)end if#diff>8 then table.insert(lines,
-'\u{2026} +'..(#diff-8))end if not window:Confirm({Title=T('Load')..' '..name,
-Content=T('Changes',#diff)..string.char(10)..table.concat(lines,string.char(10))
-})then return end end Lib:LoadConfig(name)Lib.CurrentConfig=Util.SafeName(name)
-Lib:_setDirty(false)Lib:Notify({Title=T('Loaded'),Content=name,Type='success',
-Duration=2.5})end)end}})section:ButtonGroup({{Name=T('Export'),Callback=function
-()local text=Lib:ExportConfig(list:Get())if text then Env.Clipboard(text)Lib:
-Notify({Content=T('Copied'),Type='success',Duration=2})end end},{Name=T('Import'
-),Callback=function()task.spawn(function()local text=window:Prompt({Title=T(
-'Import'),Placeholder='PRX1.\u{2026}'})if not text then return end local ok=Lib:
-ImportConfig(text,selected()~=''and selected()or nil)Lib:Notify({Content=ok and
-T('Imported')or T('InvalidConfig'),Type=ok and'success'or'error',Duration=3})end
-)end}})section:Toggle({Name=T('AutoLoad'),Icon='load',Default=Lib:GetAutoLoad()
-~=nil,Save=false,Callback=function(v)Lib:SetAutoLoad(v and(list:Get()or Lib.
-CurrentConfig)or nil)end})section:Toggle({Name=T('AutoSave'),Icon='save',Default
-=Lib:GetAutoSave()~=nil,Save=false,Callback=function(v)Lib:SetAutoSave(v and(
-list:Get()or Lib.CurrentConfig)or nil)end})section:Label({Text=T('Folder')..': '
-..Lib.Folder..'/configs',Color='TextMute',Icon='folder'})return tab end end end
-function __DARKLUA_BUNDLE_MODULES.y()local v=__DARKLUA_BUNDLE_MODULES.cache.y if
-not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.y=v end return v.c
-end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
-local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()
-local Keys=__DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()
-local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j(
-)local Shared=__DARKLUA_BUNDLE_MODULES.k()local UIS=Env.Service(
-'UserInputService')local RunService=Env.Service('RunService')return function(Lib
-)local function dock(frame,key,default)local saved=Lib:GetSetting('Dock.'..key)
-if type(saved)=='table'then frame.AnchorPoint=Vector2.new(saved[1],saved[2])
-frame.Position=UDim2.new(saved[1],saved[3],saved[2],saved[4])elseif default then
-frame.AnchorPoint=default.AnchorPoint frame.Position=default.Position end local
-dragging,start,startPos frame.InputBegan:Connect(function(input)if input.
-UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.
-UserInputType.Touch then dragging,start=true,Vector2.new(input.Position.X,input.
-Position.Y)startPos=frame.AbsolutePosition-frame.Parent.AbsolutePosition frame.
-AnchorPoint=Vector2.new(0,0)frame.Position=UDim2.fromOffset(startPos.X,startPos.
-Y)end end)Shared.Maid:Connect(UIS.InputChanged,function(input)if dragging and(
-input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==
-Enum.UserInputType.Touch)then local p=startPos+Vector2.new(input.Position.X,
-input.Position.Y)-start frame.Position=UDim2.fromOffset(p.X,p.Y)end end)Shared.
-Maid:Connect(UIS.InputEnded,function(input)if not dragging or(input.
-UserInputType~=Enum.UserInputType.MouseButton1 and input.UserInputType~=Enum.
-UserInputType.Touch)then return end dragging=false local view=frame.Parent.
-AbsoluteSize local pos,size=frame.AbsolutePosition-frame.Parent.AbsolutePosition
-,frame.AbsoluteSize local cx,cy=(pos.X+size.X/2)/view.X,(pos.Y+size.Y/2)/view.Y
-local ax=cx<0.33 and 0 or(cx>0.66 and 1 or 0.5)local ay=cy<0.33 and 0 or(cy>0.66
-and 1 or 0.5)local ox=ax==0 and 12 or(ax==1 and-12 or 0)local oy=ay==0 and 12 or
-(ay==1 and-12 or 0)local nearX=pos.X<60 or pos.X+size.X>view.X-60 or ax==0.5
-local nearY=pos.Y<60 or pos.Y+size.Y>view.Y-60 if not nearX then ax,ox=0,pos.X
-end if not nearY then ay,oy=0,pos.Y end frame.AnchorPoint=Vector2.new(ax,ay)
-local target=UDim2.new(ax,ox,ay,oy)Tween.Play(frame,{Position=target},0.25,Enum.
-EasingStyle.Back)Lib:SetSetting('Dock.'..key,{ax,ay,ox,oy})end)end Lib.Dock=
-function(_,frame,key,default)dock(frame,key,default)end local function panel(
-name,parent)local frame=Util.New('Frame',{Name=name,AutomaticSize=Enum.
-AutomaticSize.XY,Size=UDim2.new(),Active=true,Parent=parent or Shared.Gui.
-Widgets})Util.Corner(8,frame)Theme.Paint(frame,{BackgroundColor3='Bg'})frame.
-BackgroundTransparency=0.08 Theme.Paint(Util.Stroke(frame),{Color='Stroke'})
-Shared.Overlay.Shadow(frame,0.6,16)return frame end local holder=Util.New(
-'Frame',{Name='Notifications',BackgroundTransparency=1,Size=UDim2.new(0,300,1,-
-24),ZIndex=90,Parent=Shared.Gui.Root})local layout=Util.List(holder,8)local
-notifyScale=Util.New('UIScale',{Parent=holder})Lib.NotificationHistory={}local
-active={}function Lib:SetNotifyPosition(position)local map={TopRight={Vector2.
-new(1,0),UDim2.new(1,-12,0,12),Enum.VerticalAlignment.Top},BottomRight={Vector2.
-new(1,1),UDim2.new(1,-12,1,-12),Enum.VerticalAlignment.Bottom},TopLeft={Vector2.
-new(0,0),UDim2.new(0,12,0,12),Enum.VerticalAlignment.Top},BottomLeft={Vector2.
-new(0,1),UDim2.new(0,12,1,-12),Enum.VerticalAlignment.Bottom},TopCenter={Vector2
-.new(0.5,0),UDim2.new(0.5,0,0,12),Enum.VerticalAlignment.Top}}local spec=map[
-position]or map.BottomRight holder.AnchorPoint,holder.Position=spec[1],spec[2]
-layout.VerticalAlignment=spec[3]layout.HorizontalAlignment=position:find('Left')
-and Enum.HorizontalAlignment.Left or(position:find('Center')and Enum.
-HorizontalAlignment.Center or Enum.HorizontalAlignment.Right)Lib.NotifyPosition=
-position end Lib:SetNotifyPosition(Lib:GetSetting('NotifyPosition','BottomRight'
-))local typeIcons={info='info',success='check-circle',warning='alert-triangle',
-warn='alert-triangle',error='x-circle'}local typeTokens={info='Accent',success=
-'Success',warning='Warning',warn='Warning',error='Error'}function Lib:Notify(
-options)if type(options)~='table'then options={Content=tostring(options)}end
-local kind=options.Type or'info'local duration=options.Duration or options.Time
-or options.Delay or 4 local handle={Title=options.Title,Content=options.Content
-or options.Text or options.Description or''}table.insert(Lib.NotificationHistory
-,{Title=handle.Title,Content=handle.Content,Type=kind,Time=os.time()})while#Lib.
-NotificationHistory>50 do table.remove(Lib.NotificationHistory,1)end notifyScale
-.Scale=Shared.Scale or 1 local wrap=Util.New('Frame',{BackgroundTransparency=1,
-Size=UDim2.new(1,0,0,0),ClipsDescendants=false,LayoutOrder=math.floor((Lib.
-NotifyPosition:find('Bottom')and 1 or-1)*(os.clock()*100%1e7)),Parent=holder})
-local card=Util.New('Frame',{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.
-AutomaticSize.Y,Position=UDim2.fromOffset(Lib.NotifyPosition:find('Left')and-320
-or 320,0),Parent=wrap})Util.Corner(8,card)Theme.Paint(card,{BackgroundColor3=
-'Elevated'})Theme.Paint(Util.Stroke(card),{Color='StrokeHi'})Shared.Overlay.
-Shadow(card,0.55,14)Util.Padding(card,11,12,9,12)Util.List(card,3)local top=Util
-.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,16),LayoutOrder=1,
-Parent=card})local icon=Util.New('ImageLabel',{BackgroundTransparency=1,Image=
-Icons.Get(options.Icon or typeIcons[kind])or'',Size=UDim2.fromOffset(14,14),
-Position=UDim2.fromOffset(0,1),Parent=top})Theme.Paint(icon,{ImageColor3=
-typeTokens[kind]or'Accent'})local title=Util.Label({Text=handle.Title or(Lib.
-Windows[1]and Lib.Windows[1].Title)or'Proximity',FontFace=Theme.Fonts.SemiBold,
-TextSize=13,Size=UDim2.new(1,-40,1,0),Position=UDim2.fromOffset(20,0),
-TextTruncate=Enum.TextTruncate.AtEnd,Parent=top})Theme.Paint(title,{TextColor3=
-'Text'})local close=Util.New('ImageButton',{BackgroundTransparency=1,Image=Icons
-.Get('x')or'',Size=UDim2.fromOffset(12,12),AnchorPoint=Vector2.new(1,0),Position
-=UDim2.new(1,0,0,2),Parent=top})Theme.Paint(close,{ImageColor3='TextMute'})local
-content=Util.Label({Text=handle.Content,FontFace=Theme.Fonts.Regular,TextSize=12
-,RichText=true,TextWrapped=true,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.
-new(1,0,0,0),LayoutOrder=2,Parent=card})Theme.Paint(content,{TextColor3=
-'TextDim'})content.Visible=handle.Content~=''if options.Actions then local row=
-Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,26),LayoutOrder=
-3,Parent=card})Util.List(row,6,Enum.FillDirection.Horizontal,Enum.
-HorizontalAlignment.Right,Enum.VerticalAlignment.Bottom)for i,action in options.
-Actions do local b=Util.New('TextButton',{Text=action.Text or action[1],FontFace
-=Theme.Fonts.SemiBold,TextSize=12,AutoButtonColor=false,AutomaticSize=Enum.
-AutomaticSize.X,Size=UDim2.fromOffset(0,22),LayoutOrder=i,Parent=row})Util.
-Corner(5,b)Util.Padding(b,0,10,0,10)Theme.Paint(b,{BackgroundColor3=i==1 and
-'Accent'or'Surface3',TextColor3=i==1 and'AccentInk'or'Text'})b.Activated:
-Connect(function()Util.SafeCall(action.Callback or action[2])handle:Close()end)
-end end local track=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,
-0,0,6),LayoutOrder=99,Parent=card})local progress=Util.New('Frame',{Size=UDim2.
-new(1,0,0,2),Position=UDim2.fromOffset(0,4),BorderSizePixel=0,
-BackgroundTransparency=0.6,Parent=track})Util.Round(progress)Theme.Paint(
-progress,{BackgroundColor3='Accent'})local closed=false local expires=os.clock()
-+duration function handle:Close()if closed then return end closed=true local i=
-table.find(active,handle)if i then table.remove(active,i)end Tween.Play(card,{
-Position=UDim2.fromOffset(Lib.NotifyPosition:find('Left')and-320 or 320,0)},0.25
-)task.delay(0.22,function()Tween.Play(wrap,{Size=UDim2.new(1,0,0,0)},0.18)task.
-delay(0.2,function()wrap:Destroy()end)end)end function handle:SetTitle(t)title.
-Text=t return self end function handle:SetContent(t)content.Text=t content.
-Visible=t~=''return self end function handle:SetProgress(p)progress.Size=UDim2.
-new(math.clamp(p,0,1),0,0,2)return self end function handle:Extend(seconds)
-expires+=seconds return self end close.Activated:Connect(function()handle:Close(
-)end)local function fitWrap()local h=math.floor(card.AbsoluteSize.Y/notifyScale.
-Scale+0.5)if not closed and wrap.Size.Y.Offset~=h then wrap.Size=UDim2.new(1,0,0
-,h)end end task.defer(function()fitWrap()card:GetPropertyChangedSignal(
-'AbsoluteSize'):Connect(function()task.defer(fitWrap)end)Tween.Play(card,{
-Position=UDim2.fromOffset(0,0)},0.35,Enum.EasingStyle.Back)end)if not options.
-Persistent then task.spawn(function()local hovered=false card.MouseEnter:
-Connect(function()hovered=true end)card.MouseLeave:Connect(function()hovered=
-false end)local last=os.clock()while not closed do local now=os.clock()if
-hovered then expires+=now-last end last=now local left=expires-now progress.Size
-=UDim2.new(math.clamp(left/duration,0,1),0,0,2)if left<=0 then handle:Close()end
-RunService.Heartbeat:Wait()end end)end table.insert(active,handle)while#active>5
-do active[1]:Close()end return handle end Lib.Notification=Lib.Notify Lib.
-SetNotification=Lib.Notify function Lib:Success(content,title)return Lib:Notify(
-{Title=title,Content=content,Type='success'})end function Lib:Error(content,
-title)return Lib:Notify({Title=title,Content=content,Type='error'})end function
-Lib:Warn(content,title)return Lib:Notify({Title=title,Content=content,Type=
-'warning'})end function Lib:Info(content,title)return Lib:Notify({Title=title,
-Content=content,Type='info'})end function Lib:ClearNotifications()for _,h in
-table.clone(active)do h:Close()end end function Lib:Watermark(options)options=
-options or{}if Lib.WatermarkWidget then return Lib.WatermarkWidget end local
+=v})end})end)local widgets=tab:RightSection({Name=T('Widgets'),Icon=
+'layout-grid'})local function widgetToggle(name,icon,key,make)widgets:Toggle({
+Name=T(name),Icon=icon,Default=Lib:GetSetting(key,false),Save=false,Callback=
+function(v)Lib:SetSetting(key,v)local w=make()if w then w:SetVisible(v)end end})
+if Lib:GetSetting(key,false)then task.defer(function()make():SetVisible(true)end
+)end end widgetToggle('PlayerPanel','user','Widget.PlayerPanel',function()return
+Lib:PlayerPanel()end)widgetToggle('Performance','activity','Widget.Perf',
+function()return Lib:PerfGraph()end)widgetToggle('Stopwatch','timer',
+'Widget.Stopwatch',function()return Lib:Stopwatch()end)widgets:Toggle({Name=T(
+'AutoEconomy'),Icon='leaf',Description=T('AutoEconomyHint'),Default=Lib:
+GetSetting('AutoEconomy',true),Save=false,Callback=function(v)Lib:SetSetting(
+'AutoEconomy',v)if not v and Lib.Economy then Lib:SetEconomy(false)end end})
+local editor=tab:RightSection({Name=T('ThemeEditor'),Icon='editor',Collapsible=
+true,Collapsed=true})for _,token in{'Bg','Surface','Surface2','Stroke',
+'StrokeHi','Text','TextDim','TextMute','Accent','AccentInk','Risky'}do editor:
+ColorPicker({Name=token,Default=Theme.Get(token),Save=false,Callback=function(c)
+Theme.SetToken(token,c,false)end})end editor:ButtonGroup({{Name=T('Export'),
+Callback=function()Env.Clipboard(Theme.Export())Lib:Notify({Content=T('Copied'),
+Type='success',Duration=2})end},{Name=T('Import'),Callback=function()task.spawn(
+function()local text=window:Prompt({Title=T('Import'),Placeholder='{ \u{2026} }'
+})if text and Theme.Import(text)then Lib:Notify({Content=T('Imported'),Type=
+'success',Duration=2})end end)end}})local misc=tab:RightSection({Name=T('About')
+,Icon='planet'})misc:Stat({Name='Proximity',Value='v'..Lib.Version,Icon='info'})
+misc:Stat({Name=T('Executor'),Value=Env.ExecutorName(),Icon='code'})if options.
+Tour then misc:Button({Name=T('ReplayTour'),Icon='tour',Callback=function()
+window:Tour(options.Tour,{Force=true})end})end misc:Button({Name=T('Unload'),
+Style='Danger',Icon='power',Confirm=T('UnloadConfirm'),Callback=function()Lib:
+Unload()end})if options.Configs~=false then self:ConfigTab({Tab=tab})end return
+tab end function Window:ConfigTab(options)options=options or{}local Lib=self.
+Library local window=self local tab=options.Tab or self:Tab({Name=options.Name
+or T('Configs'),Icon=options.Icon or'folder',Order=999})local section=tab:
+RightSection({Name=T('Configs'),Icon='folder'})local nameInput=section:Input({
+Name=T('ConfigName'),Icon='edit-3',Placeholder='legit',Save=false,Finished=true}
+)local list list=section:Dropdown({Name=T('ConfigList'),Icon='configs',Values=
+Lib:ListConfigs(),Save=false,Deletable=true,Search=true,OnDelete=function(name)
+Lib:DeleteConfig(name)end,Callback=function(v)if v then nameInput:Set(v,true)end
+end})local function selected()local n=Util.Trim(nameInput:Get()or'')if n==''then
+n=list:Get()end return n end Lib.ConfigsChanged:Connect(function()list:
+SetValues(Lib:ListConfigs(),true)end)section:ButtonGroup({{Name=T('Save'),Style=
+'Primary',Callback=function()local name=selected()if not name or name==''then
+return end task.spawn(function()if Lib:ConfigExists(name)and not window:Confirm(
+{Title=T('Save'),Content=T('Overwrite',name)})then return end local ok=Lib:
+SaveConfig(name)if ok then Lib.CurrentConfig=Util.SafeName(name)Lib:_setDirty(
+false)list:Set(Util.SafeName(name),true)Lib:Notify({Title=T('Saved'),Content=
+name,Type='success',Duration=2.5})end end)end},{Name=T('Load'),Callback=function
+()local name=selected()if not name or not Lib:ConfigExists(name)then return end
+task.spawn(function()local diff=Lib:DiffConfig(name)if#diff>0 then local lines={
+}for i=1,math.min(#diff,8)do table.insert(lines,'\u{2022} '..diff[i].Flag)end if
+#diff>8 then table.insert(lines,'\u{2026} +'..(#diff-8))end if not window:
+Confirm({Title=T('Load')..' '..name,Content=T('Changes',#diff)..string.char(10)
+..table.concat(lines,string.char(10))})then return end end Lib:LoadConfig(name)
+Lib.CurrentConfig=Util.SafeName(name)Lib:_setDirty(false)Lib:Notify({Title=T(
+'Loaded'),Content=name,Type='success',Duration=2.5})end)end}})section:
+ButtonGroup({{Name=T('Export'),Callback=function()local text=Lib:ExportConfig(
+list:Get())if text then Env.Clipboard(text)Lib:Notify({Content=T('Copied'),Type=
+'success',Duration=2})end end},{Name=T('Import'),Callback=function()task.spawn(
+function()local text=window:Prompt({Title=T('Import'),Placeholder=
+'PRX1.\u{2026}'})if not text then return end local ok=Lib:ImportConfig(text,
+selected()~=''and selected()or nil)Lib:Notify({Content=ok and T('Imported')or T(
+'InvalidConfig'),Type=ok and'success'or'error',Duration=3})end)end}})section:
+ButtonGroup({{Name=T('ShareCode'),Callback=function()task.spawn(function()local
+code=Lib:ShareConfig(list:Get())if code then Env.Clipboard(code)Lib:Notify({
+Title=T('ShareCode'),Content=T('CodeCopied',code),Type='success',Duration=6})
+else Lib:Notify({Content=T('CodeFailed'),Type='error',Duration=4})end end)end},{
+Name=T('ImportCode'),Callback=function()task.spawn(function()local code=window:
+Prompt({Title=T('ImportCode'),Placeholder='AbC12'})if not code then return end
+local ok=Lib:ImportCode(code,selected()~=''and selected()or nil)Lib:Notify({
+Content=ok and T('Imported')or T('CodeInvalid'),Type=ok and'success'or'error',
+Duration=3})end)end}})section:Toggle({Name=T('AutoLoad'),Icon='load',Default=Lib
+:GetAutoLoad()~=nil,Save=false,Callback=function(v)Lib:SetAutoLoad(v and(list:
+Get()or Lib.CurrentConfig)or nil)end})section:Toggle({Name=T('AutoSave'),Icon=
+'save',Default=Lib:GetAutoSave()~=nil,Save=false,Callback=function(v)Lib:
+SetAutoSave(v and(list:Get()or Lib.CurrentConfig)or nil)end})section:Label({Text
+=T('Folder')..': '..Lib.Folder..'/configs',Color='TextMute',Icon='folder'})
+return tab end end end function __DARKLUA_BUNDLE_MODULES.A()local v=
+__DARKLUA_BUNDLE_MODULES.cache.A if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end do local function 
+__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
+__DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
+__DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
+Shared=__DARKLUA_BUNDLE_MODULES.k()local UIS=Env.Service('UserInputService')
+local RunService=Env.Service('RunService')return function(Lib)local function 
+dock(frame,key,default)local saved=Lib:GetSetting('Dock.'..key)if type(saved)==
+'table'then frame.AnchorPoint=Vector2.new(saved[1],saved[2])frame.Position=UDim2
+.new(saved[1],saved[3],saved[2],saved[4])elseif default then frame.AnchorPoint=
+default.AnchorPoint frame.Position=default.Position end local dragging,start,
+startPos frame.InputBegan:Connect(function(input)if input.UserInputType==Enum.
+UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+dragging,start=true,Vector2.new(input.Position.X,input.Position.Y)startPos=frame
+.AbsolutePosition-frame.Parent.AbsolutePosition frame.AnchorPoint=Vector2.new(0,
+0)frame.Position=UDim2.fromOffset(startPos.X,startPos.Y)end end)Shared.Maid:
+Connect(UIS.InputChanged,function(input)if dragging and(input.UserInputType==
+Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.
+Touch)then local p=startPos+Vector2.new(input.Position.X,input.Position.Y)-start
+frame.Position=UDim2.fromOffset(p.X,p.Y)end end)Shared.Maid:Connect(UIS.
+InputEnded,function(input)if not dragging or(input.UserInputType~=Enum.
+UserInputType.MouseButton1 and input.UserInputType~=Enum.UserInputType.Touch)
+then return end dragging=false local view=frame.Parent.AbsoluteSize local pos,
+size=frame.AbsolutePosition-frame.Parent.AbsolutePosition,frame.AbsoluteSize
+local cx,cy=(pos.X+size.X/2)/view.X,(pos.Y+size.Y/2)/view.Y local ax=cx<0.33 and
+0 or(cx>0.66 and 1 or 0.5)local ay=cy<0.33 and 0 or(cy>0.66 and 1 or 0.5)local
+ox=ax==0 and 12 or(ax==1 and-12 or 0)local oy=ay==0 and 12 or(ay==1 and-12 or 0)
+local nearX=pos.X<60 or pos.X+size.X>view.X-60 or ax==0.5 local nearY=pos.Y<60
+or pos.Y+size.Y>view.Y-60 if not nearX then ax,ox=0,pos.X end if not nearY then
+ay,oy=0,pos.Y end frame.AnchorPoint=Vector2.new(ax,ay)local target=UDim2.new(ax,
+ox,ay,oy)Tween.Play(frame,{Position=target},0.25,Enum.EasingStyle.Back)Lib:
+SetSetting('Dock.'..key,{ax,ay,ox,oy})end)end Lib.Dock=function(_,frame,key,
+default)dock(frame,key,default)end local function panel(name,parent)local frame=
+Util.New('Frame',{Name=name,AutomaticSize=Enum.AutomaticSize.XY,Size=UDim2.new()
+,Active=true,Parent=parent or Shared.Gui.Widgets})Util.Corner(8,frame)Theme.
+Paint(frame,{BackgroundColor3='Bg'})frame.BackgroundTransparency=0.08 Theme.
+Paint(Util.Stroke(frame),{Color='Stroke'})Shared.Overlay.Shadow(frame,0.6,16)
+return frame end local holder=Util.New('Frame',{Name='Notifications',
+BackgroundTransparency=1,Size=UDim2.new(0,300,1,-24),ZIndex=90,Parent=Shared.Gui
+.Root})local layout=Util.List(holder,8)local notifyScale=Util.New('UIScale',{
+Parent=holder})Lib.NotificationHistory={}local active={}function Lib:
+SetNotifyPosition(position)local map={TopRight={Vector2.new(1,0),UDim2.new(1,-12
+,0,12),Enum.VerticalAlignment.Top},BottomRight={Vector2.new(1,1),UDim2.new(1,-12
+,1,-12),Enum.VerticalAlignment.Bottom},TopLeft={Vector2.new(0,0),UDim2.new(0,12,
+0,12),Enum.VerticalAlignment.Top},BottomLeft={Vector2.new(0,1),UDim2.new(0,12,1,
+-12),Enum.VerticalAlignment.Bottom},TopCenter={Vector2.new(0.5,0),UDim2.new(0.5,
+0,0,12),Enum.VerticalAlignment.Top}}local spec=map[position]or map.BottomRight
+holder.AnchorPoint,holder.Position=spec[1],spec[2]layout.VerticalAlignment=spec[
+3]layout.HorizontalAlignment=position:find('Left')and Enum.HorizontalAlignment.
+Left or(position:find('Center')and Enum.HorizontalAlignment.Center or Enum.
+HorizontalAlignment.Right)Lib.NotifyPosition=position end Lib:SetNotifyPosition(
+Lib:GetSetting('NotifyPosition','BottomRight'))local typeIcons={info='info',
+success='check-circle',warning='alert-triangle',warn='alert-triangle',error=
+'x-circle'}local typeTokens={info='Accent',success='Success',warning='Warning',
+warn='Warning',error='Error'}function Lib:Notify(options)if type(options)~=
+'table'then options={Content=tostring(options)}end local kind=options.Type or
+'info'local duration=options.Duration or options.Time or options.Delay or 4
+local handle={Title=options.Title,Content=options.Content or options.Text or
+options.Description or''}table.insert(Lib.NotificationHistory,{Title=handle.
+Title,Content=handle.Content,Type=kind,Time=os.time()})Lib.Unread=(Lib.Unread or
+0)+1 Lib.NotificationsChanged:Fire()while#Lib.NotificationHistory>50 do table.
+remove(Lib.NotificationHistory,1)end notifyScale.Scale=Shared.Scale or 1 local
+wrap=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),
+ClipsDescendants=false,LayoutOrder=math.floor((Lib.NotifyPosition:find('Bottom')
+and 1 or-1)*(os.clock()*100%1e7)),Parent=holder})local card=Util.New('Frame',{
+Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,Position=UDim2.
+fromOffset(Lib.NotifyPosition:find('Left')and-320 or 320,0),Parent=wrap})Util.
+Corner(8,card)Theme.Paint(card,{BackgroundColor3='Elevated'})Theme.Paint(Util.
+Stroke(card),{Color='StrokeHi'})Shared.Overlay.Shadow(card,0.55,14)Util.Padding(
+card,11,12,9,12)Util.List(card,3)local top=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,16),LayoutOrder=1,Parent=card})
+local icon=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get(
+options.Icon or typeIcons[kind])or'',Size=UDim2.fromOffset(14,14),Position=UDim2
+.fromOffset(0,1),Parent=top})Theme.Paint(icon,{ImageColor3=typeTokens[kind]or
+'Accent'})local title=Util.Label({Text=handle.Title or(Lib.Windows[1]and Lib.
+Windows[1].Title)or'Proximity',FontFace=Theme.Fonts.SemiBold,TextSize=13,Size=
+UDim2.new(1,-40,1,0),Position=UDim2.fromOffset(20,0),TextTruncate=Enum.
+TextTruncate.AtEnd,Parent=top})Theme.Paint(title,{TextColor3='Text'})local close
+=Util.New('ImageButton',{BackgroundTransparency=1,Image=Icons.Get('x')or'',Size=
+UDim2.fromOffset(12,12),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0,0,2)
+,Parent=top})Theme.Paint(close,{ImageColor3='TextMute'})local content=Util.
+Label({Text=handle.Content,FontFace=Theme.Fonts.Regular,TextSize=12,RichText=
+true,TextWrapped=true,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0)
+,LayoutOrder=2,Parent=card})Theme.Paint(content,{TextColor3='TextDim'})content.
+Visible=handle.Content~=''if options.Actions then local row=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,26),LayoutOrder=3,Parent=card})
+Util.List(row,6,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.Right,
+Enum.VerticalAlignment.Bottom)for i,action in options.Actions do local b=Util.
+New('TextButton',{Text=action.Text or action[1],FontFace=Theme.Fonts.SemiBold,
+TextSize=12,AutoButtonColor=false,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
+fromOffset(0,22),LayoutOrder=i,Parent=row})Util.Corner(5,b)Util.Padding(b,0,10,0
+,10)Theme.Paint(b,{BackgroundColor3=i==1 and'Accent'or'Surface3',TextColor3=i==1
+and'AccentInk'or'Text'})b.Activated:Connect(function()Util.SafeCall(action.
+Callback or action[2])handle:Close()end)end end local track=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,6),LayoutOrder=99,Parent=card})
+local progress=Util.New('Frame',{Size=UDim2.new(1,0,0,2),Position=UDim2.
+fromOffset(0,4),BorderSizePixel=0,BackgroundTransparency=0.6,Parent=track})Util.
+Round(progress)Theme.Paint(progress,{BackgroundColor3='Accent'})local closed=
+false local expires=os.clock()+duration function handle:Close()if closed then
+return end closed=true local i=table.find(active,handle)if i then table.remove(
+active,i)end Tween.Play(card,{Position=UDim2.fromOffset(Lib.NotifyPosition:find(
+'Left')and-320 or 320,0)},0.25)task.delay(0.22,function()Tween.Play(wrap,{Size=
+UDim2.new(1,0,0,0)},0.18)task.delay(0.2,function()wrap:Destroy()end)end)end
+function handle:SetTitle(t)title.Text=t return self end function handle:
+SetContent(t)content.Text=t content.Visible=t~=''return self end function handle
+:SetProgress(p)progress.Size=UDim2.new(math.clamp(p,0,1),0,0,2)return self end
+function handle:Extend(seconds)expires+=seconds return self end close.Activated:
+Connect(function()handle:Close()end)local function fitWrap()local h=math.floor(
+card.AbsoluteSize.Y/notifyScale.Scale+0.5)if not closed and wrap.Size.Y.Offset~=
+h then wrap.Size=UDim2.new(1,0,0,h)end end task.defer(function()fitWrap()card:
+GetPropertyChangedSignal('AbsoluteSize'):Connect(function()task.defer(fitWrap)
+end)Tween.Play(card,{Position=UDim2.fromOffset(0,0)},0.35,Enum.EasingStyle.Back)
+end)if not options.Persistent then task.spawn(function()local hovered=false card
+.MouseEnter:Connect(function()hovered=true end)card.MouseLeave:Connect(function(
+)hovered=false end)local last=os.clock()while not closed do local now=os.clock()
+if hovered then expires+=now-last end last=now local left=expires-now progress.
+Size=UDim2.new(math.clamp(left/duration,0,1),0,0,2)if left<=0 then handle:Close(
+)end RunService.Heartbeat:Wait()end end)end table.insert(active,handle)while#
+active>5 do active[1]:Close()end return handle end Lib.Notification=Lib.Notify
+Lib.SetNotification=Lib.Notify function Lib:Success(content,title)return Lib:
+Notify({Title=title,Content=content,Type='success'})end function Lib:Error(
+content,title)return Lib:Notify({Title=title,Content=content,Type='error'})end
+function Lib:Warn(content,title)return Lib:Notify({Title=title,Content=content,
+Type='warning'})end function Lib:Info(content,title)return Lib:Notify({Title=
+title,Content=content,Type='info'})end function Lib:ClearNotifications()for _,h
+in table.clone(active)do h:Close()end end function Lib:Watermark(options)options
+=options or{}if Lib.WatermarkWidget then return Lib.WatermarkWidget end local
 frame=panel('Watermark')Util.Padding(frame,0,12,0,10)Util.List(frame,10,Enum.
 FillDirection.Horizontal,Enum.HorizontalAlignment.Left,Enum.VerticalAlignment.
 Center)Util.New('UISizeConstraint',{MinSize=Vector2.new(0,30),Parent=frame})
@@ -3810,82 +4721,383 @@ text)return self end function item:Remove()dot:Destroy()label:Destroy()self.
 Removed=true end if type(spec.Text)=='function'then task.spawn(function()while
 not item.Removed and not Lib.Unloaded do local ok,v=pcall(spec.Text)if ok then
 item:Set(v)end task.wait(spec.Interval or 1)end end)else item:Set(spec.Text or''
-)end table.insert(widget.Items,item)return item end function widget:SetVisible(v
-)frame.Visible=v return self end function widget:SetText(t)name.Text=t return
-self end for _,it in options.Items or{'FPS','Ping','Time'}do widget:AddItem(it)
-end dock(frame,'Watermark',{AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(
-0.5,0,0,12)})frame.Visible=Lib:GetSetting('Watermark',options.Visible~=false)Lib
-.WatermarkWidget=widget return widget end Lib.WatermarkPresets={FPS={Text=
+)end table.insert(widget.Items,item)return item end function widget:AddGraph()
+order+=1 local dot=Util.New('Frame',{Size=UDim2.fromOffset(3,3),LayoutOrder=
+order,BorderSizePixel=0,Parent=frame})Util.Round(dot)Theme.Paint(dot,{
+BackgroundColor3='TextMute'})order+=1 local area=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.fromOffset(46,16),LayoutOrder=order,
+ClipsDescendants=true,Parent=frame})local item={Label=area,Data={}}function item
+:Remove()dot:Destroy()area:Destroy()self.Removed=true end function item:Set()end
+task.spawn(function()while not item.Removed and not Lib.Unloaded do table.
+insert(item.Data,Lib.Providers.FPS())if#item.Data>24 then table.remove(item.Data
+,1)end if frame.Visible then Lib._drawSpark(area,item.Data)end task.wait(0.5)end
+end)table.insert(widget.Items,item)return item end function widget:SetItems(list
+)for _,item in widget.Items do item:Remove()end widget.Items={}order=1 for _,it
+in list do if it=='Graph'then widget:AddGraph()else widget:AddItem(it)end end
+return self end function widget:SetVisible(v)frame.Visible=v return self end
+function widget:SetText(t)name.Text=t return self end widget:SetItems(options.
+Items or Lib:GetSetting('WatermarkItems',{'FPS','Ping','Time'}))dock(frame,
+'Watermark',{AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,0,12)})
+frame.Visible=Lib:GetSetting('Watermark',options.Visible~=false)Lib.
+WatermarkWidget=widget return widget end Lib.WatermarkPresets={FPS={Text=
 function()return Lib.Providers.FPS()..' fps'end,Interval=0.5},Ping={Text=
 function()return Lib.Providers.Ping()end,Interval=1},Time={Text=function()return
 os.date('%H:%M:%S')end,Interval=1},Game={Text=function()return Lib.Providers.
 GameName()end,Interval=60},Player={Text=function()return Lib:GetIdentity().
-DisplayName end,Interval=5}}function Lib:KeybindList(options)options=options or{
-}if Lib.KeybindListWidget then return Lib.KeybindListWidget end local frame=
-panel('Keybinds')frame.AutomaticSize=Enum.AutomaticSize.Y frame.Size=UDim2.
-fromOffset(options.Width or 230,0)Util.Padding(frame,8,10,8,10)Util.List(frame,3
-)local head=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,18),
-LayoutOrder=0,Parent=frame})local icon=Util.New('ImageLabel',{
-BackgroundTransparency=1,Image=Icons.Get('keyboard')or'',Size=UDim2.fromOffset(
-13,13),Position=UDim2.fromOffset(0,2),Parent=head})Theme.Paint(icon,{ImageColor3
-='TextDim'})local title=Util.Label({Text=options.Title or Locale.T('KeybindList'
-),FontFace=Theme.Fonts.Bold,TextSize=11,Size=UDim2.new(1,-20,1,0),Position=UDim2
-.fromOffset(19,0),Parent=head})Theme.Paint(title,{TextColor3='Text'})local rows=
-{}local showAll=options.ShowInactive==true local function rebuild()for _,r in
-rows do r:Destroy()end rows={}local list={}for _,kb in Lib._classes.Keybind.All(
-)do if kb.ShowInList and kb.Value~='None'and not kb._destroyed and(showAll or kb
-.Active or kb.Mode=='Always')and kb.Window then table.insert(list,kb)end end
-table.sort(list,function(a,b)return a.Name<b.Name end)for i,kb in list do local
-row=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,18),
-LayoutOrder=i,Parent=frame})local name=Util.Label({Text=kb.Name,FontFace=Theme.
-Fonts.Medium,TextSize=12,Size=UDim2.new(1,-96,1,0),TextTruncate=Enum.
-TextTruncate.AtEnd,Parent=row})Theme.Paint(name,{TextColor3=kb.Active and'Text'
-or'TextMute'})local mode=Util.Label({Text=Locale.T(kb.Mode=='Press'and'Press_'or
-kb.Mode),FontFace=Theme.Fonts.Regular,TextSize=10,TextXAlignment=Enum.
-TextXAlignment.Right,Size=UDim2.new(0,56,1,0),Position=UDim2.new(1,-96,0,0),
-Parent=row})Theme.Paint(mode,{TextColor3='TextMute'})local key=Util.Label({Text=
-Keys.Display(kb.Value),FontFace=Theme.Fonts.MonoBold,TextSize=11,TextXAlignment=
-Enum.TextXAlignment.Right,Size=UDim2.new(0,36,1,0),Position=UDim2.new(1,-36,0,0)
-,Parent=row})Theme.Paint(key,{TextColor3=kb.Active and'Accent'or'TextDim'})table
-.insert(rows,row)end frame.Visible=Lib:GetSetting('KeybindList',options.Visible
-~=false)and(#list>0 or showAll)end Lib.KeybindsChanged:Connect(function()task.
-defer(rebuild)end)dock(frame,'Keybinds',{AnchorPoint=Vector2.new(0,0.5),Position
-=UDim2.new(0,12,0.5,0)})local widget={Frame=frame}function widget:SetVisible(v)
-Lib:SetSetting('KeybindList',v)rebuild()return self end function widget:
-ShowInactive(v)showAll=v rebuild()return self end widget.Refresh=rebuild
-rebuild()Lib.KeybindListWidget=widget return widget end end end function
-__DARKLUA_BUNDLE_MODULES.z()local v=__DARKLUA_BUNDLE_MODULES.cache.z if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end
+DisplayName end,Interval=5},Date={Text=function()return os.date('%d.%m.%Y')end,
+Interval=30},Players={Text=function()return Lib.Providers.Players()end,Interval=
+2},Executor={Text=function()return Lib.Providers.Executor()end,Interval=60},
+Session={Text=function()return Lib.Providers.Session()end,Interval=1},Memory={
+Text=function()return Lib.Providers.Memory()end,Interval=2},Position={Text=
+function()return Lib.Providers.Position()end,Interval=0.5},Speed={Text=function(
+)return Lib.Providers.Speed()end,Interval=0.3},Uptime={Text=function()return Lib
+.Providers.ServerUptime()end,Interval=1},Version={Text=function()return'v'..Lib.
+Version end,Interval=60},Server={Text=function()return Lib.Providers.JobId()end,
+Interval=60}}Lib.WatermarkItemNames={'FPS','Graph','Ping','Time','Date','Game',
+'Player','Players','Executor','Session','Memory','Position','Speed','Uptime',
+'Version','Server'}function Lib:KeybindList(options)options=options or{}if Lib.
+KeybindListWidget then return Lib.KeybindListWidget end local frame=panel(
+'Keybinds')frame.AutomaticSize=Enum.AutomaticSize.Y frame.Size=UDim2.fromOffset(
+options.Width or 230,0)Util.Padding(frame,8,10,8,10)Util.List(frame,3)local head
+=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,18),LayoutOrder
+=0,Parent=frame})local icon=Util.New('ImageLabel',{BackgroundTransparency=1,
+Image=Icons.Get('keyboard')or'',Size=UDim2.fromOffset(13,13),Position=UDim2.
+fromOffset(0,2),Parent=head})Theme.Paint(icon,{ImageColor3='TextDim'})local
+title=Util.Label({Text=options.Title or Locale.T('KeybindList'),FontFace=Theme.
+Fonts.Bold,TextSize=11,Size=UDim2.new(1,-20,1,0),Position=UDim2.fromOffset(19,0)
+,Parent=head})Theme.Paint(title,{TextColor3='Text'})local rows={}local showAll=
+options.ShowInactive==true or Lib:GetSetting('BindsInactive',false)local 
+function rebuild()for _,r in rows do r:Destroy()end rows={}local list={}for _,kb
+in Lib._classes.Keybind.All()do if kb.ShowInList and kb.Value~='None'and not kb.
+_destroyed and(showAll or kb.Active or kb.Mode=='Always')and kb.Window then
+table.insert(list,kb)end end local sort=Lib:GetSetting('BindsSort','Active')
+table.sort(list,function(a,b)if sort=='Active'and a.Active~=b.Active then return
+a.Active elseif sort=='Key'then return Keys.Display(a.Value)<Keys.Display(b.
+Value)end return a.Name<b.Name end)for i,kb in list do local row=Util.New(
+'Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,18),LayoutOrder=i,Parent=
+frame})local name=Util.Label({Text=kb.Name,FontFace=Theme.Fonts.Medium,TextSize=
+12,Size=UDim2.new(1,-96,1,0),TextTruncate=Enum.TextTruncate.AtEnd,Parent=row})
+Theme.Paint(name,{TextColor3=kb.Active and'Text'or'TextMute'})local mode=Util.
+Label({Text=Locale.T(kb.Mode=='Press'and'Press_'or kb.Mode),FontFace=Theme.Fonts
+.Regular,TextSize=10,TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(0,
+56,1,0),Position=UDim2.new(1,-96,0,0),Parent=row})Theme.Paint(mode,{TextColor3=
+'TextMute'})local key=Util.Label({Text=Keys.Display(kb.Value),FontFace=Theme.
+Fonts.MonoBold,TextSize=11,TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.
+new(0,36,1,0),Position=UDim2.new(1,-36,0,0),Parent=row})Theme.Paint(key,{
+TextColor3=kb.Active and'Accent'or'TextDim'})table.insert(rows,row)end frame.
+Visible=Lib:GetSetting('KeybindList',options.Visible~=false)and(#list>0 or
+showAll)end Lib.KeybindsChanged:Connect(function()task.defer(rebuild)end)dock(
+frame,'Keybinds',{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,12,0.5,0)}
+)local widget={Frame=frame}function widget:SetVisible(v)Lib:SetSetting(
+'KeybindList',v)rebuild()return self end function widget:ShowInactive(v)showAll=
+v rebuild()return self end widget.Refresh=rebuild rebuild()Lib.KeybindListWidget
+=widget return widget end end end function __DARKLUA_BUNDLE_MODULES.B()local v=
+__DARKLUA_BUNDLE_MODULES.cache.B if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.B=v end return v.c end end do local function 
+__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
+__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
+=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.k()local
+Players=Env.Service('Players')local RunService=Env.Service('RunService')local
+GuiService=Env.Service('GuiService')return function(Lib)local function panel(
+name,width,key,default)local frame=Util.New('Frame',{Name=name,Size=UDim2.
+fromOffset(width,0),AutomaticSize=Enum.AutomaticSize.Y,Active=true,Parent=Shared
+.Gui.Widgets})Util.Corner(10,frame)Theme.Paint(frame,{BackgroundColor3='Bg'})
+frame.BackgroundTransparency=0.06 Theme.Paint(Util.Stroke(frame),{Color='Stroke'
+})Shared.Overlay.Shadow(frame,0.55,18)Util.Padding(frame,10,12,12,12)Util.List(
+frame,6)Lib:Dock(frame,key,default)return frame end local function header(frame,
+title,icon)local head=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(
+1,0,0,18),LayoutOrder=0,Parent=frame})local img=Util.New('ImageLabel',{
+BackgroundTransparency=1,Image=Icons.Get(icon)or'',Size=UDim2.fromOffset(14,14),
+Position=UDim2.fromOffset(0,2),Parent=head})Theme.Paint(img,{ImageColor3=
+'TextDim'})local label=Util.Label({Text=title,FontFace=Theme.Fonts.Bold,TextSize
+=12,Size=UDim2.new(1,-20,1,0),Position=UDim2.fromOffset(20,0),Parent=head})Theme
+.Paint(label,{TextColor3='Text'})return head,label end function Lib:Widget(
+options)options=options or{}local frame=panel('Widget_'..(options.Title or'HUD')
+,options.Width or 230,'Widget.'..(options.Title or'HUD'),options.Position and{
+AnchorPoint=options.AnchorPoint or Vector2.new(0,0),Position=options.Position}or
+{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-12,0.5,0)})header(frame,
+options.Title or'HUD',options.Icon or'layout-dashboard')local body=Util.New(
+'Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.
+new(1,0,0,0),LayoutOrder=1,Parent=frame})Util.List(body,2)local section=Lib.
+_classes.Section.new(nil,{Name=options.Title or'HUD'})section.Floating=true
+section.Window=Lib.Windows[1]section.Body=body section._mounted=true section.
+Frame=frame function section:SetVisible(v)frame.Visible=v return self end
+function section:Destroy()self:Clear()frame:Destroy()end return section end Lib.
+HUD=Lib.Widget function Lib:PlayerPanel(options)options=options or{}if Lib.
+PlayerPanelWidget then return Lib.PlayerPanelWidget end local frame=panel(
+'PlayerPanel',190,'PlayerPanel',{AnchorPoint=Vector2.new(1,0.5),Position=UDim2.
+new(1,-12,0.5,0)})header(frame,Locale.T('PlayerPanel'),'user')local vp=Util.New(
+'ViewportFrame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,170),LayoutOrder=
+1,Ambient=Color3.fromRGB(150,150,160),LightColor=Color3.new(1,1,1),
+LightDirection=Vector3.new(-1,-1,-1),Parent=frame})Util.Corner(8,vp)local 
+function stat(order,name)local row=Util.New('Frame',{BackgroundTransparency=1,
+Size=UDim2.new(1,0,0,16),LayoutOrder=order,Parent=frame})local l=Util.Label({
+Text=name,FontFace=Theme.Fonts.Medium,TextSize=11,Size=UDim2.fromScale(0.5,1),
+Parent=row})Theme.Paint(l,{TextColor3='TextMute'})local v=Util.Label({Text='-',
+FontFace=Theme.Fonts.MonoBold,TextSize=11,TextXAlignment=Enum.TextXAlignment.
+Right,Size=UDim2.fromScale(1,1),Parent=row})Theme.Paint(v,{TextColor3='Text'})
+return v end local barTrack=Util.New('Frame',{Size=UDim2.new(1,0,0,4),
+LayoutOrder=2,Parent=frame})Util.Round(barTrack)Theme.Paint(barTrack,{
+BackgroundColor3='Surface3'})local bar=Util.New('Frame',{Size=UDim2.fromScale(1,
+1),Parent=barTrack})Util.Round(bar)Theme.Paint(bar,{BackgroundColor3='Accent'})
+local hp,speed,state,pos=stat(3,Locale.T('Health')),stat(4,Locale.T('Speed')),
+stat(5,Locale.T('State')),stat(6,Locale.T('Position'))local model,camera,angle=
+nil,nil,0 local function rebuild()vp:ClearAllChildren()Util.Corner(8,vp)local
+char=Players.LocalPlayer.Character if not char then return end local ok=Lib:
+_fillViewport(vp,char)if ok then camera=vp.CurrentCamera model=vp:
+FindFirstChildWhichIsA('WorldModel')and vp:FindFirstChildWhichIsA('WorldModel'):
+FindFirstChildWhichIsA('Model')end end rebuild()local conns={}table.insert(conns
+,Players.LocalPlayer.CharacterAdded:Connect(function()task.wait(1)rebuild()end))
+local last=0 table.insert(conns,RunService.Heartbeat:Connect(function(dt)if not
+frame.Visible then return end angle+=dt*0.6 if model and camera then local cf,
+size=model:GetBoundingBox()local d=size.Magnitude*1.05 camera.CFrame=CFrame.
+lookAt(cf.Position+Vector3.new(math.sin(angle)*d,size.Y*0.05,math.cos(angle)*d),
+cf.Position)end if os.clock()-last<0.25 then return end last=os.clock()local
+char=Players.LocalPlayer.Character local hum=char and char:
+FindFirstChildOfClass('Humanoid')local root=char and char:FindFirstChild(
+'HumanoidRootPart')if hum then hp.Text=math.floor(hum.Health)..' / '..math.
+floor(hum.MaxHealth)Tween.Play(bar,{Size=UDim2.fromScale(math.clamp(hum.Health/
+math.max(hum.MaxHealth,1),0,1),1)},0.2)state.Text=hum:GetState().Name end if
+root then speed.Text=string.format('%.1f',root.AssemblyLinearVelocity.Magnitude)
+local p=root.Position pos.Text=Lib.Anonymous and'hidden'or string.format(
+'%d, %d, %d',p.X,p.Y,p.Z)end end))local widget={Frame=frame}function widget:
+SetVisible(v)frame.Visible=v return self end function widget:Destroy()for _,c in
+conns do c:Disconnect()end frame:Destroy()Lib.PlayerPanelWidget=nil end Shared.
+Maid:Give(widget)Lib.PlayerPanelWidget=widget return widget end function Lib:
+PerfGraph(options)options=options or{}if Lib.PerfGraphWidget then return Lib.
+PerfGraphWidget end local frame=panel('PerfGraph',210,'PerfGraph',{AnchorPoint=
+Vector2.new(1,1),Position=UDim2.new(1,-12,1,-12)})header(frame,Locale.T(
+'Performance'),'activity')local function graph(order,name)local row=Util.New(
+'Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,40),LayoutOrder=order,
+Parent=frame})local l=Util.Label({Text=name,FontFace=Theme.Fonts.Medium,TextSize
+=11,Size=UDim2.new(0.4,0,0,14),Parent=row})Theme.Paint(l,{TextColor3='TextMute'}
+)local v=Util.Label({Text='',FontFace=Theme.Fonts.MonoBold,TextSize=11,
+TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(1,0,0,14),Parent=row})
+Theme.Paint(v,{TextColor3='Text'})local area=Util.New('Frame',{Size=UDim2.new(1,
+0,0,22),Position=UDim2.fromOffset(0,17),ClipsDescendants=true,Parent=row})Util.
+Corner(4,area)Theme.Paint(area,{BackgroundColor3='Surface2'})return v,area end
+local fpsLabel,fpsArea=graph(1,'FPS')local pingLabel,pingArea=graph(2,Locale.T(
+'Ping'))local fps,ping={},{}local alive=true task.spawn(function()while alive
+and not Lib.Unloaded do local f=Lib.Providers.FPS()local p=tonumber(string.
+match(Lib.Providers.Ping(),'%d+'))or 0 table.insert(fps,f)table.insert(ping,p)if
+#fps>40 then table.remove(fps,1)table.remove(ping,1)end if frame.Visible then
+fpsLabel.Text=tostring(f)pingLabel.Text=p..' ms'Lib._drawSpark(fpsArea,fps)Lib.
+_drawSpark(pingArea,ping)end task.wait(0.5)end end)local widget={Frame=frame}
+function widget:SetVisible(v)frame.Visible=v return self end function widget:
+Destroy()alive=false frame:Destroy()Lib.PerfGraphWidget=nil end Shared.Maid:
+Give(widget)Lib.PerfGraphWidget=widget return widget end function Lib:Stopwatch(
+options)options=options or{}if Lib.StopwatchWidget then return Lib.
+StopwatchWidget end local frame=panel('Stopwatch',200,'Stopwatch',{AnchorPoint=
+Vector2.new(0,1),Position=UDim2.new(0,12,1,-12)})header(frame,Locale.T(
+'Stopwatch'),'timer')local time=Util.Label({Text='00:00.0',FontFace=Theme.Fonts.
+MonoBold,TextSize=24,TextXAlignment=Enum.TextXAlignment.Center,Size=UDim2.new(1,
+0,0,30),LayoutOrder=1,Parent=frame})Theme.Paint(time,{TextColor3='Text'})local
+session=Util.Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=11,TextXAlignment
+=Enum.TextXAlignment.Center,Size=UDim2.new(1,0,0,14),LayoutOrder=2,Parent=frame}
+)Theme.Paint(session,{TextColor3='TextMute'})local row=Util.New('Frame',{
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,28),LayoutOrder=3,Parent=frame})
+Util.List(row,6,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.Center)
+local running,startAt,acc=false,0,0 local function btn(icon,fn)local b=Util.New(
+'ImageButton',{Size=UDim2.fromOffset(40,28),AutoButtonColor=false,Parent=row})
+Util.Corner(6,b)Theme.Paint(b,{BackgroundColor3='Surface3'})local img=Util.New(
+'ImageLabel',{BackgroundTransparency=1,Image=Icons.Get(icon)or'',Size=UDim2.
+fromOffset(14,14),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,
+0.5),Parent=b})Theme.Paint(img,{ImageColor3='Text'})b.Activated:Connect(fn)
+return img end local playIcon playIcon=btn('play',function()if running then acc
++=os.clock()-startAt running=false else startAt=os.clock()running=true end
+playIcon.Image=Icons.Get(running and'pause'or'play')or''end)btn('rotate-ccw',
+function()acc,startAt=0,os.clock()end)local alive=true task.spawn(function()
+while alive and not Lib.Unloaded do local t=acc+(running and(os.clock()-startAt)
+or 0)time.Text=string.format('%02d:%02d.%d',t//60,t%60,(t*10)%10)session.Text=
+Locale.T('InGame')..' '..Lib.Providers.Session()task.wait(0.1)end end)local
+widget={Frame=frame}function widget:SetVisible(v)frame.Visible=v return self end
+function widget:Destroy()alive=false frame:Destroy()Lib.StopwatchWidget=nil end
+Shared.Maid:Give(widget)Lib.StopwatchWidget=widget return widget end function
+Lib:_topbarButton(window)local button=Util.New('TextButton',{Name=
+'ProximityTopbar',Text='',AutoButtonColor=false,Size=UDim2.fromOffset(44,44),
+BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=0.3,ZIndex=250,Parent=
+Shared.Gui.Root})Util.Round(button)local stroke=Util.Stroke(button,Color3.new(1,
+1,1),1,1)local logo=window:_drawLogo(button,26)logo.AnchorPoint=Vector2.new(0.5,
+0.5)logo.Position=UDim2.fromScale(0.5,0.5)local function place()local inset=
+GuiService.TopbarInset local x,y=164,4 if inset and inset.Width>0 then x=inset.
+Min.X+8 y=inset.Min.Y+math.max(0,(inset.Height-44)/2)end button.Position=UDim2.
+fromOffset(x,y)end place()pcall(function()Shared.Maid:Connect(GuiService:
+GetPropertyChangedSignal('TopbarInset'),place)end)button.Activated:Connect(
+function()window:Toggle()end)local function paint()Tween.Play(stroke,{
+Transparency=window:IsOpen()and 0.55 or 1},0.2)Tween.Play(button,{
+BackgroundTransparency=window:IsOpen()and 0.15 or 0.3},0.2)end window.Opened:
+Connect(paint)window.Closed:Connect(paint)Shared.Overlay.Hover(button,function()
+return window.Title end)window.Maid:Give(button)return button end local function 
+newer(a,b)local pa,pb={},{}for n in string.gmatch(a,'%d+')do table.insert(pa,
+tonumber(n))end for n in string.gmatch(b,'%d+')do table.insert(pb,tonumber(n))
+end for i=1,math.max(#pa,#pb)do if(pa[i]or 0)~=(pb[i]or 0)then return(pa[i]or 0)
+>(pb[i]or 0)end end return false end Lib._newer=newer function Lib:
+CheckForUpdates(url,current,name)task.spawn(function()local body=Env.HttpGet((
+url or Lib.VersionUrl)..'?t='..os.time())local latest=body and string.match(body
+,'%d+%.%d+[%.%d]*')current=current or Lib.Version if latest and newer(latest,
+current)then Lib:Notify({Title=Locale.T('UpdateTitle',name or'Proximity'),
+Content=Locale.T('UpdateBody',current,latest),Type='info',Duration=8})end end)
+end function Lib:SetEconomy(on,auto)Lib.Economy=on and true or false for _,w in
+Lib.Windows do w:_applyEconomy()end if on and auto and not Lib._economyNoticed
+then Lib._economyNoticed=true Lib:Notify({Title=Locale.T('EconomyTitle'),Content
+=Locale.T('EconomyBody'),Type='info',Duration=6})end return self end task.spawn(
+function()local low=0 while not Lib.Unloaded do task.wait(1)if Lib:GetSetting(
+'AutoEconomy',true)and not Lib.Economy and#Lib.Windows>0 then local fps=Lib.
+Providers.FPS()low=fps<30 and low+1 or 0 if low>=6 then Lib:SetEconomy(true,true
+)end end end end)function Lib:SetDebug(on)Lib.Debug=on and true or false if Lib.
+_debugPanel then Lib._debugPanel:Destroy()Lib._debugPanel=nil end if not on then
+return self end local frame=panel('Debug',240,'Debug',{AnchorPoint=Vector2.new(0
+,0),Position=UDim2.new(0,12,0,70)})header(frame,'Debug','bug')local text=Util.
+Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=11,TextWrapped=true,
+TextYAlignment=Enum.TextYAlignment.Top,AutomaticSize=Enum.AutomaticSize.Y,Size=
+UDim2.new(1,0,0,0),LayoutOrder=1,Parent=frame})Theme.Paint(text,{TextColor3=
+'TextDim'})local alive=true task.spawn(function()while alive and not Lib.
+Unloaded do local lines={'version   '..Lib.Version,'elements  '..#Lib.
+AllElements,'flags     '..Util.Count(Lib.Elements),'instances '..#Shared.Gui.
+Root:GetDescendants(),'memory    '..math.floor(gcinfo()/1024*10)/10 ..' MB',
+'fps       '..Lib.Providers.FPS()}for _,w in Lib.Windows do table.insert(lines,
+'')table.insert(lines,w.Title..' - '..w.State)for _,tab in w.Tabs do table.
+insert(lines,string.format('  %-12s %3d el  %4.0f ms',string.sub(tab.Name,1,12),
+tab._total,(tab._buildTime or 0)*1000))end end text.Text=table.concat(lines,'\n'
+)task.wait(0.5)end end)Lib._debugPanel={Destroy=function()alive=false frame:
+Destroy()end}return self end end end function __DARKLUA_BUNDLE_MODULES.C()local
+v=__DARKLUA_BUNDLE_MODULES.cache.C if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.C=v end return v.c end end do local function 
+__modImpl()local HttpService=game:GetService('HttpService')local Util=
+__DARKLUA_BUNDLE_MODULES.a()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=
+__DARKLUA_BUNDLE_MODULES.e()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
+__DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
+Shared=__DARKLUA_BUNDLE_MODULES.k()return function(Lib)local function verify(
+options,key)key=Util.Trim(key or'')if key==''then return false end if options.
+Keys then for _,k in options.Keys do if k==key then return true end end end if
+options.Check then local ok,result=pcall(options.Check,key)if ok and result then
+return true end end if options.Url then local body=Env.HttpGet(string.format(
+options.Url,HttpService:UrlEncode(key)))if body then local b=string.lower(Util.
+Trim(body))if b=='true'or b=='valid'or b=='ok'or b=='1'or string.find(b,
+'"valid"%s*:%s*true')then return true end end end return false end function Lib:
+KeySystem(options)options=options or{}local storeKey='Key.'..Util.SafeName(
+options.Title or'default')if options.Remember~=false then local saved=Lib:
+GetSetting(storeKey)if type(saved)=='string'and verify(options,saved)then return
+true end end local attempts,maxAttempts=0,options.Attempts or 5 local
+lockedUntil=0 local result=nil local thread=coroutine.running()local root=Util.
+New('Frame',{Name='ProximityKey',BackgroundTransparency=1,Size=UDim2.fromScale(1
+,1),ZIndex=400,Parent=Shared.Gui.Root})local dim=Util.New('Frame',{
+BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=1,Size=UDim2.
+fromScale(1,1),ZIndex=400,Parent=root})Tween.Play(dim,{BackgroundTransparency=
+0.35},0.4)local card=Util.New('Frame',{AnchorPoint=Vector2.new(0.5,0.5),Position
+=UDim2.fromScale(0.5,0.53),Size=UDim2.fromOffset(380,0),AutomaticSize=Enum.
+AutomaticSize.Y,ZIndex=401,Parent=root})Util.Corner(12,card)Theme.Paint(card,{
+BackgroundColor3='Bg'})Theme.Paint(Util.Stroke(card),{Color='StrokeHi'})Shared.
+Overlay.Shadow(card,0.3,30)Util.Padding(card,22,22,20,22)Util.List(card,12)local
+scale=Util.New('UIScale',{Scale=0.94,Parent=card})Tween.Play(scale,{Scale=1},
+0.35,Enum.EasingStyle.Back)Tween.Play(card,{Position=UDim2.fromScale(0.5,0.5)},
+0.35)local head=Util.New('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,
+40),LayoutOrder=1,ZIndex=401,Parent=card})local fakeWindow={Logo=options.Logo,
+Title=options.Title}local logo=Lib._drawLogo(fakeWindow,head,36)logo.ZIndex=402
+local title=Util.Label({Text=options.Title or(Locale.T('KeyTitle')),FontFace=
+Theme.Fonts.Bold,TextSize=17,Position=UDim2.fromOffset(50,2),Size=UDim2.new(1,-
+50,0,20),ZIndex=402,Parent=head})Theme.Paint(title,{TextColor3='Text'})local sub
+=Util.Label({Text=options.Subtitle or Locale.T('KeySubtitle'),FontFace=Theme.
+Fonts.Regular,TextSize=12,Position=UDim2.fromOffset(50,22),Size=UDim2.new(1,-50,
+0,16),ZIndex=402,Parent=head})Theme.Paint(sub,{TextColor3='TextMute'})local box=
+Util.New('TextBox',{Text='',PlaceholderText=Locale.T('KeyPlaceholder'),
+ClearTextOnFocus=false,FontFace=Theme.Fonts.Mono,TextSize=14,TextXAlignment=Enum
+.TextXAlignment.Left,Size=UDim2.new(1,0,0,40),LayoutOrder=2,ZIndex=402,Parent=
+card})Util.Corner(8,box)Util.Padding(box,0,12,0,40)Theme.Paint(box,{
+BackgroundColor3='Surface2',TextColor3='Text',PlaceholderColor3='TextMute'})
+local boxStroke=Util.Stroke(box)Theme.Paint(boxStroke,{Color='Stroke'})local
+keyIcon=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('key')or
+'',Size=UDim2.fromOffset(16,16),Position=UDim2.new(0,-28,0.5,-8),ZIndex=403,
+Parent=box})Theme.Paint(keyIcon,{ImageColor3='TextDim'})box.Focused:Connect(
+function()Theme.Paint(boxStroke,{Color='Accent'},0.15)end)box.FocusLost:Connect(
+function()Theme.Paint(boxStroke,{Color='Stroke'},0.15)end)local status=Util.
+Label({Text=options.Note or'',FontFace=Theme.Fonts.Regular,TextSize=12,
+TextWrapped=true,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),
+LayoutOrder=3,Visible=options.Note~=nil,ZIndex=402,Parent=card})Theme.Paint(
+status,{TextColor3='TextDim'})local row=Util.New('Frame',{BackgroundTransparency
+=1,Size=UDim2.new(1,0,0,36),LayoutOrder=4,ZIndex=402,Parent=card})local function 
+button(text,icon,primary,x,w)local b=Util.New('TextButton',{Text='',
+AutoButtonColor=false,Size=UDim2.new(w,-4,1,0),Position=UDim2.new(x,x>0 and 4 or
+0,0,0),ZIndex=402,Parent=row})Util.Corner(8,b)Theme.Paint(b,{BackgroundColor3=
+primary and'Accent'or'Surface3'})Theme.Paint(Util.Stroke(b),{Color=primary and
+'Accent'or'Stroke'})local inner=Util.New('Frame',{BackgroundTransparency=1,
+AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,1),AnchorPoint=Vector2
+.new(0.5,0),Position=UDim2.fromScale(0.5,0),ZIndex=403,Parent=b})Util.List(inner
+,6,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.Center,Enum.
+VerticalAlignment.Center)local img=Util.New('ImageLabel',{BackgroundTransparency
+=1,Image=Icons.Get(icon)or'',Size=UDim2.fromOffset(14,14),ZIndex=403,Parent=
+inner})Theme.Paint(img,{ImageColor3=primary and'AccentInk'or'Text'})local l=Util
+.Label({Text=text,FontFace=Theme.Fonts.SemiBold,TextSize=13,AutomaticSize=Enum.
+AutomaticSize.X,Size=UDim2.fromScale(0,1),LayoutOrder=2,ZIndex=403,Parent=inner}
+)Theme.Paint(l,{TextColor3=primary and'AccentInk'or'Text'})return b,l end local
+hasLink=options.GetKey~=nil local getBtn=hasLink and button(Locale.T('GetKey'),
+'link',false,0,0.5)local checkBtn,checkLabel=button(Locale.T('CheckKey'),'check'
+,true,hasLink and 0.5 or 0,hasLink and 0.5 or 1)if options.Discord then local d=
+Util.New('TextButton',{Text=Locale.T('JoinDiscord'),FontFace=Theme.Fonts.Medium,
+TextSize=12,BackgroundTransparency=1,AutoButtonColor=false,Size=UDim2.new(1,0,0,
+16),LayoutOrder=5,ZIndex=402,Parent=card})Theme.Paint(d,{TextColor3='TextDim'})d
+.Activated:Connect(function()Env.Clipboard(options.Discord)status.Visible=true
+status.Text=Locale.T('LinkCopied')end)end local function shake()for _,dx in{8,-8
+,5,-5,0}do Tween.Await(card,{Position=UDim2.new(0.5,dx,0.5,0)},0.05,Enum.
+EasingStyle.Sine)end end local busy=false local function submit()if busy or
+result~=nil then return end if os.clock()<lockedUntil then status.Visible=true
+status.Text=Locale.T('KeyWait',math.ceil(lockedUntil-os.clock()))return end busy
+=true checkLabel.Text=Locale.T('Checking')local ok=verify(options,box.Text)busy=
+false checkLabel.Text=Locale.T('CheckKey')if ok then result=true if options.
+Remember~=false then Lib:SetSetting(storeKey,Util.Trim(box.Text))end Theme.
+Paint(boxStroke,{Color='Success'},0.15)status.Visible=true status.Text=Locale.T(
+'KeyOk')Theme.Paint(status,{TextColor3='Success'})task.wait(0.45)Tween.Play(dim,
+{BackgroundTransparency=1},0.3)Tween.Play(scale,{Scale=0.96},0.25)card.Visible=
+false task.delay(0.3,function()root:Destroy()end)if coroutine.status(thread)==
+'suspended'then task.spawn(thread,true)end return end attempts+=1 Theme.Paint(
+boxStroke,{Color='Risky'},0.1)Theme.Paint(status,{TextColor3='Risky'})status.
+Visible=true if attempts>=maxAttempts then attempts=0 lockedUntil=os.clock()+(
+options.Cooldown or 30)status.Text=Locale.T('KeyLocked',options.Cooldown or 30)
+else status.Text=Locale.T('KeyBad',maxAttempts-attempts)end task.spawn(shake)end
+checkBtn.Activated:Connect(submit)box.FocusLost:Connect(function(enter)if enter
+then submit()end end)if getBtn then getBtn.Activated:Connect(function()local
+copied=Env.Clipboard(options.GetKey)status.Visible=true Theme.Paint(status,{
+TextColor3='TextDim'})status.Text=copied and Locale.T('LinkCopied')or options.
+GetKey end)end return coroutine.yield()end end end function
+__DARKLUA_BUNDLE_MODULES.D()local v=__DARKLUA_BUNDLE_MODULES.cache.D if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.D=v end return v.c end end
 end local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=__DARKLUA_BUNDLE_MODULES
 .b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=__DARKLUA_BUNDLE_MODULES.
 d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=__DARKLUA_BUNDLE_MODULES.f()
 local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()
 local Locale=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.
-k()local Overlay=__DARKLUA_BUNDLE_MODULES.l()local shared=Env.Shared()if shared.
-Library and shared.Library.Unload then pcall(shared.Library.Unload,shared.
-Library)end local Library={Version='1.1.0',Flags={},Elements={},AllElements={},
+k()local Overlay=__DARKLUA_BUNDLE_MODULES.l()local shared=Env.Shared()local
+previousVersion=nil if shared.Library and shared.Library.Unload then
+previousVersion=shared.Library.Version pcall(shared.Library.Unload,shared.
+Library,true)end local Library={Version='1.2.0',VersionUrl=
+[[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/VERSION]]
+,ToggleStyle='Switch',DensityName='Normal',Flags={},Elements={},AllElements={},
 Windows={},Debug=false,Unloaded=false,Anonymous=false,_classes={},_custom={},
 _autoSaveArmed=false,FlagChanged=Signal.new(),KeybindsChanged=Signal.new(),
 IdentityChanged=Signal.new(),WindowReady=Signal.new(),DirtyChanged=Signal.new(),
-Unloading=Signal.new(),FavoritesChanged=Signal.new(),Util=Util,Signal=Signal,
-Maid=Maid,Tween=Tween,Theme=Theme,Icons=Icons,Keys=Keys,Env=Env,Locale=Locale}
-Library.__index=Library shared.Library=Library Shared.Lib=Library Shared.Maid=
-Maid.new()Shared.Scale=1 do local root=Util.New('ScreenGui',{Name=Util.Uid(),
-ResetOnSpawn=false,IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.
-Sibling,DisplayOrder=9999})Env.Protect(root)root.Parent=Env.GuiParent()local
-windows=Util.New('Frame',{Name='Windows',BackgroundTransparency=1,Size=UDim2.
-fromScale(1,1),ZIndex=10,Parent=root})local widgets=Util.New('Frame',{Name=
-'Widgets',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=20,Parent=
-root})Shared.Gui={Root=root,Windows=windows,Widgets=widgets}Shared.Maid:Give(
-root)Overlay.Init(root)Shared.Overlay=Overlay Library.Gui=root end
-__DARKLUA_BUNDLE_MODULES.m()(Library)for _,module in{__DARKLUA_BUNDLE_MODULES.o(
-),__DARKLUA_BUNDLE_MODULES.p(),__DARKLUA_BUNDLE_MODULES.q(),
-__DARKLUA_BUNDLE_MODULES.r(),__DARKLUA_BUNDLE_MODULES.s()}do for name,class in
-module do Library._classes[name]=class end end local Section=
-__DARKLUA_BUNDLE_MODULES.t()Library._classes.Section=Section Library.Base=
-__DARKLUA_BUNDLE_MODULES.n()local Window=__DARKLUA_BUNDLE_MODULES.w()
-__DARKLUA_BUNDLE_MODULES.x()(Window)__DARKLUA_BUNDLE_MODULES.y()(Window)
-__DARKLUA_BUNDLE_MODULES.z()(Library)function Library:_setDirty(value)if self.
+Unloading=Signal.new(),FavoritesChanged=Signal.new(),NotificationsChanged=Signal
+.new(),ErrorOccurred=Signal.new(),Util=Util,Signal=Signal,Maid=Maid,Tween=Tween,
+Theme=Theme,Icons=Icons,Keys=Keys,Env=Env,Locale=Locale}Library.__index=Library
+shared.Library=Library Shared.Lib=Library Shared.Maid=Maid.new()Shared.Scale=1
+do local root=Util.New('ScreenGui',{Name=Util.Uid(),ResetOnSpawn=false,
+IgnoreGuiInset=true,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=9999
+})Env.Protect(root)root.Parent=Env.GuiParent()local windows=Util.New('Frame',{
+Name='Windows',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=10,
+Parent=root})local widgets=Util.New('Frame',{Name='Widgets',
+BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=20,Parent=root})Shared
+.Gui={Root=root,Windows=windows,Widgets=widgets}Shared.Maid:Give(root)Overlay.
+Init(root)Shared.Overlay=Overlay Library.Gui=root end __DARKLUA_BUNDLE_MODULES.
+m()(Library)for _,module in{__DARKLUA_BUNDLE_MODULES.o(),
+__DARKLUA_BUNDLE_MODULES.p(),__DARKLUA_BUNDLE_MODULES.q(),
+__DARKLUA_BUNDLE_MODULES.r(),__DARKLUA_BUNDLE_MODULES.s(),
+__DARKLUA_BUNDLE_MODULES.t()}do for name,class in module do Library._classes[
+name]=class end end local Section=__DARKLUA_BUNDLE_MODULES.u()Library._classes.
+Section=Section Library.Base=__DARKLUA_BUNDLE_MODULES.n()local Window=
+__DARKLUA_BUNDLE_MODULES.y()__DARKLUA_BUNDLE_MODULES.z()(Window)
+__DARKLUA_BUNDLE_MODULES.A()(Window)__DARKLUA_BUNDLE_MODULES.B()(Library)
+__DARKLUA_BUNDLE_MODULES.C()(Library)__DARKLUA_BUNDLE_MODULES.D()(Library)
+Library._drawLogo=Window._drawLogo function Library:_setDirty(value)if self.
 Dirty~=value then self.Dirty=value self.DirtyChanged:Fire(value)end end function
 Library:_onElementChanged(element,new,old)if element.Flag then self.FlagChanged:
 Fire(element.Flag,new,old)if not self.Loading and self._autoSaveArmed and
@@ -3955,45 +5167,64 @@ then return'hidden'end return tostring(Players.LocalPlayer.UserId)end,Executor=
 function()return Env.ExecutorName()end,PlaceId=function()return tostring(game.
 PlaceId)end,JobId=function()if Library.Anonymous then return'hidden'end return
 game.JobId~=''and string.sub(game.JobId,1,18)..'\u{2026}'or'studio'end,
-ServerUptime=function()return duration(workspace.DistributedGameTime)end,
-GameName=function()if not gameName then local ok,info=pcall(function()return
-game:GetService('MarketplaceService'):GetProductInfo(game.PlaceId)end)gameName=
-ok and info and info.Name or'Roblox'end return gameName end}end function Library
-._drawSpark(frame,data,fixedMin,fixedMax)if not frame or not frame.Parent then
-return end for _,c in frame:GetChildren()do if c.Name=='Seg'then c:Destroy()end
-end local n=#data if n<2 then return end local s=Shared.Scale or 1 local w,h=
-frame.AbsoluteSize.X/s,frame.AbsoluteSize.Y/s if w<=0 or h<=0 then task.delay(
-0.1,function()Library._drawSpark(frame,data,fixedMin,fixedMax)end)return end
-local min,max=fixedMin or math.huge,fixedMax or-math.huge if not fixedMin or not
-fixedMax then for _,v in data do min=fixedMin or math.min(min,v)max=fixedMax or
-math.max(max,v)end end if max-min<1e-6 then max=min+1 end local pad=3 local 
-function point(i)local x=(i-1)/(n-1)*(w-pad*2)+pad local y=h-pad-(data[i]-min)/(
-max-min)*(h-pad*2)return Vector2.new(x,y)end for i=1,n-1 do local a,b=point(i),
-point(i+1)local d=b-a local seg=Util.New('Frame',{Name='Seg',BorderSizePixel=0,
-AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(d.Magnitude+1,1.5),
-Position=UDim2.fromOffset((a.X+b.X)/2,(a.Y+b.Y)/2),Rotation=math.deg(math.atan2(
-d.Y,d.X)),BackgroundTransparency=0.15+0.6*(1-i/(n-1)),ZIndex=frame.ZIndex+1,
-Parent=frame})Theme.Paint(seg,{BackgroundColor3='Accent'})end end function
-Library:_fillViewport(viewport,model)local ok=pcall(function()local archivable=
-model.Archivable model.Archivable=true local copy=model:Clone()model.Archivable=
-archivable if not copy then return end for _,d in copy:GetDescendants()do if d:
-IsA('Script')or d:IsA('LocalScript')then d:Destroy()end end local world=Instance
-.new('WorldModel')world.Parent=viewport copy.Parent=world local cf,size if copy:
-IsA('Model')then cf,size=copy:GetBoundingBox()else cf,size=copy.CFrame,copy.Size
-end local camera=Instance.new('Camera')camera.FieldOfView=40 local distance=size
-.Magnitude*1.15 camera.CFrame=CFrame.lookAt(cf.Position+cf.LookVector*distance+
-Vector3.new(0,size.Y*0.1,0),cf.Position)camera.Parent=viewport viewport.
-CurrentCamera=camera end)return ok end function Library:Window(options)options=
-options or{}if options.Folder then self:SetFolder(options.Folder)end local theme
-=self:GetSetting('Theme',options.Theme)if theme and Theme.Presets[theme]then
-Theme.Set(theme,false)end local accent=Util.FromHex(self:GetSetting('Accent','')
-)or Util.ToColor(options.Accent)if accent then Theme.SetToken('Accent',accent,
-false)end if self:GetSetting('ReducedMotion',options.ReducedMotion==true)then
-Tween.Speed=0 end local lang=self:GetSetting('Language',options.Language)if lang
-then Locale.Set(lang)end self.AnonymousName=self:GetSetting('AnonymousName',
-'Hidden')if self:GetSetting('Anonymous',false)then self.Anonymous=true end local
-savedKey=self:GetSetting('MenuKey')if savedKey then options.Keybind=savedKey end
-local window=Window.new(self,options)table.insert(self.Windows,window)window:
+ServerUptime=function()return duration(workspace.DistributedGameTime)end,Memory=
+function()local ok,mb=pcall(function()return Stats:GetTotalMemoryUsageMb()end)
+return ok and(math.floor(mb)..' MB')or(math.floor(gcinfo()/1024)..' MB')end,
+Position=function()if Library.Anonymous then return'hidden'end local root=
+Players.LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild(
+'HumanoidRootPart')if not root then return'-'end local p=root.Position return
+string.format('%d %d %d',p.X,p.Y,p.Z)end,Speed=function()local root=Players.
+LocalPlayer.Character and Players.LocalPlayer.Character:FindFirstChild(
+'HumanoidRootPart')return root and string.format('%.1f st/s',root.
+AssemblyLinearVelocity.Magnitude)or'-'end,GameName=function()if not gameName
+then local ok,info=pcall(function()return game:GetService('MarketplaceService'):
+GetProductInfo(game.PlaceId)end)gameName=ok and info and info.Name or'Roblox'end
+return gameName end}end function Library._drawSpark(frame,data,fixedMin,fixedMax
+)if not frame or not frame.Parent then return end for _,c in frame:GetChildren()
+do if c.Name=='Seg'then c:Destroy()end end local n=#data if n<2 then return end
+local s=Shared.Scale or 1 local w,h=frame.AbsoluteSize.X/s,frame.AbsoluteSize.Y/
+s if w<=0 or h<=0 then task.delay(0.1,function()Library._drawSpark(frame,data,
+fixedMin,fixedMax)end)return end local min,max=fixedMin or math.huge,fixedMax or
+-math.huge if not fixedMin or not fixedMax then for _,v in data do min=fixedMin
+or math.min(min,v)max=fixedMax or math.max(max,v)end end if max-min<1e-6 then
+max=min+1 end local pad=3 local function point(i)local x=(i-1)/(n-1)*(w-pad*2)+
+pad local y=h-pad-(data[i]-min)/(max-min)*(h-pad*2)return Vector2.new(x,y)end
+for i=1,n-1 do local a,b=point(i),point(i+1)local d=b-a local seg=Util.New(
+'Frame',{Name='Seg',BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Size=
+UDim2.fromOffset(d.Magnitude+1,1.5),Position=UDim2.fromOffset((a.X+b.X)/2,(a.Y+b
+.Y)/2),Rotation=math.deg(math.atan2(d.Y,d.X)),BackgroundTransparency=0.15+0.6*(1
+-i/(n-1)),ZIndex=frame.ZIndex+1,Parent=frame})Theme.Paint(seg,{BackgroundColor3=
+'Accent'})end end function Library:_fillViewport(viewport,model)local ok=pcall(
+function()local archivable=model.Archivable model.Archivable=true local copy=
+model:Clone()model.Archivable=archivable if not copy then return end for _,d in
+copy:GetDescendants()do if d:IsA('Script')or d:IsA('LocalScript')then d:Destroy(
+)end end local world=Instance.new('WorldModel')world.Parent=viewport copy.Parent
+=world local cf,size if copy:IsA('Model')then cf,size=copy:GetBoundingBox()else
+cf,size=copy.CFrame,copy.Size end local camera=Instance.new('Camera')camera.
+FieldOfView=40 local distance=size.Magnitude*1.15 camera.CFrame=CFrame.lookAt(cf
+.Position+cf.LookVector*distance+Vector3.new(0,size.Y*0.1,0),cf.Position)camera.
+Parent=viewport viewport.CurrentCamera=camera end)return ok end function Library
+:Window(options)options=options or{}if options.Folder then self:SetFolder(
+options.Folder)end local theme=self:GetSetting('Theme',options.Theme)if theme
+and Theme.Presets[theme]then Theme.Set(theme,false)end local accent=Util.
+FromHex(self:GetSetting('Accent',''))or Util.ToColor(options.Accent)if accent
+then Theme.SetToken('Accent',accent,false)end if self:GetSetting('ReducedMotion'
+,options.ReducedMotion==true)then Tween.Speed=0 end local lang=self:GetSetting(
+'Language',options.Language)if lang then Locale.Set(lang)end self.AnonymousName=
+self:GetSetting('AnonymousName','Hidden')if self:GetSetting('Anonymous',false)
+then self.Anonymous=true end local savedKey=self:GetSetting('MenuKey')if
+savedKey then options.Keybind=savedKey end local key=options.KeySystem if key
+and key~=false then local spec=type(key)=='table'and key or{}spec.Title=spec.
+Title or options.Title spec.Logo=spec.Logo or options.Logo if not self:
+KeySystem(spec)then return nil end end Shared.Density=self.Densities[self:
+GetSetting('Density',options.Density or'Normal')]or 1 self.DensityName=self:
+GetSetting('Density',options.Density or'Normal')self.ToggleStyle=self:
+GetSetting('ToggleStyle',options.ToggleStyle or'Switch')local font=self:
+GetSetting('Font',options.Font)if font then task.spawn(function()self:SetFont(
+font)end)end local window=Window.new(self,options)table.insert(self.Windows,
+window)if previousVersion and previousVersion~=self.Version then window:OnReady(
+function()self:Notify({Title='Proximity',Content=Locale.T('Replaced',
+previousVersion,self.Version),Type='info',Duration=5})end)end window:
 SetTransparency((self:GetSetting('Glass',0)or 0)/100)if options.Watermark~=false
 then self:Watermark(type(options.Watermark)=='table'and options.Watermark or nil
 )end if options.KeybindList~=false then self:KeybindList()end return window end
@@ -4028,13 +5259,35 @@ SafeName(input)self:_setDirty(false)self:Notify({Title=Locale.T('Saved'),Content
 =self.CurrentConfig,Type='success',Duration=2.5})end end)return end self:
 SaveConfig(name)self:_setDirty(false)self:Notify({Title=Locale.T('Saved'),
 Content=name,Type='success',Duration=2})end function Library:OnUnload(fn)return
-self.Unloading:Connect(fn)end function Library:Unload()if self.Unloaded then
-return end self.Unloading:Fire()for _,el in table.clone(self.AllElements)do if
-el.Type=='Toggle'and el.Value==true and el.Save~=false then pcall(el.Set,el,
-false)end end for _,w in table.clone(self.Windows)do pcall(w.Destroy,w)end
-Overlay.CloseAll()Shared.Maid:Clean()self.Unloaded=true if shared.Library==self
-then shared.Library=nil end end Library.Destroy=Library.Unload function Library:
-GetVersion()return self.Version end function Library:SetDebug(on)self.Debug=on
-and true or false return self end Util.ErrorHandler=function(message,trace)warn(
-'[Proximity] callback error: '..tostring(message)..(Library.Debug and('\n'..
-trace)or''))end return Library
+self.Unloading:Connect(fn)end function Library:Unload(silent)if self.Unloaded
+then return end if not silent and self.Dirty and self.CurrentConfig and self.
+Windows[1]and coroutine.isyieldable()then local index=self.Windows[1]:Dialog({
+Title=Locale.T('Unsaved'),Content=Locale.T('SaveBeforeUnload',self.CurrentConfig
+),Buttons={{Text=Locale.T('Cancel')},{Text=Locale.T('DontSave')},{Text=Locale.T(
+'Save'),Style='Primary'}}})if index==0 or index==1 then return elseif index==3
+then self:SaveConfig(self.CurrentConfig)end end self.Unloading:Fire()for _,el in
+table.clone(self.AllElements)do if el.Type=='Toggle'and el.Value==true and el.
+Save~=false then pcall(el.Set,el,false)end end for _,w in table.clone(self.
+Windows)do pcall(w.Destroy,w)end Overlay.CloseAll()Shared.Maid:Clean()self.
+Unloaded=true if shared.Library==self then shared.Library=nil end end Library.
+Destroy=Library.Unload function Library:GetVersion()return self.Version end Util
+.ErrorHandler=function(message,trace)warn('[Proximity] callback error: '..
+tostring(message)..(Library.Debug and('\n'..trace)or''))Library.ErrorOccurred:
+Fire(tostring(message),trace)end function Library:OnError(fn)return self.
+ErrorOccurred:Connect(fn)end function Library:_optionWarning(kind,name,message)
+warn(string.format('[Proximity] %s "%s": %s',tostring(kind),tostring(name),
+message))end Library.Densities={Compact=0.86,Normal=1,Comfortable=1.14,Touch=
+1.32}function Library:SetDensity(name)local factor=self.Densities[name]or 1 self
+.DensityName=self.Densities[name]and name or'Normal'Shared.Density=factor self:
+SetSetting('Density',self.DensityName)for _,el in self.AllElements do local
+frame=el.Frame local base=frame and frame:GetAttribute('BaseH')if base then
+frame.Size=UDim2.new(frame.Size.X.Scale,frame.Size.X.Offset,0,math.floor(base*
+factor+0.5))end end for _,d in Shared.Gui.Root:GetDescendants()do if d:IsA(
+'UIListLayout')and d:GetAttribute('BaseGap')then d.Padding=UDim.new(0,math.
+floor(d:GetAttribute('BaseGap')*factor*2+0.5))end end return self end function
+Library:SetToggleStyle(name)self.ToggleStyle=name self:SetSetting('ToggleStyle',
+name)for _,el in self.AllElements do if el.Type=='Toggle'and not el.Style and el
+._mounted then el:_buildControl()el:_render(false)end end return self end
+function Library:SetFont(name)local ok=Theme.ApplyFont(name,Shared.Gui.Root)if
+ok then self:SetSetting('Font',name)end return ok end function Library:GetFonts(
+)return Theme.FontList()end return Library

@@ -85,6 +85,12 @@ function Page:_ensureMounted()
 		Parent = window.Content,
 	})
 	Theme.Paint(scroller, { ScrollBarImageColor3 = "StrokeHi" })
+	local remember = Util.Debounce(0.8, function()
+		if window.State == "Ready" then
+			Shared.Lib:SetSetting(window:_scrollKey(self), math.floor(scroller.CanvasPosition.Y))
+		end
+	end)
+	scroller:GetPropertyChangedSignal("CanvasPosition"):Connect(remember)
 	Util.Padding(scroller, 12, 12, 14, 12)
 	Util.List(scroller, 10)
 	self.Frame = scroller

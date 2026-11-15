@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0 - the planet intro
+
+- Loading screen: dimmed screen, a 3D planet assembled from points that turns into the Proximity artwork, real progress with time left, a burst, and the window grows out of it
+- Key system: keys, your own check or a URL, get-a-key button, attempt limit, remembered keys; `KeySystem = true / false`
+- Window opens from and folds into a planet button next to the Roblox menu; icons-only navigation; mini mode; background image or gradient; keyboard and gamepad navigation; remembered scroll
+- 9 toggle styles, ~50 fonts (Roblox families plus Monocraft, VT323, Silkscreen and more), density modes, chips in multi dropdowns, glow on the active tab and switches, risky stripe on sections
+- Key combos (Ctrl+Shift+X), modifier-only binds, mode shown on the chip
+- Player list element, range / select / switch filters in tables
+- Notification center, what's new dialog, update check for Proximity and for your script
+- Widgets: player panel with a 3D model, FPS and ping graph, stopwatch, custom HUD panels, watermark with 16 items and a live FPS line, inactive binds and sorting in the keybind list
+- Configs: scrambled files with a checksum, a backup before every overwrite, undo delete, short share codes
+- `OnError`, readable option warnings, debug overlay, automatic FPS saving, notice when an older copy is replaced
+- Website with docs, a code generator and live executor status; the script is also served from the site
+
 ## 1.1.0 - the planet
 
 - The logo is the Proximity planet: drawn instantly, then the real artwork fades in (cached, needs getcustomasset)
