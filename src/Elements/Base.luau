@@ -132,7 +132,11 @@ function Base:Set(value: any, silent: boolean?)
 		Lib.Flags[self.Flag] = normalized
 	end
 	if self._mounted then
-		self:_render(true)
+		if Lib._batch then
+			Lib._batch[self] = true
+		else
+			self:_render(true)
+		end
 	end
 	if not silent then
 		self:_fireCallbacks()
@@ -154,9 +158,18 @@ function Base:_userSet(value: any)
 end
 
 function Base:_fireCallbacks()
+	local started = os.clock()
 	for _, callback in self._callbacks do
 		Util.SafeCall(callback, self:_callbackArgs())
 	end
+	if self.Library._profile then
+		self.Library:_profile(self, os.clock() - started)
+	end
+end
+
+-- element:OnChanged(fn) - fn(new, old) after every change (same as .Changed:Connect)
+function Base:OnChanged(fn)
+	return self.Changed:Connect(fn)
 end
 
 function Base:Fire()

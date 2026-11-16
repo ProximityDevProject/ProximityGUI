@@ -814,12 +814,14 @@ function Library:Unload(silent)
 			self:SaveConfig(self.CurrentConfig)
 		end
 	end
-	self.Unloading:Fire()
+	-- switch everything off first (so the script's own code cleans up), then
+	-- take back all that went through the library (Lifecycle)
 	for _, el in table.clone(self.AllElements) do
 		if el.Type == "Toggle" and el.Value == true and el.Save ~= false then
 			pcall(el.Set, el, false)
 		end
 	end
+	self.Unloading:Fire()
 	for _, w in table.clone(self.Windows) do
 		pcall(w.Destroy, w)
 	end
@@ -1004,6 +1006,18 @@ task.defer(function()
 	end
 end)
 
+-- Library:Localize({ en = { Aim = "Aim" }, ru = { Aim = "Аим" } }) and Library:T("Aim")
+function Library:Localize(tables)
+	for code, strings in tables or {} do
+		Locale.Add(code, strings)
+	end
+	return self
+end
+function Library:T(key, ...)
+	return Locale.T(key, ...)
+end
+
+require("./Lifecycle")(Library)
 require("./Widgets/Screen")(Library)
 
 return Library

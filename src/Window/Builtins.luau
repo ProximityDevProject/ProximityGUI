@@ -682,6 +682,11 @@ return function(Window)
 			{ Name = T("TestNotification"), Callback = function()
 				Lib:Notify({ Title = "Proximity", Content = T("TestNotificationBody"), Duration = 4 })
 			end },
+			{ Name = T("SlowCallbacks"), Callback = function()
+				for _, p in Lib:GetProfile(8) do
+					pcall(console.Log, console, ("%s  ·  %d calls  ·  avg %.1f ms  ·  max %.1f ms"):format(p.Name, p.Calls, p.Average * 1000, p.Max * 1000))
+				end
+			end },
 			{ Name = T("TestWarning"), Callback = function()
 				Lib:Notify({ Title = "Proximity", Content = T("TestNotificationBody"), Type = "warning", Duration = 4 })
 			end },
@@ -921,6 +926,48 @@ return function(Window)
 			Callback = function(v)
 				Lib:SetAutoSave(v and (list:Get() or Lib.CurrentConfig) or nil)
 			end,
+		})
+		section:Toggle({
+			Name = T("GameProfiles"),
+			Icon = "globe",
+			Description = T("GameProfilesHint"),
+			Default = Lib:GetSetting("GameProfiles", false),
+			Save = false,
+			Callback = function(v)
+				Lib:SetSetting("GameProfiles", v)
+			end,
+		})
+		section:Button({ Name = T("SaveForGame"), Icon = "save", Callback = function()
+			local ok = Lib:SaveConfig(Lib:GameProfileName())
+			Lib:Notify({ Title = T("SaveForGame"), Content = ok and Lib:GameProfileName() or T("SaveFailed"), Type = ok and "success" or "error", Duration = 3 })
+		end })
+		section:Button({ Name = T("CompareSelected"), Icon = "layers", Callback = function()
+			local name = list:Get()
+			if not name then
+				return
+			end
+			local diff = Lib:DiffConfig(name)
+			local lines = {}
+			for i, d in diff do
+				if i > 40 then
+					table.insert(lines, "...")
+					break
+				end
+				table.insert(lines, ("<b>%s</b>  <font color=\"#e84c54\">%s</font>  ->  <font color=\"#78dca0\">%s</font>"):format(d.Flag, tostring(d.From), tostring(d.To)))
+			end
+			task.spawn(function()
+				window:Dialog({ Title = T("CompareSelected") .. ": " .. name, Content = #lines > 0 and table.concat(lines, string.char(10)) or T("NoDifferences"), Buttons = { { Text = T("Ok"), Style = "Primary" } } })
+			end)
+		end })
+		section:ButtonGroup({
+			{ Name = "JSON", Callback = function()
+				Env.Clipboard(Lib:ExportFlags("json"))
+				Lib:Notify({ Title = T("Copied"), Content = "JSON", Duration = 2 })
+			end },
+			{ Name = "Lua", Callback = function()
+				Env.Clipboard(Lib:ExportFlags("lua"))
+				Lib:Notify({ Title = T("Copied"), Content = "Lua", Duration = 2 })
+			end },
 		})
 		section:Label({ Text = T("Folder") .. ": " .. Lib.Folder .. "/configs", Color = "TextMute", Icon = "folder" })
 		return tab
