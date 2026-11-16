@@ -520,6 +520,13 @@ function Intros.new(window, options, style)
 	Util.Gradient(dim, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.2) }), 90)
 	Tween.Play(dim, { BackgroundTransparency = options.Dim or def.Dim or 0.22 }, 0.6, Enum.EasingStyle.Sine)
 	self.Dim = dim
+	-- a quiet field of stars drifting behind every screen
+	self.Stars = {}
+	local srng = Random.new(5)
+	for i = 1, 46 do
+		local star = frame(root, { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(srng:NextNumber() < 0.2 and 2 or 1, srng:NextNumber() < 0.2 and 2 or 1), BackgroundColor3 = WHITE, BackgroundTransparency = 1, ZIndex = 300 })
+		self.Stars[i] = { Frame = star, X = srng:NextNumber(), Y = srng:NextNumber(), Speed = srng:NextNumber(0.004, 0.014), A = srng:NextNumber(0.35, 0.8), Phase = srng:NextNumber() * TAU }
+	end
 	local stage = frame(root, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.46), Size = UDim2.fromOffset(STAGE, STAGE), ZIndex = 301 })
 	local view = workspace.CurrentCamera.ViewportSize
 	local scale = Util.New("UIScale", { Scale = math.clamp(math.min(view.X, view.Y) / 820, 0.55, 1.2), Parent = stage })
@@ -536,6 +543,12 @@ function Intros.new(window, options, style)
 		local shown = self:_progress(os.clock() - self.Started)
 		if not self.Frozen then
 			def.Step(self, self.T, shown, math.min(dt, 1 / 30))
+		end
+		local fadeIn = smooth(self.T / 1.2) * (self.Exploding and math.max(0, 1 - (os.clock() - (self.ExplodeAt or os.clock())) / 0.5) or 1)
+		for _, st in self.Stars do
+			st.X = (st.X + st.Speed * math.min(dt, 1 / 30)) % 1
+			st.Frame.Position = UDim2.fromScale(st.X, st.Y)
+			st.Frame.BackgroundTransparency = 1 - fadeIn * st.A * (0.55 + 0.45 * math.sin(self.T * 1.6 + st.Phase))
 		end
 	end)
 	return self
@@ -567,6 +580,9 @@ function Intros:_buildInfo(root, s)
 	local track = frame(info, { Size = UDim2.new(1, 0, 0, 2), Position = UDim2.fromOffset(0, 25), BackgroundColor3 = WHITE, ZIndex = 301 })
 	local fill = frame(track, { Size = UDim2.fromScale(0, 1), BackgroundColor3 = WHITE, BackgroundTransparency = 0, ZIndex = 302 })
 	fill.Visible = false
+	-- a soft glowing head at the end of the bar
+	local head = frame(fill, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromOffset(16, 7), BackgroundColor3 = WHITE, BackgroundTransparency = 0.55, ZIndex = 302 })
+	Util.Round(head)
 	local status = label({ Text = Locale.T("Preparing"), FontFace = Theme.Fonts.Regular, TextSize = 12, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -70, 0, 16), Position = UDim2.fromOffset(0, 34) })
 	status.TextColor3 = Color3.fromRGB(170, 170, 178)
 	local eta = label({ Text = "", FontFace = Theme.Fonts.Mono, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 34) })
@@ -651,6 +667,7 @@ function Intros:Finish(onOpen)
 		-- let the last state (full ring, totality, finished picture) read for a moment
 		task.wait(0.25)
 		self.Exploding = true
+		self.ExplodeAt = os.clock()
 		if self.Fill then
 			self.Fill.Size = UDim2.fromScale(1, 1)
 			self.Pct.Text = "100%"

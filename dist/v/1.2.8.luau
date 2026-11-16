@@ -3995,74 +3995,86 @@ Started=os.clock()self.T=0 self.Display=0 self.Samples={}local root=frame(Shared
 fromScale(1,1),ZIndex=300})Util.Gradient(dim,nil,NumberSequence.new({
 NumberSequenceKeypoint.new(0,0.2),NumberSequenceKeypoint.new(0.5,0),
 NumberSequenceKeypoint.new(1,0.2)}),90)Tween.Play(dim,{BackgroundTransparency=
-options.Dim or def.Dim or 0.22},0.6,Enum.EasingStyle.Sine)self.Dim=dim local
-stage=frame(root,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,
-0.46),Size=UDim2.fromOffset(STAGE,STAGE),ZIndex=301})local view=workspace.
-CurrentCamera.ViewportSize local scale=Util.New('UIScale',{Scale=math.clamp(math
-.min(view.X,view.Y)/820,0.55,1.2),Parent=stage})self.Stage=stage self.Center=
-Vector2.new(STAGE/2,STAGE/2)def.Build(self)if not def.NoInfo then self:
-_buildInfo(root,scale.Scale)end self.Conn=RunService.RenderStepped:Connect(
-function(dt)self.T+=math.min(dt,3.333333333333333E-2)local shown=self:_progress(
-os.clock()-self.Started)if not self.Frozen then def.Step(self,self.T,shown,math.
-min(dt,3.333333333333333E-2))end end)return self end function Intros:_term(rich)
-local plain=string.gsub(rich,'<[^>]+>','')plain=string.gsub(string.gsub(string.
-gsub(plain,'&lt;','<'),'&gt;','>'),'&amp;','&')table.insert(self.Lines,{Rich=
-rich,Plain=plain})while#self.Lines>12 do local first=table.remove(self.Lines,1)
-self.Typed=math.max(0,self.Typed-#first.Plain)end end function Intros:_buildInfo
-(root,s)local info=frame(root,{AnchorPoint=Vector2.new(0.5,0),Position=UDim2.
-new(0.5,0,0.46,(STAGE/2)*s*0.9),Size=UDim2.fromOffset(300,60),ZIndex=301})local 
-function label(props)local l=Util.Label(props)l.TextTransparency=1 l.ZIndex=301
-l.Parent=info return l end local title=label({Text=self.Window.Title,FontFace=
-Theme.Fonts.SemiBold,TextSize=14,Size=UDim2.new(1,-60,0,18)})title.TextColor3=
-WHITE local pct=label({Text='0%',FontFace=Theme.Fonts.MonoBold,TextSize=13,
-TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(1,0,0,18)})pct.
-TextColor3=WHITE local track=frame(info,{Size=UDim2.new(1,0,0,2),Position=UDim2.
-fromOffset(0,25),BackgroundColor3=WHITE,ZIndex=301})local fill=frame(track,{Size
-=UDim2.fromScale(0,1),BackgroundColor3=WHITE,BackgroundTransparency=0,ZIndex=302
-})fill.Visible=false local status=label({Text=Locale.T('Preparing'),FontFace=
-Theme.Fonts.Regular,TextSize=12,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.
-new(1,-70,0,16),Position=UDim2.fromOffset(0,34)})status.TextColor3=Color3.
-fromRGB(170,170,178)local eta=label({Text='',FontFace=Theme.Fonts.Mono,TextSize=
-11,TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(1,0,0,16),Position=
-UDim2.fromOffset(0,34)})eta.TextColor3=Color3.fromRGB(120,120,128)if self.
-HidePct then pct.Visible=false end self.Info,self.Pct,self.Fill,self.Track,self.
-Status,self.Eta,self.TitleLabel=info,pct,fill,track,status,eta,title task.delay(
-0.5,function()if self.Root then for _,l in{title,pct,status,eta}do Tween.Play(l,
-{TextTransparency=0},0.6)end Tween.Play(track,{BackgroundTransparency=0.86},0.6)
-fill.Visible=true end end)end function Intros:_progress(t)if self.Exploding then
-return 1 end local window=self.Window local actual=window:GetLoadProgress()if
-window.State~='Loading'then actual=math.max(actual,0.98)end self.Display=math.
-max(self.Display,math.min(actual,0.99))local shown=self._shown or 0 shown+=(self
-.Display-shown)*0.12 self._shown=shown table.insert(self.Samples,{t,self.Display
-})while#self.Samples>2 and self.Samples[1][1]<t-1.5 do table.remove(self.Samples
-,1)end local first=self.Samples[1]local rate=(self.Display-first[2])/math.max(t-
-first[1],0.05)local etaText if rate>0.002 and self.Display<0.98 then local left=
-(1-self.Display)/rate etaText=left<1 and'<1 s'or('~'..math.ceil(left)..' s')else
-etaText=string.format('%.1f s',t)end self.EtaText=etaText if self.Fill then self
-.Fill.Size=UDim2.fromScale(shown,1)self.Pct.Text=math.floor(shown*100+0.5)..'%'
-self.Eta.Text=etaText end return shown end function Intros:SetStage(text)if not
-text then return end if self.Status then self.Status.Text=text end if self.Def.
-Stage then self.Def.Stage(self,text)end end function Intros:Finish(onOpen)if
-self.Finishing then return end self.Finishing=true task.spawn(function()local
-start=os.clock()while self.Root and(self._shown or 0)<0.97 and os.clock()-start<
-1.2 do self.Display=1 RunService.RenderStepped:Wait()end if not self.Root then
-return end task.wait(0.25)self.Exploding=true if self.Fill then self.Fill.Size=
-UDim2.fromScale(1,1)self.Pct.Text='100%'self.Status.Text=Locale.T('Ready')self.
-Eta.Text=''for _,l in{self.TitleLabel,self.Pct,self.Status,self.Eta}do Tween.
-Play(l,{TextTransparency=1},0.35)end Tween.Play(self.Track,{
-BackgroundTransparency=1},0.35)Tween.Play(self.Fill,{BackgroundTransparency=1},
-0.35)end local delay,ownAnimation=self.Def.Burst(self)Tween.Play(self.Dim,{
-BackgroundTransparency=1},0.8,Enum.EasingStyle.Sine)task.delay(delay or 0.2,
-function()if onOpen then local stage=self.Stage local point=stage and(stage.
-AbsolutePosition+stage.AbsoluteSize/2-Shared.Gui.Root.AbsolutePosition)onOpen((
-not ownAnimation)and point or nil)end end)task.delay(1.1,function()self:Destroy(
-)end)end)end function Intros:Destroy()if self.Conn then self.Conn:Disconnect()
-self.Conn=nil end if self.Root then self.Root:Destroy()self.Root=nil end end
-return Intros end function __DARKLUA_BUNDLE_MODULES.z()local v=
-__DARKLUA_BUNDLE_MODULES.cache.z if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end do local function 
-__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
-__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
+options.Dim or def.Dim or 0.22},0.6,Enum.EasingStyle.Sine)self.Dim=dim self.
+Stars={}local srng=Random.new(5)for i=1,46 do local star=frame(root,{AnchorPoint
+=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(srng:NextNumber()<0.2 and 2 or 1,
+srng:NextNumber()<0.2 and 2 or 1),BackgroundColor3=WHITE,BackgroundTransparency=
+1,ZIndex=300})self.Stars[i]={Frame=star,X=srng:NextNumber(),Y=srng:NextNumber(),
+Speed=srng:NextNumber(0.004,0.014),A=srng:NextNumber(0.35,0.8),Phase=srng:
+NextNumber()*TAU}end local stage=frame(root,{AnchorPoint=Vector2.new(0.5,0.5),
+Position=UDim2.fromScale(0.5,0.46),Size=UDim2.fromOffset(STAGE,STAGE),ZIndex=301
+})local view=workspace.CurrentCamera.ViewportSize local scale=Util.New('UIScale'
+,{Scale=math.clamp(math.min(view.X,view.Y)/820,0.55,1.2),Parent=stage})self.
+Stage=stage self.Center=Vector2.new(STAGE/2,STAGE/2)def.Build(self)if not def.
+NoInfo then self:_buildInfo(root,scale.Scale)end self.Conn=RunService.
+RenderStepped:Connect(function(dt)self.T+=math.min(dt,3.333333333333333E-2)local
+shown=self:_progress(os.clock()-self.Started)if not self.Frozen then def.Step(
+self,self.T,shown,math.min(dt,3.333333333333333E-2))end local fadeIn=smooth(self
+.T/1.2)*(self.Exploding and math.max(0,1-(os.clock()-(self.ExplodeAt or os.
+clock()))/0.5)or 1)for _,st in self.Stars do st.X=(st.X+st.Speed*math.min(dt,
+3.333333333333333E-2))%1 st.Frame.Position=UDim2.fromScale(st.X,st.Y)st.Frame.
+BackgroundTransparency=1-fadeIn*st.A*(0.55+0.45*math.sin(self.T*1.6+st.Phase))
+end end)return self end function Intros:_term(rich)local plain=string.gsub(rich,
+'<[^>]+>','')plain=string.gsub(string.gsub(string.gsub(plain,'&lt;','<'),'&gt;',
+'>'),'&amp;','&')table.insert(self.Lines,{Rich=rich,Plain=plain})while#self.
+Lines>12 do local first=table.remove(self.Lines,1)self.Typed=math.max(0,self.
+Typed-#first.Plain)end end function Intros:_buildInfo(root,s)local info=frame(
+root,{AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,0.46,(STAGE/2)*s*
+0.9),Size=UDim2.fromOffset(300,60),ZIndex=301})local function label(props)local
+l=Util.Label(props)l.TextTransparency=1 l.ZIndex=301 l.Parent=info return l end
+local title=label({Text=self.Window.Title,FontFace=Theme.Fonts.SemiBold,TextSize
+=14,Size=UDim2.new(1,-60,0,18)})title.TextColor3=WHITE local pct=label({Text=
+'0%',FontFace=Theme.Fonts.MonoBold,TextSize=13,TextXAlignment=Enum.
+TextXAlignment.Right,Size=UDim2.new(1,0,0,18)})pct.TextColor3=WHITE local track=
+frame(info,{Size=UDim2.new(1,0,0,2),Position=UDim2.fromOffset(0,25),
+BackgroundColor3=WHITE,ZIndex=301})local fill=frame(track,{Size=UDim2.fromScale(
+0,1),BackgroundColor3=WHITE,BackgroundTransparency=0,ZIndex=302})fill.Visible=
+false local head=frame(fill,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromScale(1,0.5),Size=UDim2.fromOffset(16,7),BackgroundColor3=WHITE,
+BackgroundTransparency=0.55,ZIndex=302})Util.Round(head)local status=label({Text
+=Locale.T('Preparing'),FontFace=Theme.Fonts.Regular,TextSize=12,TextTruncate=
+Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-70,0,16),Position=UDim2.fromOffset(0,
+34)})status.TextColor3=Color3.fromRGB(170,170,178)local eta=label({Text='',
+FontFace=Theme.Fonts.Mono,TextSize=11,TextXAlignment=Enum.TextXAlignment.Right,
+Size=UDim2.new(1,0,0,16),Position=UDim2.fromOffset(0,34)})eta.TextColor3=Color3.
+fromRGB(120,120,128)if self.HidePct then pct.Visible=false end self.Info,self.
+Pct,self.Fill,self.Track,self.Status,self.Eta,self.TitleLabel=info,pct,fill,
+track,status,eta,title task.delay(0.5,function()if self.Root then for _,l in{
+title,pct,status,eta}do Tween.Play(l,{TextTransparency=0},0.6)end Tween.Play(
+track,{BackgroundTransparency=0.86},0.6)fill.Visible=true end end)end function
+Intros:_progress(t)if self.Exploding then return 1 end local window=self.Window
+local actual=window:GetLoadProgress()if window.State~='Loading'then actual=math.
+max(actual,0.98)end self.Display=math.max(self.Display,math.min(actual,0.99))
+local shown=self._shown or 0 shown+=(self.Display-shown)*0.12 self._shown=shown
+table.insert(self.Samples,{t,self.Display})while#self.Samples>2 and self.Samples
+[1][1]<t-1.5 do table.remove(self.Samples,1)end local first=self.Samples[1]local
+rate=(self.Display-first[2])/math.max(t-first[1],0.05)local etaText if rate>
+0.002 and self.Display<0.98 then local left=(1-self.Display)/rate etaText=left<1
+and'<1 s'or('~'..math.ceil(left)..' s')else etaText=string.format('%.1f s',t)end
+self.EtaText=etaText if self.Fill then self.Fill.Size=UDim2.fromScale(shown,1)
+self.Pct.Text=math.floor(shown*100+0.5)..'%'self.Eta.Text=etaText end return
+shown end function Intros:SetStage(text)if not text then return end if self.
+Status then self.Status.Text=text end if self.Def.Stage then self.Def.Stage(self
+,text)end end function Intros:Finish(onOpen)if self.Finishing then return end
+self.Finishing=true task.spawn(function()local start=os.clock()while self.Root
+and(self._shown or 0)<0.97 and os.clock()-start<1.2 do self.Display=1 RunService
+.RenderStepped:Wait()end if not self.Root then return end task.wait(0.25)self.
+Exploding=true self.ExplodeAt=os.clock()if self.Fill then self.Fill.Size=UDim2.
+fromScale(1,1)self.Pct.Text='100%'self.Status.Text=Locale.T('Ready')self.Eta.
+Text=''for _,l in{self.TitleLabel,self.Pct,self.Status,self.Eta}do Tween.Play(l,
+{TextTransparency=1},0.35)end Tween.Play(self.Track,{BackgroundTransparency=1},
+0.35)Tween.Play(self.Fill,{BackgroundTransparency=1},0.35)end local delay,
+ownAnimation=self.Def.Burst(self)Tween.Play(self.Dim,{BackgroundTransparency=1},
+0.8,Enum.EasingStyle.Sine)task.delay(delay or 0.2,function()if onOpen then local
+stage=self.Stage local point=stage and(stage.AbsolutePosition+stage.AbsoluteSize
+/2-Shared.Gui.Root.AbsolutePosition)onOpen((not ownAnimation)and point or nil)
+end end)task.delay(1.1,function()self:Destroy()end)end)end function Intros:
+Destroy()if self.Conn then self.Conn:Disconnect()self.Conn=nil end if self.Root
+then self.Root:Destroy()self.Root=nil end end return Intros end function
+__DARKLUA_BUNDLE_MODULES.z()local v=__DARKLUA_BUNDLE_MODULES.cache.z if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end
+do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal
+=__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
 __DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
 __DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
@@ -4326,45 +4338,68 @@ Paint(label,{TextColor3='TextDim'},0.15)end end)button.Activated:Connect(
 function()self:SelectTab(tab)end)self:_paintTab(tab,false)end function Window:
 _paintTab(tab,animate)local on=self.CurrentTab==tab local t=animate and 0.18 or
 0 if not tab.Button then return end Tween.Play(tab.Button,{
-BackgroundTransparency=on and 0 or 1},t)Theme.Paint(tab._label,{TextColor3=on
-and'Text'or'TextDim'},t)Theme.Paint(tab._icon,{ImageColor3=on and'Accent'or
-'TextMute'},t)Tween.Play(tab._bar,{Size=UDim2.fromOffset(2,on and 16 or 0)},on
-and 0.3 or 0.15,on and Enum.EasingStyle.Back or Enum.EasingStyle.Quint)if tab.
-_glow then Tween.Play(tab._glow,{Transparency=on and 0.82 or 1},t)end end
-function Window:_buildMain()local main=Util.New('Frame',{Name='Main',
-BackgroundTransparency=1,Size=UDim2.new(1,-self.SidebarWidth,1,0),Position=UDim2
-.fromOffset(self.SidebarWidth,0),ZIndex=2,Parent=self.Canvas})self.Main=main
-local header=Util.New('Frame',{Name='Header',BackgroundTransparency=1,Size=UDim2
-.new(1,0,0,56),ZIndex=3,Parent=main})self.Header=header self:_makeDraggable(
-header)local back=Util.New('ImageButton',{BackgroundTransparency=1,Image=Icons.
-Get('arrow-left')or'',Size=UDim2.fromOffset(18,18),Position=UDim2.new(0,16,0.5,-
-9),Visible=false,ZIndex=4,Parent=header})Theme.Paint(back,{ImageColor3='TextDim'
-})back.Activated:Connect(function()self:Back()end)local title=Util.Label({
-FontFace=Theme.Fonts.SemiBold,TextSize=17,Size=UDim2.new(1,-260,0,20),Position=
-UDim2.fromOffset(18,10),TextTruncate=Enum.TextTruncate.AtEnd,ZIndex=4,Parent=
-header})Theme.Paint(title,{TextColor3='Text'})local desc=Util.Label({FontFace=
-Theme.Fonts.Regular,TextSize=11,Size=UDim2.new(1,-260,0,14),Position=UDim2.
-fromOffset(18,31),TextTruncate=Enum.TextTruncate.AtEnd,ZIndex=4,Parent=header})
-Theme.Paint(desc,{TextColor3='TextMute'})self._back,self._title,self._desc=back,
-title,desc local actions=Util.New('Frame',{BackgroundTransparency=1,
-AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.new(0,0,1,0),AnchorPoint=Vector2.
-new(1,0),Position=UDim2.new(1,-12,0,0),ZIndex=4,Parent=header})Util.List(actions
-,6,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.Right,Enum.
-VerticalAlignment.Center)self._actions=actions if self.Options.ConfigButton~=
-false then self:_buildConfigChip(actions)end self._homeButton=self:
-_headerButton('home',10,function()if self.HomeTab then self.HomeTab:Select()end
-end,'Home')self._homeButton.Visible=false self._settingsButton=self:
-_headerButton('settings',11,function()if self.SettingsTabRef then self.
-SettingsTabRef:Select()end end,'Settings')self._settingsButton.Visible=false
-self._bell=self:_headerButton('bell',12,function()self:OpenNotifications()end,
-'NotificationCenter')local badge=Util.Label({Text='',FontFace=Theme.Fonts.Bold,
-TextSize=9,TextXAlignment=Enum.TextXAlignment.Center,Size=UDim2.fromOffset(14,14
-),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,2,0,-2),
-BackgroundTransparency=0,Visible=false,ZIndex=6,Parent=self._bell})Util.Round(
-badge)Theme.Paint(badge,{BackgroundColor3='Accent',TextColor3='AccentInk'})self.
-_bellBadge=badge self.Library.NotificationsChanged:Connect(function()local n=
-self.Library.Unread or 0 badge.Visible=n>0 badge.Text=n>9 and'9+'or tostring(n)
-end)self:_headerButton('minimize-2',19,function()self:SetMini(true)end,
+BackgroundTransparency=1},t)Theme.Paint(tab._label,{TextColor3=on and'Text'or
+'TextDim'},t)Theme.Paint(tab._icon,{ImageColor3=on and'Accent'or'TextMute'},t)
+tab._bar.Size=UDim2.fromOffset(2,0)if tab._glow then tab._glow.Transparency=1
+end if on then self:_movePill(animate)end end function Window:_tabPill()if self.
+_pill then return self._pill end local list=self.TabList local side=list.Parent
+local pill=Util.New('Frame',{Name='TabPill',BorderSizePixel=0,Visible=false,
+ZIndex=2,Parent=side})Util.Corner(6,pill)Theme.Paint(pill,{BackgroundColor3=
+'Surface2'})local stroke=Util.Stroke(pill,nil,1,0.82)Theme.Paint(stroke,{Color=
+'Accent'})local bar=Util.New('Frame',{BorderSizePixel=0,AnchorPoint=Vector2.new(
+0,0.5),Position=UDim2.fromScale(0,0.5),Size=UDim2.fromOffset(2,16),ZIndex=3,
+Parent=pill})Util.Round(bar)Theme.Paint(bar,{BackgroundColor3='Accent'})self.
+_pill,self._pillBar=pill,bar local function follow()self:_movePill(false)end
+self.Maid:Connect(list:GetPropertyChangedSignal('CanvasPosition'),follow)self.
+Maid:Connect(list:GetPropertyChangedSignal('AbsoluteSize'),follow)self.Maid:
+Connect(list:GetPropertyChangedSignal('AbsoluteCanvasSize'),follow)return pill
+end function Window:_movePill(animate)local pill=self:_tabPill()local tab=self.
+CurrentTab local button=tab and tab.Button if not(button and button.Visible and
+button.Parent)then pill.Visible=false return end local side=pill.Parent local k=
+self.Holder.AbsoluteSize.X/math.max(self.Holder.Size.X.Offset,1)if k<=0.01 then
+task.defer(function()self:_movePill(false)end)return end local pos=(button.
+AbsolutePosition-side.AbsolutePosition)/k local size=button.AbsoluteSize/k local
+list=self.TabList local top=(list.AbsolutePosition.Y-side.AbsolutePosition.Y)/k
+local bottom=top+list.AbsoluteSize.Y/k pill.Visible=size.Y>1 and pos.Y+size.Y>
+top+2 and pos.Y<bottom-2 local goal={Position=UDim2.fromOffset(pos.X,pos.Y),Size
+=UDim2.fromOffset(size.X,size.Y)}if animate and Tween.Speed>0 and pill.Size.Y.
+Offset>0 then Tween.Play(pill,goal,0.42,Enum.EasingStyle.Back,Enum.
+EasingDirection.Out)self._pillBar.Size=UDim2.fromOffset(2,6)Tween.Play(self.
+_pillBar,{Size=UDim2.fromOffset(2,16)},0.5,Enum.EasingStyle.Back)else pill.
+Position,pill.Size=goal.Position,goal.Size end end function Window:_buildMain()
+local main=Util.New('Frame',{Name='Main',BackgroundTransparency=1,Size=UDim2.
+new(1,-self.SidebarWidth,1,0),Position=UDim2.fromOffset(self.SidebarWidth,0),
+ZIndex=2,Parent=self.Canvas})self.Main=main local header=Util.New('Frame',{Name=
+'Header',BackgroundTransparency=1,Size=UDim2.new(1,0,0,56),ZIndex=3,Parent=main}
+)self.Header=header self:_makeDraggable(header)local back=Util.New('ImageButton'
+,{BackgroundTransparency=1,Image=Icons.Get('arrow-left')or'',Size=UDim2.
+fromOffset(18,18),Position=UDim2.new(0,16,0.5,-9),Visible=false,ZIndex=4,Parent=
+header})Theme.Paint(back,{ImageColor3='TextDim'})back.Activated:Connect(function
+()self:Back()end)local title=Util.Label({FontFace=Theme.Fonts.SemiBold,TextSize=
+17,Size=UDim2.new(1,-260,0,20),Position=UDim2.fromOffset(18,10),TextTruncate=
+Enum.TextTruncate.AtEnd,ZIndex=4,Parent=header})Theme.Paint(title,{TextColor3=
+'Text'})local desc=Util.Label({FontFace=Theme.Fonts.Regular,TextSize=11,Size=
+UDim2.new(1,-260,0,14),Position=UDim2.fromOffset(18,31),TextTruncate=Enum.
+TextTruncate.AtEnd,ZIndex=4,Parent=header})Theme.Paint(desc,{TextColor3=
+'TextMute'})self._back,self._title,self._desc=back,title,desc local actions=Util
+.New('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=
+UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-12,0,0),
+ZIndex=4,Parent=header})Util.List(actions,6,Enum.FillDirection.Horizontal,Enum.
+HorizontalAlignment.Right,Enum.VerticalAlignment.Center)self._actions=actions if
+self.Options.ConfigButton~=false then self:_buildConfigChip(actions)end self.
+_homeButton=self:_headerButton('home',10,function()if self.HomeTab then self.
+HomeTab:Select()end end,'Home')self._homeButton.Visible=false self.
+_settingsButton=self:_headerButton('settings',11,function()if self.
+SettingsTabRef then self.SettingsTabRef:Select()end end,'Settings')self.
+_settingsButton.Visible=false self._bell=self:_headerButton('bell',12,function()
+self:OpenNotifications()end,'NotificationCenter')local badge=Util.Label({Text=''
+,FontFace=Theme.Fonts.Bold,TextSize=9,TextXAlignment=Enum.TextXAlignment.Center,
+Size=UDim2.fromOffset(14,14),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,2
+,0,-2),BackgroundTransparency=0,Visible=false,ZIndex=6,Parent=self._bell})Util.
+Round(badge)Theme.Paint(badge,{BackgroundColor3='Accent',TextColor3='AccentInk'}
+)self._bellBadge=badge self.Library.NotificationsChanged:Connect(function()local
+n=self.Library.Unread or 0 badge.Visible=n>0 badge.Text=n>9 and'9+'or tostring(n
+)end)self:_headerButton('minimize-2',19,function()self:SetMini(true)end,
 'MiniMode')self:_headerButton('minus',20,function()self:Close()end,'Hide')local
 line=Util.New('Frame',{Size=UDim2.new(1,-24,0,1),Position=UDim2.new(0,12,1,-1),
 BorderSizePixel=0,ZIndex=3,Parent=header})Theme.Paint(line,{BackgroundColor3=
@@ -4627,83 +4662,92 @@ page.Hidden then table.clear(self._history)end local oldTab=self.CurrentTab self
 .CurrentTab,self.CurrentPage=tab,page tab._lastPage=not page.Hidden and page or
 tab._lastPage if previous and previous.Frame then previous.Frame.Visible=false
 end page:_ensureMounted()local frame=page.Frame frame.Visible=true if Tween.
-Speed>0 and self.State~='Loading'then frame.Position=UDim2.fromOffset(0,8)Tween.
-Play(frame,{Position=UDim2.fromOffset(0,0)},0.25)end if oldTab~=tab then if
-oldTab then self:_paintTab(oldTab,true)end self:_paintTab(tab,true)self.
-TabChanged:Fire(tab,oldTab)tab.Selected:Fire()end page.Selected:Fire()self.
-PageChanged:Fire(page,previous)self:_refreshHeader()if self.State=='Ready'then
-self:_saveState()end end function Window:Back()local last=table.remove(self.
-_history)if last then self:_selectPage(last,true)elseif self.CurrentPage and
-self.CurrentPage.Hidden then self:SelectTab(self.CurrentTab)end return self end
-function Window:_refreshHeader()local tab,page=self.CurrentTab,self.CurrentPage
-if not tab then return end local inner=page and page.Hidden self._back.Visible=
-inner==true local x=inner and 42 or 18 self._title.Position=UDim2.fromOffset(x,(
-tab.Description or(inner and page.Description))and 10 or 18)self._desc.Position=
-UDim2.fromOffset(x,31)self._title.Text=inner and(tab.Name..'  \u{203a}  '..page.
-Name)or tab.Name local d=inner and page.Description or tab.Description self.
-_desc.Text=d or''self._desc.Visible=d~=nil self:_refreshPills()end function
-Window:_refreshPills()local tab=self.CurrentTab for _,c in self._pills:
-GetChildren()do if c:IsA('GuiObject')then c:Destroy()end end local visible={}for
-_,p in tab and tab.Pages or{}do if not p.Hidden then table.insert(visible,p)end
-end local show=#visible>1 and not(self.CurrentPage and self.CurrentPage.Hidden)
-self._pills.Visible=show self.Content.Size=UDim2.new(1,0,1,show and-96 or-58)
-self.Content.Position=UDim2.fromOffset(0,show and 96 or 58)if not show then
-return end for i,page in visible do local on=page==self.CurrentPage local pill=
-Util.New('TextButton',{Text='',AutoButtonColor=false,AutomaticSize=Enum.
-AutomaticSize.X,Size=UDim2.fromOffset(0,26),LayoutOrder=i,ZIndex=4,Parent=self.
-_pills})Util.Corner(13,pill)Util.Padding(pill,0,12,0,12)Theme.Paint(pill,{
-BackgroundColor3=on and'Accent'or'Surface2'})local stroke=Util.Stroke(pill)Theme
-.Paint(stroke,{Color=on and'Accent'or'Stroke'})local holder=Util.New('Frame',{
-BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
-fromScale(0,1),ZIndex=4,Parent=pill})Util.List(holder,5,Enum.FillDirection.
-Horizontal,Enum.HorizontalAlignment.Left,Enum.VerticalAlignment.Center)local
-iconId=Icons.Get(page.Icon)if iconId then local img=Util.New('ImageLabel',{
-BackgroundTransparency=1,Image=iconId,Size=UDim2.fromOffset(13,13),ZIndex=4,
-Parent=holder})Theme.Paint(img,{ImageColor3=on and'AccentInk'or'TextDim'})end
-local label=Util.Label({Text=page.Name,FontFace=Theme.Fonts.SemiBold,TextSize=12
-,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0,1),LayoutOrder=2,
-ZIndex=4,Parent=holder})Theme.Paint(label,{TextColor3=on and'AccentInk'or
-'TextDim'})pill.Activated:Connect(function()page:Select()end)end end function
-Window:_enqueue(element)table.insert(self._queue,element)local tab=element.Tab
-if tab then tab._total+=1 if self.Skeleton then self.Skeleton:AddTab(tab)end end
-self._lastDeclare=os.clock()if not self._pumping then self._pumping=true task.
-defer(function()self:_pump()end)end end function Window:_pump()self._pumping=
-true local budget=self.Loading.Budget or 0.004 while#self._queue>0 and not self.
-_destroyed do local start=os.clock()while#self._queue>0 and os.clock()-start<
-budget do local el=table.remove(self._queue,1)if not el._destroyed then self.
-_buildingTab=el.Tab local ok,err=pcall(function()local section=el.Section
-section:_ensureMounted()el:_mount(section.Body,el._order)end)if not ok then
-warn("[Proximity] failed to build '"..tostring(el.Name).."': "..tostring(err))if
-el.Tab then el.Tab._errors=(el.Tab._errors or 0)+1 end end end if el.Tab then el
-.Tab._done+=1 end end if self.Skeleton then local tab=self._buildingTab self.
-Skeleton:Update(tab and(Locale.T('Building')..' \u{b7} '..tab.Name..'  '..tab.
-_done..'/'..tab._total)or nil)end task.wait()end self._buildingTab=nil self.
-_pumping=false self:_setStage()self:_checkReady()end function Window:_setStage(
-text)if self.Skeleton then self.Skeleton:Update(text)end if self.Loader and text
-then self.Loader:SetStage(text)end end function Window:GetLoadProgress()local
-total,done=0,0 for _,tab in self.Tabs do total+=tab._total done+=tab._done end
-local elements=total for _,t in self._tasks do local weight=math.max(t.Weight,
-elements/#self._tasks)total+=weight done+=weight*(t.Finished and 1 or t.Amount)
-end if total==0 then return 0 end return done/total end function Window:
-_checkReady()if self.State~='Loading'or self._checking then return end local 
-function blocked()if#self._queue>0 then return true end for _,t in self._tasks
-do if not t.Finished then return true end end if self._explicitReady then return
-false end if not self.AutoReady then return true end return os.clock()-self.
-_lastDeclare<0.2 end if blocked()then if self.AutoReady or self._explicitReady
-then self._checking=true task.delay(0.1,function()self._checking=false self:
-_checkReady()end)end return end self:_finishLoading()end function Window:
-_finishLoading()if self.State~='Loading'then return end self.State='Finishing'
-self._declaring=false local Lib=self.Library task.spawn(function()if self.
-Options.AutoLoad~=false and Lib:GetAutoLoad()and not Lib._autoLoaded then Lib.
-_autoLoaded=true self:_setStage(Locale.T('ApplyingConfig')..' \u{b7} '..Lib:
-GetAutoLoad())Lib:LoadAutoConfig()Lib.CurrentConfig=Lib:GetAutoLoad()end local
-started=(self.Skeleton and self.Skeleton.Started)or(self.Loader and self.Loader.
-Started)local elapsed=started and(os.clock()-started)or 0 local wait=(self.
-Loading.MinTime or 0)-elapsed if wait>0 and Tween.Speed>0 then task.wait(wait)
-end self:_reveal()end)end function Window:_reveal(force)if self.State=='Ready'
-then return end self.State='Ready'self._declaring=false local Lib=self.Library
-Lib._autoSaveArmed=true local saved=Lib:GetSetting('Window.'..self.Title)if
-type(saved)=='table'and saved.Tab and not self._restoredTab then self.
+Speed>0 and self.State~='Loading'then local dir=1 if oldTab and oldTab~=tab and(
+tab.Order or 0)<(oldTab.Order or 0)then dir=-1 end if fromBack then frame.
+Position=UDim2.fromOffset(-16,0)else frame.Position=UDim2.fromOffset(0,14*dir)
+end Tween.Play(frame,{Position=UDim2.fromOffset(0,0)},0.42,Enum.EasingStyle.
+Quint)for i,section in page.Sections or{}do local stroke=section.Stroke if
+stroke then stroke.Transparency=1 task.delay(0.035*i,function()Tween.Play(stroke
+,{Transparency=0},0.4)end)end end end if oldTab~=tab then if oldTab then self:
+_paintTab(oldTab,true)end self:_paintTab(tab,true)self.TabChanged:Fire(tab,
+oldTab)tab.Selected:Fire()end page.Selected:Fire()self.PageChanged:Fire(page,
+previous)self:_refreshHeader()local title=self._title if title and previous and
+Tween.Speed>0 and self.State~='Loading'then local rest=title.Position title.
+TextTransparency=1 title.Position=rest+UDim2.fromOffset(10,0)Tween.Play(title,{
+TextTransparency=0,Position=rest},0.4,Enum.EasingStyle.Quint)if self._desc then
+self._desc.TextTransparency=1 Tween.Play(self._desc,{TextTransparency=0},0.5)end
+end if self.State=='Ready'then self:_saveState()end end function Window:Back()
+local last=table.remove(self._history)if last then self:_selectPage(last,true)
+elseif self.CurrentPage and self.CurrentPage.Hidden then self:SelectTab(self.
+CurrentTab)end return self end function Window:_refreshHeader()local tab,page=
+self.CurrentTab,self.CurrentPage if not tab then return end local inner=page and
+page.Hidden self._back.Visible=inner==true local x=inner and 42 or 18 self.
+_title.Position=UDim2.fromOffset(x,(tab.Description or(inner and page.
+Description))and 10 or 18)self._desc.Position=UDim2.fromOffset(x,31)self._title.
+Text=inner and(tab.Name..'  \u{203a}  '..page.Name)or tab.Name local d=inner and
+page.Description or tab.Description self._desc.Text=d or''self._desc.Visible=d~=
+nil self:_refreshPills()end function Window:_refreshPills()local tab=self.
+CurrentTab for _,c in self._pills:GetChildren()do if c:IsA('GuiObject')then c:
+Destroy()end end local visible={}for _,p in tab and tab.Pages or{}do if not p.
+Hidden then table.insert(visible,p)end end local show=#visible>1 and not(self.
+CurrentPage and self.CurrentPage.Hidden)self._pills.Visible=show self.Content.
+Size=UDim2.new(1,0,1,show and-96 or-58)self.Content.Position=UDim2.fromOffset(0,
+show and 96 or 58)if not show then return end for i,page in visible do local on=
+page==self.CurrentPage local pill=Util.New('TextButton',{Text='',AutoButtonColor
+=false,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,26),
+LayoutOrder=i,ZIndex=4,Parent=self._pills})Util.Corner(13,pill)Util.Padding(pill
+,0,12,0,12)Theme.Paint(pill,{BackgroundColor3=on and'Accent'or'Surface2'})local
+stroke=Util.Stroke(pill)Theme.Paint(stroke,{Color=on and'Accent'or'Stroke'})
+local holder=Util.New('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.
+AutomaticSize.X,Size=UDim2.fromScale(0,1),ZIndex=4,Parent=pill})Util.List(holder
+,5,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.Left,Enum.
+VerticalAlignment.Center)local iconId=Icons.Get(page.Icon)if iconId then local
+img=Util.New('ImageLabel',{BackgroundTransparency=1,Image=iconId,Size=UDim2.
+fromOffset(13,13),ZIndex=4,Parent=holder})Theme.Paint(img,{ImageColor3=on and
+'AccentInk'or'TextDim'})end local label=Util.Label({Text=page.Name,FontFace=
+Theme.Fonts.SemiBold,TextSize=12,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
+fromScale(0,1),LayoutOrder=2,ZIndex=4,Parent=holder})Theme.Paint(label,{
+TextColor3=on and'AccentInk'or'TextDim'})pill.Activated:Connect(function()page:
+Select()end)end end function Window:_enqueue(element)table.insert(self._queue,
+element)local tab=element.Tab if tab then tab._total+=1 if self.Skeleton then
+self.Skeleton:AddTab(tab)end end self._lastDeclare=os.clock()if not self.
+_pumping then self._pumping=true task.defer(function()self:_pump()end)end end
+function Window:_pump()self._pumping=true local budget=self.Loading.Budget or
+0.004 while#self._queue>0 and not self._destroyed do local start=os.clock()while
+#self._queue>0 and os.clock()-start<budget do local el=table.remove(self._queue,
+1)if not el._destroyed then self._buildingTab=el.Tab local ok,err=pcall(function
+()local section=el.Section section:_ensureMounted()el:_mount(section.Body,el.
+_order)end)if not ok then warn("[Proximity] failed to build '"..tostring(el.Name
+).."': "..tostring(err))if el.Tab then el.Tab._errors=(el.Tab._errors or 0)+1
+end end end if el.Tab then el.Tab._done+=1 end end if self.Skeleton then local
+tab=self._buildingTab self.Skeleton:Update(tab and(Locale.T('Building')..
+' \u{b7} '..tab.Name..'  '..tab._done..'/'..tab._total)or nil)end task.wait()end
+self._buildingTab=nil self._pumping=false self:_setStage()self:_checkReady()end
+function Window:_setStage(text)if self.Skeleton then self.Skeleton:Update(text)
+end if self.Loader and text then self.Loader:SetStage(text)end end function
+Window:GetLoadProgress()local total,done=0,0 for _,tab in self.Tabs do total+=
+tab._total done+=tab._done end local elements=total for _,t in self._tasks do
+local weight=math.max(t.Weight,elements/#self._tasks)total+=weight done+=weight*
+(t.Finished and 1 or t.Amount)end if total==0 then return 0 end return done/
+total end function Window:_checkReady()if self.State~='Loading'or self._checking
+then return end local function blocked()if#self._queue>0 then return true end
+for _,t in self._tasks do if not t.Finished then return true end end if self.
+_explicitReady then return false end if not self.AutoReady then return true end
+return os.clock()-self._lastDeclare<0.2 end if blocked()then if self.AutoReady
+or self._explicitReady then self._checking=true task.delay(0.1,function()self.
+_checking=false self:_checkReady()end)end return end self:_finishLoading()end
+function Window:_finishLoading()if self.State~='Loading'then return end self.
+State='Finishing'self._declaring=false local Lib=self.Library task.spawn(
+function()if self.Options.AutoLoad~=false and Lib:GetAutoLoad()and not Lib.
+_autoLoaded then Lib._autoLoaded=true self:_setStage(Locale.T('ApplyingConfig')
+..' \u{b7} '..Lib:GetAutoLoad())Lib:LoadAutoConfig()Lib.CurrentConfig=Lib:
+GetAutoLoad()end local started=(self.Skeleton and self.Skeleton.Started)or(self.
+Loader and self.Loader.Started)local elapsed=started and(os.clock()-started)or 0
+local wait=(self.Loading.MinTime or 0)-elapsed if wait>0 and Tween.Speed>0 then
+task.wait(wait)end self:_reveal()end)end function Window:_reveal(force)if self.
+State=='Ready'then return end self.State='Ready'self._declaring=false local Lib=
+self.Library Lib._autoSaveArmed=true local saved=Lib:GetSetting('Window.'..self.
+Title)if type(saved)=='table'and saved.Tab and not self._restoredTab then self.
 _restoredTab=true local tab=self:GetTab(saved.Tab)if tab then self:SelectTab(tab
 )end end local function rise()local page=self.CurrentPage if page and page.Frame
 and Tween.Speed>0 then page.Frame.Position=UDim2.fromOffset(0,10)Tween.Play(page

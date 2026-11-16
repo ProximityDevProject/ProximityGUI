@@ -561,12 +561,77 @@ function Window:_paintTab(tab, animate)
 	if not tab.Button then
 		return
 	end
-	Tween.Play(tab.Button, { BackgroundTransparency = on and 0 or 1 }, t)
+	-- the highlight itself is one pill that glides between tabs (_movePill);
+	-- the button only changes its text and icon colour
+	Tween.Play(tab.Button, { BackgroundTransparency = 1 }, t)
 	Theme.Paint(tab._label, { TextColor3 = on and "Text" or "TextDim" }, t)
 	Theme.Paint(tab._icon, { ImageColor3 = on and "Accent" or "TextMute" }, t)
-	Tween.Play(tab._bar, { Size = UDim2.fromOffset(2, on and 16 or 0) }, on and 0.3 or 0.15, on and Enum.EasingStyle.Back or Enum.EasingStyle.Quint)
+	tab._bar.Size = UDim2.fromOffset(2, 0)
 	if tab._glow then
-		Tween.Play(tab._glow, { Transparency = on and 0.82 or 1 }, t)
+		tab._glow.Transparency = 1
+	end
+	if on then
+		self:_movePill(animate)
+	end
+end
+
+-- One highlight for the current tab, sliding (with a little stretch) from
+-- the old tab to the new one, and following the list when it scrolls.
+function Window:_tabPill()
+	if self._pill then
+		return self._pill
+	end
+	local list = self.TabList
+	local side = list.Parent
+	local pill = Util.New("Frame", { Name = "TabPill", BorderSizePixel = 0, Visible = false, ZIndex = 2, Parent = side })
+	Util.Corner(6, pill)
+	Theme.Paint(pill, { BackgroundColor3 = "Surface2" })
+	local stroke = Util.Stroke(pill, nil, 1, 0.82)
+	Theme.Paint(stroke, { Color = "Accent" })
+	local bar = Util.New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(2, 16), ZIndex = 3, Parent = pill })
+	Util.Round(bar)
+	Theme.Paint(bar, { BackgroundColor3 = "Accent" })
+	self._pill, self._pillBar = pill, bar
+	local function follow()
+		self:_movePill(false)
+	end
+	self.Maid:Connect(list:GetPropertyChangedSignal("CanvasPosition"), follow)
+	self.Maid:Connect(list:GetPropertyChangedSignal("AbsoluteSize"), follow)
+	self.Maid:Connect(list:GetPropertyChangedSignal("AbsoluteCanvasSize"), follow)
+	return pill
+end
+
+function Window:_movePill(animate)
+	local pill = self:_tabPill()
+	local tab = self.CurrentTab
+	local button = tab and tab.Button
+	if not (button and button.Visible and button.Parent) then
+		pill.Visible = false
+		return
+	end
+	local side = pill.Parent
+	local k = self.Holder.AbsoluteSize.X / math.max(self.Holder.Size.X.Offset, 1)
+	if k <= 0.01 then
+		task.defer(function()
+			self:_movePill(false)
+		end)
+		return
+	end
+	local pos = (button.AbsolutePosition - side.AbsolutePosition) / k
+	local size = button.AbsoluteSize / k
+	-- hide it when its tab is scrolled out of the list
+	local list = self.TabList
+	local top = (list.AbsolutePosition.Y - side.AbsolutePosition.Y) / k
+	local bottom = top + list.AbsoluteSize.Y / k
+	pill.Visible = size.Y > 1 and pos.Y + size.Y > top + 2 and pos.Y < bottom - 2
+	local goal = { Position = UDim2.fromOffset(pos.X, pos.Y), Size = UDim2.fromOffset(size.X, size.Y) }
+	if animate and Tween.Speed > 0 and pill.Size.Y.Offset > 0 then
+		Tween.Play(pill, goal, 0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		-- the accent bar squeezes while travelling and springs back on arrival
+		self._pillBar.Size = UDim2.fromOffset(2, 6)
+		Tween.Play(self._pillBar, { Size = UDim2.fromOffset(2, 16) }, 0.5, Enum.EasingStyle.Back)
+	else
+		pill.Position, pill.Size = goal.Position, goal.Size
 	end
 end
 
@@ -1265,8 +1330,28 @@ function Window:_selectPage(page, fromBack)
 	local frame = page.Frame
 	frame.Visible = true
 	if Tween.Speed > 0 and self.State ~= "Loading" then
-		frame.Position = UDim2.fromOffset(0, 8)
-		Tween.Play(frame, { Position = UDim2.fromOffset(0, 0) }, 0.25)
+		-- the new page comes from the direction of travel: a tab further down
+		-- rises from below, one further up drops in from above; going back
+		-- slides in from the left. Sections then light up one after another.
+		local dir = 1
+		if oldTab and oldTab ~= tab and (tab.Order or 0) < (oldTab.Order or 0) then
+			dir = -1
+		end
+		if fromBack then
+			frame.Position = UDim2.fromOffset(-16, 0)
+		else
+			frame.Position = UDim2.fromOffset(0, 14 * dir)
+		end
+		Tween.Play(frame, { Position = UDim2.fromOffset(0, 0) }, 0.42, Enum.EasingStyle.Quint)
+		for i, section in page.Sections or {} do
+			local stroke = section.Stroke
+			if stroke then
+				stroke.Transparency = 1
+				task.delay(0.035 * i, function()
+					Tween.Play(stroke, { Transparency = 0 }, 0.4)
+				end)
+			end
+		end
 	end
 	if oldTab ~= tab then
 		if oldTab then
@@ -1279,6 +1364,18 @@ function Window:_selectPage(page, fromBack)
 	page.Selected:Fire()
 	self.PageChanged:Fire(page, previous)
 	self:_refreshHeader()
+	-- the title slides in to its place with the new name
+	local title = self._title
+	if title and previous and Tween.Speed > 0 and self.State ~= "Loading" then
+		local rest = title.Position
+		title.TextTransparency = 1
+		title.Position = rest + UDim2.fromOffset(10, 0)
+		Tween.Play(title, { TextTransparency = 0, Position = rest }, 0.4, Enum.EasingStyle.Quint)
+		if self._desc then
+			self._desc.TextTransparency = 1
+			Tween.Play(self._desc, { TextTransparency = 0 }, 0.5)
+		end
+	end
 	if self.State == "Ready" then
 		self:_saveState()
 	end
