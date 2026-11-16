@@ -3854,41 +3854,42 @@ BackgroundTransparency=1-appear*0.94 self.PanelStroke.Transparency=1-appear self
 TextTransparency=1-appear end self.Rule.BackgroundTransparency=1-appear self.
 Typed+=dt*120 local width=26 local filled=math.floor(shown*width+0.5)local bar=
 '['..string.rep('#',filled)..string.rep('.',width-filled)..']'local pct=string.
-format('%3d%%',math.floor(shown*100+0.5))local eta=self.EtaText or''local caret=
-(math.floor(t*2.2)%2==0)and'_'or' 'local budget=math.floor(self.Typed)local out=
-{}for _,line in self.Lines do local plain=line.Plain if budget<=0 then break end
-if budget>=#plain then table.insert(out,line.Rich)budget-=#plain else table.
-insert(out,escape(string.sub(plain,1,budget)))budget=0 end end local done=budget
->0 while#out>7 do table.remove(out,1)end if done then table.insert(out,bar..'  '
-..pct..'  <font color="#7a7a84">'..eta..'</font>')table.insert(out,
-'<font color="#7a7a84">'..caret..'</font>')end self.Body.Text=table.concat(out,
-'\n')end,Stage=function(self,text)local base=string.match(text,'^(.-)%s*\u{b7}')
-or text local rich='<font color="#7a7a84">&gt;</font> '..escape(text)local last
-for _,line in self.Lines do if line.Base==base then last=line end end if last
-then local plain=string.gsub(rich,'<[^>]+>','')plain=string.gsub(string.gsub(
-string.gsub(plain,'&lt;','<'),'&gt;','>'),'&amp;','&')last.Rich,last.Plain=rich,
-plain else self:_term(rich)self.Lines[#self.Lines].Base=base end end,Burst=
-function(self)self:_term('<font color="#ffffff">ready.</font>')self.Typed+=999
-task.wait(0.3)self.Frozen=true Tween.Play(self.PanelScale,{Scale=1.03},0.35,Enum
-.EasingStyle.Quint)Tween.Play(self.Panel,{BackgroundTransparency=1},0.3)Tween.
-Play(self.PanelStroke,{Transparency=1},0.3)for _,l in{self.Head,self.Ver,self.
-Body}do Tween.Play(l,{TextTransparency=1},0.25)end Tween.Play(self.Rule,{
-BackgroundTransparency=1},0.25)return 0.1,true end}function Intros.Has(style)
-return Styles[style]~=nil end function Intros.new(window,options,style)options=
-options or{}local def=Styles[style]local self=setmetatable({},Intros)self.Window
-=window self.Def=def self.Started=os.clock()self.T=0 self.Display=0 self.Samples
-={}local root=frame(Shared.Gui.Root,{Name='ProximityIntro',Size=UDim2.fromScale(
-1,1),ZIndex=300})self.Root=root local dim=frame(root,{BackgroundColor3=Color3.
-new(0,0,0),Size=UDim2.fromScale(1,1),ZIndex=300})Util.Gradient(dim,nil,
-NumberSequence.new({NumberSequenceKeypoint.new(0,0.2),NumberSequenceKeypoint.
-new(0.5,0),NumberSequenceKeypoint.new(1,0.2)}),90)Tween.Play(dim,{
-BackgroundTransparency=options.Dim or def.Dim or 0.22},0.6,Enum.EasingStyle.Sine
-)self.Dim=dim local stage=frame(root,{AnchorPoint=Vector2.new(0.5,0.5),Position=
-UDim2.fromScale(0.5,0.46),Size=UDim2.fromOffset(STAGE,STAGE),ZIndex=301})local
-view=workspace.CurrentCamera.ViewportSize local scale=Util.New('UIScale',{Scale=
-math.clamp(math.min(view.X,view.Y)/820,0.55,1.2),Parent=stage})self.Stage=stage
-self.Center=Vector2.new(STAGE/2,STAGE/2)def.Build(self)if not def.NoInfo then
-self:_buildInfo(root,scale.Scale)end self.Conn=RunService.RenderStepped:Connect(
+format('%3d%%',math.floor(shown*100+0.5))local eta=escape(self.EtaText or'')
+local caret=(math.floor(t*2.2)%2==0)and'_'or' 'local budget=math.floor(self.
+Typed)local out={}for _,line in self.Lines do local plain=line.Plain if budget<=
+0 then break end if budget>=#plain then table.insert(out,line.Rich)budget-=#
+plain else table.insert(out,escape(string.sub(plain,1,budget)))budget=0 end end
+local done=budget>0 while#out>7 do table.remove(out,1)end if done then table.
+insert(out,bar..'  '..pct..'  <font color="#7a7a84">'..eta..'</font>')table.
+insert(out,'<font color="#7a7a84">'..caret..'</font>')end self.Body.Text=table.
+concat(out,'\n')end,Stage=function(self,text)local base=string.match(text,
+'^(.-)%s*\u{b7}')or text local rich='<font color="#7a7a84">&gt;</font> '..
+escape(text)local last for _,line in self.Lines do if line.Base==base then last=
+line end end if last then local plain=string.gsub(rich,'<[^>]+>','')plain=string
+.gsub(string.gsub(string.gsub(plain,'&lt;','<'),'&gt;','>'),'&amp;','&')last.
+Rich,last.Plain=rich,plain else self:_term(rich)self.Lines[#self.Lines].Base=
+base end end,Burst=function(self)self:_term(
+'<font color="#ffffff">ready.</font>')self.Typed+=999 task.wait(0.3)self.Frozen=
+true Tween.Play(self.PanelScale,{Scale=1.03},0.35,Enum.EasingStyle.Quint)Tween.
+Play(self.Panel,{BackgroundTransparency=1},0.3)Tween.Play(self.PanelStroke,{
+Transparency=1},0.3)for _,l in{self.Head,self.Ver,self.Body}do Tween.Play(l,{
+TextTransparency=1},0.25)end Tween.Play(self.Rule,{BackgroundTransparency=1},
+0.25)return 0.1,true end}function Intros.Has(style)return Styles[style]~=nil end
+function Intros.new(window,options,style)options=options or{}local def=Styles[
+style]local self=setmetatable({},Intros)self.Window=window self.Def=def self.
+Started=os.clock()self.T=0 self.Display=0 self.Samples={}local root=frame(Shared
+.Gui.Root,{Name='ProximityIntro',Size=UDim2.fromScale(1,1),ZIndex=300})self.Root
+=root local dim=frame(root,{BackgroundColor3=Color3.new(0,0,0),Size=UDim2.
+fromScale(1,1),ZIndex=300})Util.Gradient(dim,nil,NumberSequence.new({
+NumberSequenceKeypoint.new(0,0.2),NumberSequenceKeypoint.new(0.5,0),
+NumberSequenceKeypoint.new(1,0.2)}),90)Tween.Play(dim,{BackgroundTransparency=
+options.Dim or def.Dim or 0.22},0.6,Enum.EasingStyle.Sine)self.Dim=dim local
+stage=frame(root,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,
+0.46),Size=UDim2.fromOffset(STAGE,STAGE),ZIndex=301})local view=workspace.
+CurrentCamera.ViewportSize local scale=Util.New('UIScale',{Scale=math.clamp(math
+.min(view.X,view.Y)/820,0.55,1.2),Parent=stage})self.Stage=stage self.Center=
+Vector2.new(STAGE/2,STAGE/2)def.Build(self)if not def.NoInfo then self:
+_buildInfo(root,scale.Scale)end self.Conn=RunService.RenderStepped:Connect(
 function(dt)self.T+=math.min(dt,3.333333333333333E-2)local shown=self:_progress(
 os.clock()-self.Started)if not self.Frozen then def.Step(self,self.T,shown,math.
 min(dt,3.333333333333333E-2))end end)return self end function Intros:_term(rich)

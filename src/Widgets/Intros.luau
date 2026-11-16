@@ -436,7 +436,7 @@ Styles.Terminal = {
 		local filled = math.floor(shown * width + 0.5)
 		local bar = "[" .. string.rep("#", filled) .. string.rep(".", width - filled) .. "]"
 		local pct = string.format("%3d%%", math.floor(shown * 100 + 0.5))
-		local eta = self.EtaText or ""
+		local eta = escape(self.EtaText or "")
 		local caret = (math.floor(t * 2.2) % 2 == 0) and "_" or " "
 		local budget = math.floor(self.Typed)
 		local out = {}
