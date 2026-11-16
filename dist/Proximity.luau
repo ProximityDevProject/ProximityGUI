@@ -805,8 +805,9 @@ OpenAnimationHint='How the menu appears and hides',AnimPlanet=
 AnimSlide='Slide',AnimSwing='Swing',AnimWipe='Wipe',AnimUnfold='Unfold',AnimScan
 ='Scan',AnimFade='Fade',AnimNone='None',LoadingStyle='Loading screen',
 LoadingStyleHint='Applies the next time the script starts',LoadingPlanet=
-'Planet',LoadingSkeleton='Menu skeleton',LoadingNone='None'},ru={Search=
-'\u{41f}\u{43e}\u{438}\u{441}\u{43a}',SearchHint=
+'Planet',LoadingSkeleton='Menu skeleton',LoadingOrbit='Orbit',LoadingEclipse=
+'Eclipse',LoadingConstellation='Constellation',LoadingTerminal='Terminal',
+LoadingNone='None'},ru={Search='\u{41f}\u{43e}\u{438}\u{441}\u{43a}',SearchHint=
 '\u{41d}\u{430}\u{439}\u{434}\u{438} \u{444}\u{443}\u{43d}\u{43a}\u{446}\u{438}\u{44e}, \u{432}\u{43a}\u{43b}\u{430}\u{434}\u{43a}\u{443} \u{438}\u{43b}\u{438} \u{434}\u{435}\u{439}\u{441}\u{442}\u{432}\u{438}\u{435}'
 ,NoResults=
 '\u{41d}\u{438}\u{447}\u{435}\u{433}\u{43e} \u{43d}\u{435} \u{43d}\u{430}\u{448}\u{43b}\u{43e}\u{441}\u{44c}'
@@ -1037,6 +1038,10 @@ AnimNone=
 ,LoadingPlanet='\u{41f}\u{43b}\u{430}\u{43d}\u{435}\u{442}\u{430}',
 LoadingSkeleton=
 '\u{421}\u{43a}\u{435}\u{43b}\u{435}\u{442} \u{43c}\u{435}\u{43d}\u{44e}',
+LoadingOrbit='\u{41e}\u{440}\u{431}\u{438}\u{442}\u{44b}',LoadingEclipse=
+'\u{417}\u{430}\u{442}\u{43c}\u{435}\u{43d}\u{438}\u{435}',LoadingConstellation=
+'\u{421}\u{43e}\u{437}\u{432}\u{435}\u{437}\u{434}\u{438}\u{435}',
+LoadingTerminal='\u{422}\u{435}\u{440}\u{43c}\u{438}\u{43d}\u{430}\u{43b}',
 LoadingNone=
 '\u{411}\u{435}\u{437} \u{437}\u{430}\u{433}\u{440}\u{443}\u{437}\u{43a}\u{438}'
 }}Locale.Names={en='English',ru=
@@ -3682,25 +3687,279 @@ self.Conn then self.Conn:Disconnect()self.Conn=nil end if self.Root then self.
 Root:Destroy()self.Root=nil end end return Loader end function
 __DARKLUA_BUNDLE_MODULES.y()local v=__DARKLUA_BUNDLE_MODULES.cache.y if not v
 then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.y=v end return v.c end end
-do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal
-=__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
+do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
+__DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
+Shared=__DARKLUA_BUNDLE_MODULES.k()local RunService=Env.Service('RunService')
+local Intros={}Intros.__index=Intros Intros.Styles={'Orbit','Eclipse',
+'Constellation','Terminal'}local STAGE=420 local WHITE=Color3.new(1,1,1)local
+TAU=math.pi*2 local function escape(text)return(string.gsub(string.gsub(string.
+gsub(text,'&','&amp;'),'<','&lt;'),'>','&gt;'))end local function smooth(x)x=
+math.clamp(x,0,1)return x*x*(3-2*x)end local function frame(parent,props)props.
+BorderSizePixel=0 props.Parent=parent if props.BackgroundTransparency==nil then
+props.BackgroundTransparency=1 end return Util.New('Frame',props)end local 
+function dot(parent,size,z)local d=frame(parent,{AnchorPoint=Vector2.new(0.5,0.5
+),Size=UDim2.fromOffset(size,size),BackgroundColor3=WHITE,ZIndex=z or 303})Util.
+Round(d)return d end local function ring(parent,diameter,z,thickness)local r=
+frame(parent,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromOffset(STAGE/2
+,STAGE/2),Size=UDim2.fromOffset(diameter,diameter),ZIndex=z or 302})Util.Round(r
+)local stroke=Util.Stroke(r,WHITE,thickness or 1,1)return r,stroke end local 
+function placeLine(line,a,b)local d=b-a line.Position=UDim2.fromOffset((a.X+b.X)
+/2,(a.Y+b.Y)/2)line.Size=UDim2.fromOffset(math.max(d.Magnitude,0.01),line.Size.Y
+.Offset)line.Rotation=math.deg(math.atan2(d.Y,d.X))end local Styles={}Styles.
+Orbit={Build=function(self)local c=self.Center self.Rings,self.Moons={},{}for i,
+spec in{{120,0.9,1.1},{196,-0.55,0.85},{272,0.32,0.7}}do local r,stroke=ring(
+self.Stage,spec[1],302)r.Size=UDim2.fromOffset(0,0)table.insert(self.Rings,{
+Frame=r,Stroke=stroke,D=spec[1],Speed=spec[2],Delay=(i-1)*0.12})local moon=dot(
+self.Stage,i==1 and 7 or 5,304)moon.BackgroundTransparency=1 local trail={}for k
+=1,6 do local t=dot(self.Stage,math.max(2,5-k*0.6),303)t.BackgroundTransparency=
+1 trail[k]=t end table.insert(self.Moons,{Dot=moon,Trail=trail,R=spec[1]/2,Speed
+=spec[2]*1.4,Phase=i*2.1})end self.Ticks={}local n,radius=96,168 for i=0,n-1 do
+local a=i/n*TAU-math.pi/2 local tick=frame(self.Stage,{AnchorPoint=Vector2.new(
+0.5,0.5),Size=UDim2.fromOffset(i%8==0 and 10 or 6,2),Position=UDim2.fromOffset(c
+.X+math.cos(a)*radius,c.Y+math.sin(a)*radius),Rotation=math.deg(a),
+BackgroundColor3=WHITE,BackgroundTransparency=1,ZIndex=303})self.Ticks[i+1]=tick
+end local logo=self.Window:_drawLogo(self.Stage,30)logo.AnchorPoint=Vector2.new(
+0.5,0.5)logo.Position=UDim2.fromOffset(c.X,c.Y-30)logo.ZIndex=305 self.Logo=logo
+self.BigPct=Util.Label({Text='0',FontFace=Theme.Fonts.MonoBold,TextSize=30,
+TextXAlignment=Enum.TextXAlignment.Center,AnchorPoint=Vector2.new(0.5,0.5),
+Position=UDim2.fromOffset(c.X,c.Y+12),Size=UDim2.fromOffset(120,34),ZIndex=305,
+Parent=self.Stage})self.BigPct.TextColor3=WHITE self.BigPct.TextTransparency=1
+self.HidePct=true end,Step=function(self,t,shown)local c=self.Center for _,r in
+self.Rings do local k=smooth((t-0.15-r.Delay)/0.7)r.Frame.Size=UDim2.fromOffset(
+r.D*(0.6+0.4*k),r.D*(0.6+0.4*k))r.Stroke.Transparency=1-k*0.78 end local appear=
+smooth((t-0.5)/0.6)for _,m in self.Moons do local a=m.Phase+t*m.Speed m.Dot.
+Position=UDim2.fromOffset(c.X+math.cos(a)*m.R,c.Y+math.sin(a)*m.R)m.Dot.
+BackgroundTransparency=1-appear for k,tr in m.Trail do local b=a-k*0.07*math.
+sign(m.Speed)tr.Position=UDim2.fromOffset(c.X+math.cos(b)*m.R,c.Y+math.sin(b)*m.
+R)tr.BackgroundTransparency=1-appear*(0.55-k*0.08)end end local lit=shown*#self.
+Ticks for i,tick in self.Ticks do local on=math.clamp(lit-(i-1),0,1)local head=
+math.max(0,1-math.abs(lit-i)/3)tick.BackgroundTransparency=1-appear*(0.12+on*
+0.75+head*0.13)tick.Size=UDim2.fromOffset(((i-1)%8==0 and 10 or 6)+head*5,2)end
+self.BigPct.Text=tostring(math.floor(shown*100+0.5))self.BigPct.TextTransparency
+=1-appear end,Burst=function(self)for _,r in self.Rings do Tween.Play(r.Frame,{
+Size=UDim2.fromOffset(0,0)},0.35,Enum.EasingStyle.Quint,Enum.EasingDirection.In)
+Tween.Play(r.Stroke,{Transparency=1},0.35)end for _,tick in self.Ticks do Tween.
+Play(tick,{BackgroundTransparency=1},0.3)end Tween.Play(self.BigPct,{
+TextTransparency=1},0.2)self.Logo.Visible=false return 0.3 end}Styles.Eclipse={
+Dim=0.12,Build=function(self)local c,R=self.Center,64 self.R=R self.Corona={}for
+i,spec in{{3.2,0.985},{2.4,0.95},{1.7,0.86}}do local g=frame(self.Stage,{
+AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromOffset(c.X,c.Y),Size=UDim2.
+fromOffset(R*2*spec[1],R*2*spec[1]),BackgroundColor3=WHITE,
+BackgroundTransparency=1,ZIndex=301})Util.Round(g)self.Corona[i]={Frame=g,Base=
+spec[2]}end self.Rays={}for i=1,10 do local a=i/10*TAU+(i%2)*0.17 local len=R*(
+1.6+(i%3)*0.55)local ray=frame(self.Stage,{AnchorPoint=Vector2.new(0.5,0.5),Size
+=UDim2.fromOffset(len,1),BackgroundColor3=WHITE,BackgroundTransparency=1,ZIndex=
+301})Util.Gradient(ray,nil,NumberSequence.new({NumberSequenceKeypoint.new(0,0),
+NumberSequenceKeypoint.new(1,1)}))local mid=Vector2.new(math.cos(a),math.sin(a))
+*(R+len/2)ray.Position=UDim2.fromOffset(c.X+mid.X,c.Y+mid.Y)ray.Rotation=math.
+deg(a)self.Rays[i]=ray end local sun=frame(self.Stage,{AnchorPoint=Vector2.new(
+0.5,0.5),Position=UDim2.fromOffset(c.X,c.Y),Size=UDim2.fromOffset(R*2,R*2),
+BackgroundColor3=WHITE,BackgroundTransparency=1,ZIndex=302})Util.Round(sun)Util.
+Gradient(sun,ColorSequence.new(Color3.fromRGB(255,255,255),Color3.fromRGB(205,
+205,212)),nil,-45)self.Sun=sun local moon=frame(self.Stage,{AnchorPoint=Vector2.
+new(0.5,0.5),Size=UDim2.fromOffset(R*2+2,R*2+2),BackgroundColor3=Color3.fromRGB(
+3,3,4),BackgroundTransparency=1,ZIndex=303})Util.Round(moon)self.MoonStroke=Util
+.Stroke(moon,Color3.fromRGB(40,40,46),1,1)self.Moon=moon local diamond=dot(self.
+Stage,9,305)diamond.BackgroundTransparency=1 local streak=frame(self.Stage,{
+AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(220,1),BackgroundColor3=
+WHITE,BackgroundTransparency=1,ZIndex=305})Util.Gradient(streak,nil,
+NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(
+0.5,0),NumberSequenceKeypoint.new(1,1)}))local a=math.rad(-38)local p=c+Vector2.
+new(math.cos(a),math.sin(a))*R diamond.Position=UDim2.fromOffset(p.X,p.Y)streak.
+Position=UDim2.fromOffset(p.X,p.Y)self.Diamond,self.Streak=diamond,streak end,
+Step=function(self,t,shown)local c,R=self.Center,self.R local appear=smooth((t-
+0.1)/0.7)self.Sun.BackgroundTransparency=1-appear local cover=smooth(shown)local
+off=(1-cover)*R*2.3 self.Moon.Position=UDim2.fromOffset(c.X-off,c.Y+off*0.35)
+self.Moon.BackgroundTransparency=1-appear self.MoonStroke.Transparency=1-appear*
+0.6 local total=smooth((cover-0.9)/0.1)local pulse=0.5+0.5*math.sin(t*2.2)for i,
+g in self.Corona do local base=g.Base+(1-g.Base)*(1-appear)g.Frame.
+BackgroundTransparency=base-total*(0.06+i*0.03)-pulse*0.01 end for i,ray in self
+.Rays do ray.BackgroundTransparency=1-(0.12+total*0.5)*appear*(0.6+0.4*math.sin(
+t*1.3+i))end self.Diamond.BackgroundTransparency=1-total*(0.75+0.25*pulse)self.
+Streak.BackgroundTransparency=1-total*0.8 end,Burst=function(self)local flash=
+dot(self.Stage,12,306)flash.Position=self.Diamond.Position Tween.Play(flash,{
+Size=UDim2.fromOffset(900,900),BackgroundTransparency=1},0.7,Enum.EasingStyle.
+Quint)for _,o in{self.Sun,self.Moon,self.Diamond,self.Streak}do Tween.Play(o,{
+BackgroundTransparency=1},0.35)end Tween.Play(self.MoonStroke,{Transparency=1},
+0.3)for _,g in self.Corona do Tween.Play(g.Frame,{BackgroundTransparency=1,Size=
+UDim2.fromOffset(g.Frame.Size.X.Offset*1.4,g.Frame.Size.Y.Offset*1.4)},0.6)end
+for _,ray in self.Rays do Tween.Play(ray,{BackgroundTransparency=1},0.3)end
+return 0.15 end}Styles.Constellation={Build=function(self)local rng=Random.new(
+19)local c=self.Center self.Dust={}for i=1,60 do local d=dot(self.Stage,rng:
+NextNumber()<0.2 and 2 or 1,301)d.Position=UDim2.fromOffset(rng:NextNumber(0,
+STAGE),rng:NextNumber(30,STAGE-60))d.BackgroundTransparency=1 self.Dust[i]={Dot=
+d,A=0.55+rng:NextNumber()*0.35,Phase=rng:NextNumber()*TAU}end local stars={}
+local tries=0 while#stars<22 and tries<600 do tries+=1 local p=Vector2.new(c.X+
+rng:NextNumber(-170,170),c.Y-20+rng:NextNumber(-115,115))local ok=true for _,s
+in stars do if(s.P-p).Magnitude<46 then ok=false break end end if ok then local
+big=rng:NextNumber()<0.25 local d=dot(self.Stage,big and 6 or 4,304)d.Position=
+UDim2.fromOffset(p.X,p.Y)d.BackgroundTransparency=1 local glow=dot(self.Stage,
+big and 16 or 10,303)glow.Position=d.Position glow.BackgroundTransparency=1
+table.insert(stars,{P=p,Dot=d,Glow=glow,Big=big,Delay=rng:NextNumber()*0.7,Lit=0
+})end end local edges,used={},{[1]=true}local current=1 for _=2,#stars do local
+best,bestD for j,s in stars do if not used[j]then local d=(s.P-stars[current].P)
+.Magnitude if not bestD or d<bestD then best,bestD=j,d end end end used[best]=
+true table.insert(edges,{current,best})current=best end for _=1,7 do local a=rng
+:NextInteger(1,#stars)local best,bestD for j,s in stars do local d=(s.P-stars[a]
+.P).Magnitude if j~=a and d>1 and(not bestD or d<bestD)then local dup=false for
+_,e in edges do if(e[1]==a and e[2]==j)or(e[1]==j and e[2]==a)then dup=true end
+end if not dup then best,bestD=j,d end end end if best then table.insert(edges,{
+a,best})end end for _,e in edges do e.Line=frame(self.Stage,{AnchorPoint=Vector2
+.new(0.5,0.5),Size=UDim2.fromOffset(0,1),BackgroundColor3=WHITE,
+BackgroundTransparency=1,ZIndex=302})e.Q=0 end self.Stars,self.Edges=stars,edges
+end,Step=function(self,t,shown,dt)for _,d in self.Dust do d.Dot.
+BackgroundTransparency=1-smooth((t-0.1)/0.8)*(1-d.A)*(0.7+0.3*math.sin(t*1.7+d.
+Phase))end for _,s in self.Stars do local k=smooth((t-0.2-s.Delay)/0.5)s.Dot.
+BackgroundTransparency=1-k*(0.55+s.Lit*0.45)s.Glow.BackgroundTransparency=1-k*(
+0.05+s.Lit*0.12)*(0.8+0.2*math.sin(t*3+s.P.X))s.Lit=math.max(0,s.Lit-dt*0.6)end
+local n=#self.Edges local want=shown*n for i,e in self.Edges do local target=
+math.clamp(want-(i-1),0,1)if t<1 then target=0 end if e.Q~=target then e.Q=math.
+min(target,e.Q+dt*4)local a,b=self.Stars[e[1] ],self.Stars[e[2] ]placeLine(e.
+Line,a.P,a.P:Lerp(b.P,smooth(e.Q)))e.Line.BackgroundTransparency=e.Q>0 and 0.55
+or 1 if e.Q>=1 then a.Lit,b.Lit=1,1 end end end end,Burst=function(self)local c=
+self.Center for _,e in self.Edges do e.Line.BackgroundTransparency=0.1 Tween.
+Play(e.Line,{BackgroundTransparency=1},0.45)end for _,s in self.Stars do Tween.
+Play(s.Dot,{Position=UDim2.fromOffset(c.X,c.Y),BackgroundTransparency=1},0.45,
+Enum.EasingStyle.Quint,Enum.EasingDirection.In)Tween.Play(s.Glow,{
+BackgroundTransparency=1},0.3)end for _,d in self.Dust do Tween.Play(d.Dot,{
+BackgroundTransparency=1},0.3)end return 0.35 end}Styles.Terminal={NoInfo=true,
+Dim=0.18,Build=function(self)local c=self.Center local panel=frame(self.Stage,{
+AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromOffset(c.X,c.Y),Size=UDim2.
+fromOffset(470,250),BackgroundColor3=Color3.fromRGB(9,9,11),
+BackgroundTransparency=1,ZIndex=302})Util.Corner(10,panel)self.PanelStroke=Util.
+Stroke(panel,Color3.fromRGB(46,46,52),1,1)local scale=Util.New('UIScale',{Scale=
+0.97,Parent=panel})self.Panel,self.PanelScale=panel,scale local function text(
+props)local l=Util.Label(props)l.Parent=panel l.ZIndex=303 l.TextTransparency=1
+l.RichText=true return l end self.Head=text({Text=escape(string.lower(self.
+Window.Title))..'  \u{b7}  boot',FontFace=Theme.Fonts.Mono,TextSize=12,Position=
+UDim2.fromOffset(16,10),Size=UDim2.new(1,-120,0,16)})self.Head.TextColor3=Color3
+.fromRGB(150,150,158)self.Ver=text({Text='v'..tostring(self.Window.Library.
+Version),FontFace=Theme.Fonts.Mono,TextSize=12,TextXAlignment=Enum.
+TextXAlignment.Right,Position=UDim2.new(1,-116,0,10),Size=UDim2.fromOffset(100,
+16)})self.Ver.TextColor3=Color3.fromRGB(90,90,98)self.Rule=frame(panel,{Position
+=UDim2.fromOffset(0,34),Size=UDim2.new(1,0,0,1),BackgroundColor3=Color3.fromRGB(
+32,32,38),BackgroundTransparency=1,ZIndex=303})self.Body=text({Text='',FontFace=
+Theme.Fonts.Mono,TextSize=13,TextYAlignment=Enum.TextYAlignment.Top,TextWrapped=
+false,Position=UDim2.fromOffset(16,46),Size=UDim2.new(1,-32,1,-58),LineHeight=
+1.25})self.Body.TextColor3=Color3.fromRGB(215,215,222)self.Lines={}self.Typed=0
+self:_term('<font color="#7a7a84">$</font> proximity load')self:_term(
+[[<font color="#7a7a84">resolving theme, fonts, configs</font>]])end,Step=
+function(self,t,shown,dt)local appear=smooth(t/0.4)self.Panel.
+BackgroundTransparency=1-appear*0.94 self.PanelStroke.Transparency=1-appear self
+.PanelScale.Scale=0.97+0.03*appear for _,l in{self.Head,self.Ver,self.Body}do l.
+TextTransparency=1-appear end self.Rule.BackgroundTransparency=1-appear self.
+Typed+=dt*120 local width=26 local filled=math.floor(shown*width+0.5)local bar=
+'['..string.rep('#',filled)..string.rep('.',width-filled)..']'local pct=string.
+format('%3d%%',math.floor(shown*100+0.5))local eta=self.EtaText or''local caret=
+(math.floor(t*2.2)%2==0)and'_'or' 'local budget=math.floor(self.Typed)local out=
+{}for _,line in self.Lines do local plain=line.Plain if budget<=0 then break end
+if budget>=#plain then table.insert(out,line.Rich)budget-=#plain else table.
+insert(out,escape(string.sub(plain,1,budget)))budget=0 end end local done=budget
+>0 while#out>7 do table.remove(out,1)end if done then table.insert(out,bar..'  '
+..pct..'  <font color="#7a7a84">'..eta..'</font>')table.insert(out,
+'<font color="#7a7a84">'..caret..'</font>')end self.Body.Text=table.concat(out,
+'\n')end,Stage=function(self,text)self:_term(
+'<font color="#7a7a84">&gt;</font> '..escape(text))end,Burst=function(self)self:
+_term('<font color="#ffffff">ready.</font>')self.Typed+=999 task.wait(0.25)Tween
+.Play(self.PanelScale,{Scale=1.03},0.35,Enum.EasingStyle.Quint)Tween.Play(self.
+Panel,{BackgroundTransparency=1},0.3)Tween.Play(self.PanelStroke,{Transparency=1
+},0.3)for _,l in{self.Head,self.Ver,self.Body}do Tween.Play(l,{TextTransparency=
+1},0.25)end Tween.Play(self.Rule,{BackgroundTransparency=1},0.25)return 0.1,true
+end}function Intros.Has(style)return Styles[style]~=nil end function Intros.new(
+window,options,style)options=options or{}local def=Styles[style]local self=
+setmetatable({},Intros)self.Window=window self.Def=def self.Started=os.clock()
+self.T=0 self.Display=0 self.Samples={}local root=frame(Shared.Gui.Root,{Name=
+'ProximityIntro',Size=UDim2.fromScale(1,1),ZIndex=300})self.Root=root local dim=
+frame(root,{BackgroundColor3=Color3.new(0,0,0),Size=UDim2.fromScale(1,1),ZIndex=
+300})Util.Gradient(dim,nil,NumberSequence.new({NumberSequenceKeypoint.new(0,0.2)
+,NumberSequenceKeypoint.new(0.5,0),NumberSequenceKeypoint.new(1,0.2)}),90)Tween.
+Play(dim,{BackgroundTransparency=options.Dim or def.Dim or 0.22},0.6,Enum.
+EasingStyle.Sine)self.Dim=dim local stage=frame(root,{AnchorPoint=Vector2.new(
+0.5,0.5),Position=UDim2.fromScale(0.5,0.46),Size=UDim2.fromOffset(STAGE,STAGE),
+ZIndex=301})local view=workspace.CurrentCamera.ViewportSize local scale=Util.
+New('UIScale',{Scale=math.clamp(math.min(view.X,view.Y)/820,0.55,1.2),Parent=
+stage})self.Stage=stage self.Center=Vector2.new(STAGE/2,STAGE/2)def.Build(self)
+if not def.NoInfo then self:_buildInfo(root,scale.Scale)end self.Conn=RunService
+.RenderStepped:Connect(function(dt)self.T+=math.min(dt,3.333333333333333E-2)
+local shown=self:_progress(os.clock()-self.Started)def.Step(self,self.T,shown,
+math.min(dt,3.333333333333333E-2))end)return self end function Intros:_term(rich
+)local plain=string.gsub(rich,'<[^>]+>','')plain=string.gsub(string.gsub(string.
+gsub(plain,'&lt;','<'),'&gt;','>'),'&amp;','&')table.insert(self.Lines,{Rich=
+rich,Plain=plain})while#self.Lines>12 do local first=table.remove(self.Lines,1)
+self.Typed=math.max(0,self.Typed-#first.Plain)end end function Intros:_buildInfo
+(root,s)local info=frame(root,{AnchorPoint=Vector2.new(0.5,0),Position=UDim2.
+new(0.5,0,0.46,(STAGE/2)*s*0.9),Size=UDim2.fromOffset(300,60),ZIndex=301})local 
+function label(props)local l=Util.Label(props)l.TextTransparency=1 l.ZIndex=301
+l.Parent=info return l end local title=label({Text=self.Window.Title,FontFace=
+Theme.Fonts.SemiBold,TextSize=14,Size=UDim2.new(1,-60,0,18)})title.TextColor3=
+WHITE local pct=label({Text='0%',FontFace=Theme.Fonts.MonoBold,TextSize=13,
+TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(1,0,0,18)})pct.
+TextColor3=WHITE local track=frame(info,{Size=UDim2.new(1,0,0,2),Position=UDim2.
+fromOffset(0,25),BackgroundColor3=WHITE,ZIndex=301})local fill=frame(track,{Size
+=UDim2.fromScale(0,1),BackgroundColor3=WHITE,BackgroundTransparency=0,ZIndex=302
+})fill.Visible=false local status=label({Text=Locale.T('Preparing'),FontFace=
+Theme.Fonts.Regular,TextSize=12,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.
+new(1,-70,0,16),Position=UDim2.fromOffset(0,34)})status.TextColor3=Color3.
+fromRGB(170,170,178)local eta=label({Text='',FontFace=Theme.Fonts.Mono,TextSize=
+11,TextXAlignment=Enum.TextXAlignment.Right,Size=UDim2.new(1,0,0,16),Position=
+UDim2.fromOffset(0,34)})eta.TextColor3=Color3.fromRGB(120,120,128)if self.
+HidePct then pct.Visible=false end self.Info,self.Pct,self.Fill,self.Track,self.
+Status,self.Eta,self.TitleLabel=info,pct,fill,track,status,eta,title task.delay(
+0.5,function()if self.Root then for _,l in{title,pct,status,eta}do Tween.Play(l,
+{TextTransparency=0},0.6)end Tween.Play(track,{BackgroundTransparency=0.86},0.6)
+fill.Visible=true end end)end function Intros:_progress(t)if self.Exploding then
+return 1 end local window=self.Window local actual=window:GetLoadProgress()if
+window.State~='Loading'then actual=math.max(actual,0.98)end self.Display=math.
+max(self.Display,math.min(actual,0.99))local shown=self._shown or 0 shown+=(self
+.Display-shown)*0.12 self._shown=shown table.insert(self.Samples,{t,self.Display
+})while#self.Samples>2 and self.Samples[1][1]<t-1.5 do table.remove(self.Samples
+,1)end local first=self.Samples[1]local rate=(self.Display-first[2])/math.max(t-
+first[1],0.05)local etaText if rate>0.002 and self.Display<0.98 then local left=
+(1-self.Display)/rate etaText=left<1 and'<1 s'or('~'..math.ceil(left)..' s')else
+etaText=string.format('%.1f s',t)end self.EtaText=etaText if self.Fill then self
+.Fill.Size=UDim2.fromScale(shown,1)self.Pct.Text=math.floor(shown*100+0.5)..'%'
+self.Eta.Text=etaText end return shown end function Intros:SetStage(text)if not
+text then return end if self.Status then self.Status.Text=text end if self.Def.
+Stage then self.Def.Stage(self,text)end end function Intros:Finish(onOpen)if
+self.Finishing then return end self.Finishing=true task.spawn(function()local
+start=os.clock()while self.Root and(self._shown or 0)<0.97 and os.clock()-start<
+1.2 do self.Display=1 RunService.RenderStepped:Wait()end if not self.Root then
+return end task.wait(0.25)self.Exploding=true if self.Fill then self.Fill.Size=
+UDim2.fromScale(1,1)self.Pct.Text='100%'self.Status.Text=Locale.T('Ready')self.
+Eta.Text=''for _,l in{self.TitleLabel,self.Pct,self.Status,self.Eta}do Tween.
+Play(l,{TextTransparency=1},0.35)end Tween.Play(self.Track,{
+BackgroundTransparency=1},0.35)Tween.Play(self.Fill,{BackgroundTransparency=1},
+0.35)end local delay,ownAnimation=self.Def.Burst(self)Tween.Play(self.Dim,{
+BackgroundTransparency=1},0.8,Enum.EasingStyle.Sine)task.delay(delay or 0.2,
+function()if onOpen then local stage=self.Stage local point=stage and(stage.
+AbsolutePosition+stage.AbsoluteSize/2-Shared.Gui.Root.AbsolutePosition)onOpen((
+not ownAnimation)and point or nil)end end)task.delay(1.1,function()self:Destroy(
+)end)end)end function Intros:Destroy()if self.Conn then self.Conn:Disconnect()
+self.Conn=nil end if self.Root then self.Root:Destroy()self.Root=nil end end
+return Intros end function __DARKLUA_BUNDLE_MODULES.z()local v=
+__DARKLUA_BUNDLE_MODULES.cache.z if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end do local function 
+__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
+__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
 __DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
 __DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
 Shared=__DARKLUA_BUNDLE_MODULES.k()local PageModule=__DARKLUA_BUNDLE_MODULES.v()
 local Skeleton=__DARKLUA_BUNDLE_MODULES.w()local Motion=__DARKLUA_BUNDLE_MODULES
-.x()local Loader=__DARKLUA_BUNDLE_MODULES.y()local UIS=Env.Service(
-'UserInputService')local RunService=Env.Service('RunService')Env.Service(
-'Players')local Tab=PageModule.Tab local Window={}Window.__index=Window local
-DEFAULT_SIZE=Vector2.new(740,500)local MOBILE_SIZE=Vector2.new(600,380)function
-Window.new(Lib,options)options=options or{}local self=setmetatable({},Window)
-self.Library=Lib self.Options=options self.Title=Util.Opt(options,'Title','Name'
-)or'Proximity'self.Subtitle=Util.Opt(options,'Subtitle','SubTitle','SubName',
-'Description')or('v'..Lib.Version)self.Logo=Util.Opt(options,'Logo','Icon')self.
-Keybind=Keys.Normalize(Util.Opt(options,'Keybind','MenuKey','Key')or'RightShift'
-)self.SidebarWidth=options.SidebarWidth or 196 local touch=UIS.TouchEnabled and
-not UIS.KeyboardEnabled local size=options.Size if typeof(size)=='UDim2'then
-size=Vector2.new(size.X.Offset,size.Y.Offset)end self.BaseSize=size or(touch and
+.x()local Loader=__DARKLUA_BUNDLE_MODULES.y()local Intros=
+__DARKLUA_BUNDLE_MODULES.z()local UIS=Env.Service('UserInputService')local
+RunService=Env.Service('RunService')Env.Service('Players')local Tab=PageModule.
+Tab local Window={}Window.__index=Window local DEFAULT_SIZE=Vector2.new(740,500)
+local MOBILE_SIZE=Vector2.new(600,380)function Window.new(Lib,options)options=
+options or{}local self=setmetatable({},Window)self.Library=Lib self.Options=
+options self.Title=Util.Opt(options,'Title','Name')or'Proximity'self.Subtitle=
+Util.Opt(options,'Subtitle','SubTitle','SubName','Description')or('v'..Lib.
+Version)self.Logo=Util.Opt(options,'Logo','Icon')self.Keybind=Keys.Normalize(
+Util.Opt(options,'Keybind','MenuKey','Key')or'RightShift')self.SidebarWidth=
+options.SidebarWidth or 196 local touch=UIS.TouchEnabled and not UIS.
+KeyboardEnabled local size=options.Size if typeof(size)=='UDim2'then size=
+Vector2.new(size.X.Offset,size.Y.Offset)end self.BaseSize=size or(touch and
 MOBILE_SIZE or DEFAULT_SIZE)self.MinSize=options.MinSize or Vector2.new(560,360)
 self.Loading=type(options.Loading)=='table'and options.Loading or{Enabled=
 options.Loading~=false}self.Loading.Enabled=self.Loading.Enabled~=false and Lib:
@@ -3714,12 +3973,14 @@ touch self:_build()self.LoadingStyle=self.Loading.Style or Lib:GetSetting(
 'LoadingStyle','Planet')self:SetScale(options.Scale or Lib:GetSetting('Scale',
 'Auto'))self:_setupToggleButton()if self.Loading.Enabled and self.LoadingStyle==
 'Planet'then self.Loader=Loader.new(self,self.Loading)self.Holder.Visible=false
-else if self.Loading.Enabled then self.Skeleton=Skeleton.new(self)end self:Open(
-)end self:SetNavigation(options.Navigation or Lib:GetSetting('Navigation',
-'Sidebar'))self:_applyEconomy()local bg=Lib:GetSetting('Background')if options.
-Background or type(bg)=='table'then self:SetBackground(options.Background or bg)
-end self:_bindInput()self:_bindNavigation()task.defer(function()self:_pump()end)
-return self end local LOGO_URL=
+elseif self.Loading.Enabled and Intros.Has(self.LoadingStyle)then self.Loader=
+Intros.new(self,self.Loading,self.LoadingStyle)self.Holder.Visible=false else if
+self.Loading.Enabled then self.Skeleton=Skeleton.new(self)end self:Open()end
+self:SetNavigation(options.Navigation or Lib:GetSetting('Navigation','Sidebar'))
+self:_applyEconomy()local bg=Lib:GetSetting('Background')if options.Background
+or type(bg)=='table'then self:SetBackground(options.Background or bg)end self:
+_bindInput()self:_bindNavigation()task.defer(function()self:_pump()end)return
+self end local LOGO_URL=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-256.png]]
 local PLANET_URL=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-512.png]]
@@ -4449,9 +4710,9 @@ Destroy()if self._destroyed then return end self._destroyed=true if self.
 Skeleton then self.Skeleton:Destroy()end for _,tab in table.clone(self.Tabs)do
 for _,el in tab:GetElements()do pcall(el.Destroy,el)end end self.Maid:Clean()
 local list=self.Library.Windows local i=table.find(list,self)if i then table.
-remove(list,i)end end return Window end function __DARKLUA_BUNDLE_MODULES.z()
-local v=__DARKLUA_BUNDLE_MODULES.cache.z if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end do local function 
+remove(list,i)end end return Window end function __DARKLUA_BUNDLE_MODULES.A()
+local v=__DARKLUA_BUNDLE_MODULES.cache.A if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
@@ -4604,9 +4865,9 @@ format('%d/%d  \u{b7}  %s',i,#steps,step.Title or''),Content=step.Text or step.
 Content,Buttons={{Text=Locale.T('Cancel')},{Text=i==#steps and Locale.T('Ok')or
 '\u{2192}',Style='Primary'}}})if ring then ring:Destroy()end if index~=2 then
 break end end if options.Key then Lib:SetSetting('Tour.'..options.Key,true)end
-end)return self end end end function __DARKLUA_BUNDLE_MODULES.A()local v=
-__DARKLUA_BUNDLE_MODULES.cache.A if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end do local function 
+end)return self end end end function __DARKLUA_BUNDLE_MODULES.B()local v=
+__DARKLUA_BUNDLE_MODULES.cache.B if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.B=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Env=
 __DARKLUA_BUNDLE_MODULES.e()__DARKLUA_BUNDLE_MODULES.f()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Locale
@@ -4671,48 +4932,48 @@ and 0 or 1 end})look:Dropdown({Name=T('OpenAnimation'),Icon='move',Values={
 Description=T('OpenAnimationHint'),Save=false,Callback=function(v)if v and v~=
 window:GetAnimation()then window:SetAnimation(v)task.spawn(function()window:
 Close()task.wait(0.5)window:Open()end)end end})look:Dropdown({Name=T(
-'LoadingStyle'),Icon='loader',Values={'Planet','Skeleton','None'},Display=
-function(v)return T('Loading'..v)end,Default=Lib:GetSetting('LoadingStyle',
-'Planet'),Description=T('LoadingStyleHint'),Save=false,Callback=function(v)if v
-then Lib:SetSetting('LoadingStyle',v)end end})look:Dropdown({Name=T('Navigation'
-),Icon='sidebar',Values={'Sidebar','Rail'},Display=function(v)return T(v)end,
-Default=window.Navigation,Save=false,Callback=function(v)if v then Lib:
-SetSetting('Navigation',v)window:SetNavigation(v)end end})look:Dropdown({Name=T(
-'Font'),Icon='type',Values=Lib:GetFonts(),Default=Lib:GetSetting('Font',
-'Builder Sans'),Search=true,Save=false,Callback=function(v)if v then task.spawn(
-function()if not Lib:SetFont(v)then Lib:Notify({Content=T('FontFailed'),Type=
-'warning',Duration=4})end end)end end})look:Dropdown({Name=T('Density'),Icon=
-'align-justify',Values={'Compact','Normal','Comfortable','Touch'},Display=
-function(v)return T(v)end,Default=Lib.DensityName,Save=false,Callback=function(v
-)if v then Lib:SetDensity(v)end end})look:Dropdown({Name=T('ToggleStyle'),Icon=
-'toggle-right',Values=Lib._classes.Toggle.Styles,Default=Lib.ToggleStyle,Save=
-false,Callback=function(v)if v then Lib:SetToggleStyle(v)end end})local bgSaved=
-Lib:GetSetting('Background')local bgInput=look:Input({Name=T('BackgroundImage'),
-Icon='image',Placeholder='rbxassetid:// or https://',Default=type(bgSaved)==
-'table'and bgSaved.Image or'',Finished=true,Save=false})local bgDim=look:Slider(
-{Name=T('BackgroundDim'),Icon='moon',Min=0,Max=90,Default=type(bgSaved)=='table'
-and math.floor((bgSaved.Dim or 0.55)*100)or 55,Suffix='%',Save=false})local 
-function applyBg()local image=Util.Trim(bgInput:Get()or'')local spec=image~=''
-and{Image=image,Dim=bgDim:Get()/100}or nil Lib:SetSetting('Background',spec or
-false)window:SetBackground(spec)end bgInput:AddCallback(applyBg)bgDim:
-AddCallback(Util.Debounce(0.3,applyBg))bgDim:DependsOn(bgInput,function(v)return
-v~=nil and v~=''end)local ui=tab:LeftSection({Name=T('Interface'),Icon=
-'layout-dashboard'})ui:Keybind({Name=T('MenuKey'),Icon='keyboard',Default=window
-.Keybind,Modes={'Press'},Mode='Press',ShowInList=false,Save=false,Callback=
-function(key)Lib:SetSetting('MenuKey',key)window:SetKeybind(key)end})local langs
-,flags={},{en='\u{1f1ec}\u{1f1e7}',ru='\u{1f1f7}\u{1f1fa}',de=
-'\u{1f1e9}\u{1f1ea}',es='\u{1f1ea}\u{1f1f8}',fr='\u{1f1eb}\u{1f1f7}',uk=
-'\u{1f1fa}\u{1f1e6}',pt='\u{1f1e7}\u{1f1f7}',tr='\u{1f1f9}\u{1f1f7}'}local
-codeByName={}for _,code in Locale.List()do local name=Locale.Names[code]or code
-codeByName[name]=code table.insert(langs,name)end local prefixes={}for name,code
-in codeByName do prefixes[name]=flags[code]end ui:Dropdown({Name=T('Language'),
-Icon='language',Values=langs,Prefixes=prefixes,Default=Locale.Names[Locale.
-Current],Save=false,Callback=function(v)if v and codeByName[v]then Lib:
-SetLanguage(codeByName[v])end end})ui:Toggle({Name=T('Watermark'),Icon=
-'watermark',Default=Lib:GetSetting('Watermark',true),Save=false,Callback=
-function(v)Lib:SetSetting('Watermark',v)if Lib.WatermarkWidget then Lib.
-WatermarkWidget:SetVisible(v)end end})ui:Toggle({Name=T('KeybindList'),Icon=
-'keybinds',Default=Lib:GetSetting('KeybindList',true),Save=false,Callback=
+'LoadingStyle'),Icon='loader',Values={'Planet','Orbit','Eclipse','Constellation'
+,'Terminal','Skeleton','None'},Display=function(v)return T('Loading'..v)end,
+Default=Lib:GetSetting('LoadingStyle','Planet'),Description=T('LoadingStyleHint'
+),Save=false,Callback=function(v)if v then Lib:SetSetting('LoadingStyle',v)end
+end})look:Dropdown({Name=T('Navigation'),Icon='sidebar',Values={'Sidebar','Rail'
+},Display=function(v)return T(v)end,Default=window.Navigation,Save=false,
+Callback=function(v)if v then Lib:SetSetting('Navigation',v)window:
+SetNavigation(v)end end})look:Dropdown({Name=T('Font'),Icon='type',Values=Lib:
+GetFonts(),Default=Lib:GetSetting('Font','Builder Sans'),Search=true,Save=false,
+Callback=function(v)if v then task.spawn(function()if not Lib:SetFont(v)then Lib
+:Notify({Content=T('FontFailed'),Type='warning',Duration=4})end end)end end})
+look:Dropdown({Name=T('Density'),Icon='align-justify',Values={'Compact','Normal'
+,'Comfortable','Touch'},Display=function(v)return T(v)end,Default=Lib.
+DensityName,Save=false,Callback=function(v)if v then Lib:SetDensity(v)end end})
+look:Dropdown({Name=T('ToggleStyle'),Icon='toggle-right',Values=Lib._classes.
+Toggle.Styles,Default=Lib.ToggleStyle,Save=false,Callback=function(v)if v then
+Lib:SetToggleStyle(v)end end})local bgSaved=Lib:GetSetting('Background')local
+bgInput=look:Input({Name=T('BackgroundImage'),Icon='image',Placeholder=
+'rbxassetid:// or https://',Default=type(bgSaved)=='table'and bgSaved.Image or''
+,Finished=true,Save=false})local bgDim=look:Slider({Name=T('BackgroundDim'),Icon
+='moon',Min=0,Max=90,Default=type(bgSaved)=='table'and math.floor((bgSaved.Dim
+or 0.55)*100)or 55,Suffix='%',Save=false})local function applyBg()local image=
+Util.Trim(bgInput:Get()or'')local spec=image~=''and{Image=image,Dim=bgDim:Get()/
+100}or nil Lib:SetSetting('Background',spec or false)window:SetBackground(spec)
+end bgInput:AddCallback(applyBg)bgDim:AddCallback(Util.Debounce(0.3,applyBg))
+bgDim:DependsOn(bgInput,function(v)return v~=nil and v~=''end)local ui=tab:
+LeftSection({Name=T('Interface'),Icon='layout-dashboard'})ui:Keybind({Name=T(
+'MenuKey'),Icon='keyboard',Default=window.Keybind,Modes={'Press'},Mode='Press',
+ShowInList=false,Save=false,Callback=function(key)Lib:SetSetting('MenuKey',key)
+window:SetKeybind(key)end})local langs,flags={},{en='\u{1f1ec}\u{1f1e7}',ru=
+'\u{1f1f7}\u{1f1fa}',de='\u{1f1e9}\u{1f1ea}',es='\u{1f1ea}\u{1f1f8}',fr=
+'\u{1f1eb}\u{1f1f7}',uk='\u{1f1fa}\u{1f1e6}',pt='\u{1f1e7}\u{1f1f7}',tr=
+'\u{1f1f9}\u{1f1f7}'}local codeByName={}for _,code in Locale.List()do local name
+=Locale.Names[code]or code codeByName[name]=code table.insert(langs,name)end
+local prefixes={}for name,code in codeByName do prefixes[name]=flags[code]end ui
+:Dropdown({Name=T('Language'),Icon='language',Values=langs,Prefixes=prefixes,
+Default=Locale.Names[Locale.Current],Save=false,Callback=function(v)if v and
+codeByName[v]then Lib:SetLanguage(codeByName[v])end end})ui:Toggle({Name=T(
+'Watermark'),Icon='watermark',Default=Lib:GetSetting('Watermark',true),Save=
+false,Callback=function(v)Lib:SetSetting('Watermark',v)if Lib.WatermarkWidget
+then Lib.WatermarkWidget:SetVisible(v)end end})ui:Toggle({Name=T('KeybindList'),
+Icon='keybinds',Default=Lib:GetSetting('KeybindList',true),Save=false,Callback=
 function(v)Lib:SetSetting('KeybindList',v)if Lib.KeybindListWidget then Lib.
 KeybindListWidget:SetVisible(v)end end})ui:MultiDropdown({Name=T(
 'WatermarkItems'),Icon='list-checks',Values=Lib.WatermarkItemNames,Default=Lib:
@@ -4809,9 +5070,9 @@ Get()or Lib.CurrentConfig)or nil)end})section:Toggle({Name=T('AutoSave'),Icon=
 'save',Default=Lib:GetAutoSave()~=nil,Save=false,Callback=function(v)Lib:
 SetAutoSave(v and(list:Get()or Lib.CurrentConfig)or nil)end})section:Label({Text
 =T('Folder')..': '..Lib.Folder..'/configs',Color='TextMute',Icon='folder'})
-return tab end end end function __DARKLUA_BUNDLE_MODULES.B()local v=
-__DARKLUA_BUNDLE_MODULES.cache.B if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.B=v end return v.c end end do local function 
+return tab end end end function __DARKLUA_BUNDLE_MODULES.C()local v=
+__DARKLUA_BUNDLE_MODULES.cache.C if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.C=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
 __DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
@@ -5029,9 +5290,9 @@ frame,'Keybinds',{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,12,0.5,0)}
 )local widget={Frame=frame}function widget:SetVisible(v)Lib:SetSetting(
 'KeybindList',v)rebuild()return self end function widget:ShowInactive(v)showAll=
 v rebuild()return self end widget.Refresh=rebuild rebuild()Lib.KeybindListWidget
-=widget return widget end end end function __DARKLUA_BUNDLE_MODULES.C()local v=
-__DARKLUA_BUNDLE_MODULES.cache.C if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.C=v end return v.c end end do local function 
+=widget return widget end end end function __DARKLUA_BUNDLE_MODULES.D()local v=
+__DARKLUA_BUNDLE_MODULES.cache.D if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.D=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
@@ -5217,9 +5478,9 @@ Root:GetDescendants(),'memory    '..math.floor(gcinfo()/1024*10)/10 ..' MB',
 insert(lines,string.format('  %-12s %3d el  %4.0f ms',string.sub(tab.Name,1,12),
 tab._total,(tab._buildTime or 0)*1000))end end text.Text=table.concat(lines,'\n'
 )task.wait(0.5)end end)Lib._debugPanel={Destroy=function()alive=false frame:
-Destroy()end}return self end end end function __DARKLUA_BUNDLE_MODULES.D()local
-v=__DARKLUA_BUNDLE_MODULES.cache.D if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.D=v end return v.c end end do local function 
+Destroy()end}return self end end end function __DARKLUA_BUNDLE_MODULES.E()local
+v=__DARKLUA_BUNDLE_MODULES.cache.E if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.E=v end return v.c end end do local function 
 __modImpl()local HttpService=game:GetService('HttpService')local Util=
 __DARKLUA_BUNDLE_MODULES.a()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=
 __DARKLUA_BUNDLE_MODULES.e()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
@@ -5316,8 +5577,8 @@ then submit()end end)if getBtn then getBtn.Activated:Connect(function()local
 copied=Env.Clipboard(options.GetKey)status.Visible=true Theme.Paint(status,{
 TextColor3='TextDim'})status.Text=copied and Locale.T('LinkCopied')or options.
 GetKey end)end return coroutine.yield()end end end function
-__DARKLUA_BUNDLE_MODULES.E()local v=__DARKLUA_BUNDLE_MODULES.cache.E if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.E=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.F()local v=__DARKLUA_BUNDLE_MODULES.cache.F if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.F=v end return v.c end end
 end local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=__DARKLUA_BUNDLE_MODULES
 .b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=__DARKLUA_BUNDLE_MODULES.
 d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=__DARKLUA_BUNDLE_MODULES.f()
@@ -5326,7 +5587,7 @@ local Locale=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.
 k()local Overlay=__DARKLUA_BUNDLE_MODULES.l()local shared=Env.Shared()local
 previousVersion=nil if shared.Library and shared.Library.Unload then
 previousVersion=shared.Library.Version pcall(shared.Library.Unload,shared.
-Library,true)end local Library={Version='1.2.6',VersionUrl=
+Library,true)end local Library={Version='1.2.7',VersionUrl=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/VERSION]]
 ,ToggleStyle='Switch',DensityName='Normal',Flags={},Elements={},AllElements={},
 Windows={},Debug=false,Unloaded=false,Anonymous=false,_classes={},_custom={},
@@ -5350,9 +5611,9 @@ __DARKLUA_BUNDLE_MODULES.r(),__DARKLUA_BUNDLE_MODULES.s(),
 __DARKLUA_BUNDLE_MODULES.t()}do for name,class in module do Library._classes[
 name]=class end end local Section=__DARKLUA_BUNDLE_MODULES.u()Library._classes.
 Section=Section Library.Base=__DARKLUA_BUNDLE_MODULES.n()local Window=
-__DARKLUA_BUNDLE_MODULES.z()__DARKLUA_BUNDLE_MODULES.A()(Window)
-__DARKLUA_BUNDLE_MODULES.B()(Window)__DARKLUA_BUNDLE_MODULES.C()(Library)
-__DARKLUA_BUNDLE_MODULES.D()(Library)__DARKLUA_BUNDLE_MODULES.E()(Library)
+__DARKLUA_BUNDLE_MODULES.A()__DARKLUA_BUNDLE_MODULES.B()(Window)
+__DARKLUA_BUNDLE_MODULES.C()(Window)__DARKLUA_BUNDLE_MODULES.D()(Library)
+__DARKLUA_BUNDLE_MODULES.E()(Library)__DARKLUA_BUNDLE_MODULES.F()(Library)
 Library._drawLogo=Window._drawLogo function Library:_setDirty(value)if self.
 Dirty~=value then self.Dirty=value self.DirtyChanged:Fire(value)end end function
 Library:_onElementChanged(element,new,old)if element.Flag then self.FlagChanged:

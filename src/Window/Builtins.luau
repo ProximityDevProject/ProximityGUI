@@ -234,7 +234,7 @@ return function(Window)
 		look:Dropdown({
 			Name = T("LoadingStyle"),
 			Icon = "loader",
-			Values = { "Planet", "Skeleton", "None" },
+			Values = { "Planet", "Orbit", "Eclipse", "Constellation", "Terminal", "Skeleton", "None" },
 			Display = function(v)
 				return T("Loading" .. v)
 			end,

@@ -26,6 +26,7 @@ local PageModule = require("./Page")
 local Skeleton = require("./Skeleton")
 local Motion = require("./Motion")
 local Loader = require("../Widgets/Loader")
+local Intros = require("../Widgets/Intros")
 
 local UIS = Env.Service("UserInputService")
 local RunService = Env.Service("RunService")
@@ -83,6 +84,9 @@ function Window.new(Lib, options)
 	self:_setupToggleButton()
 	if self.Loading.Enabled and self.LoadingStyle == "Planet" then
 		self.Loader = Loader.new(self, self.Loading)
+		self.Holder.Visible = false
+	elseif self.Loading.Enabled and Intros.Has(self.LoadingStyle) then
+		self.Loader = Intros.new(self, self.Loading, self.LoadingStyle)
 		self.Holder.Visible = false
 	else
 		if self.Loading.Enabled then

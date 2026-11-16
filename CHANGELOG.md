@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.7 - new loading screens
+
+- Orbit: three thin orbits with moons and trails, 96 ticks around the outside light up with real progress, the percent in the middle; the orbits fold into the centre and the menu grows from it
+- Eclipse: a black moon slides over a white sun as it loads; at 100% it is a total eclipse - the corona flares, a diamond ring flashes and the menu opens from it
+- Constellation: stars appear and thin lines join them one by one as progress grows; the finished picture flashes and the stars rush into the middle
+- Terminal: a small boot console types out each loading step with an ASCII bar, percent, time left and a blinking caret, then the menu opens with your menu animation
+- Pick one in Settings > Loading screen, or `Loading = { Style = "Eclipse" }`
+
 ## 1.2.6 - menu animations
 
 - 9 new ways for the menu to appear and hide on the menu key: Rise, Zoom, Drop, Slide, Swing, Wipe, Unfold, Scan and Fade, next to Planet and None

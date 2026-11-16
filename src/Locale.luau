@@ -185,6 +185,10 @@ local packs = {
 		LoadingStyleHint = "Applies the next time the script starts",
 		LoadingPlanet = "Planet",
 		LoadingSkeleton = "Menu skeleton",
+		LoadingOrbit = "Orbit",
+		LoadingEclipse = "Eclipse",
+		LoadingConstellation = "Constellation",
+		LoadingTerminal = "Terminal",
 		LoadingNone = "None",
 	},
 	ru = {
@@ -358,6 +362,10 @@ local packs = {
 		LoadingStyleHint = "Применится при следующем запуске",
 		LoadingPlanet = "Планета",
 		LoadingSkeleton = "Скелет меню",
+		LoadingOrbit = "Орбиты",
+		LoadingEclipse = "Затмение",
+		LoadingConstellation = "Созвездие",
+		LoadingTerminal = "Терминал",
 		LoadingNone = "Без загрузки",
 	},
 }

@@ -41,7 +41,7 @@
     Theme = "Eclipse", Accent = Color3.new(1, 1, 1),
     Font = "Builder Sans", Density = "Normal", ToggleStyle = "Switch",
     Navigation = "Sidebar",        -- or "Rail"
-    Loading = { Style = "Planet", MinTime = 0.6 },   -- Style = "Skeleton" for the in-window shell, false to skip
+    Loading = { Style = "Planet", MinTime = 0.6 },   -- Planet, Orbit, Eclipse, Constellation, Terminal, Skeleton; false to skip
     KeySystem = false,             -- see below
     Animation = "Planet",          -- Rise, Zoom, Drop, Slide, Swing, Wipe, Unfold, Scan, Fade, None
     ToggleButton = nil,            -- bubble on phones only; "Bubble", "Topbar" or false
@@ -70,7 +70,7 @@ Window:Step("Warming up ESP", function(t)              -- runs in its own thread
 end)
 
 Window:OnReady(function() print("menu is ready") end)</code></pre>
-  <p>Prefer the old in-window shell? <code>Loading = { Style = "Skeleton" }</code>. No loading at all: <code>Loading = false</code>.</p>
+  <p>Other loading screens: <code>"Orbit"</code> (orbits and a ring of ticks), <code>"Eclipse"</code> (a moon covers the sun as it loads), <code>"Constellation"</code> (stars joined line by line), <code>"Terminal"</code> (a boot console) and <code>"Skeleton"</code> (the menu shell inside the window). No loading at all: <code>Loading = false</code>. Players can also switch it in Settings.</p>
 
   <h2 id="key">Key system</h2>
   <p>One option turns it on or off. While the key is not accepted, nothing else of your script runs.</p>
