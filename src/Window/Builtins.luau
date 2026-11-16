@@ -210,6 +210,44 @@ return function(Window)
 		})
 
 		look:Dropdown({
+			Name = T("ClickSound"),
+			Icon = "volume-2",
+			Values = { "None", "Default", "Experience", "Halloween", "Pride", "Wood" },
+			Display = function(v)
+				return v == "None" and T("Off") or v
+			end,
+			Default = Lib:GetSetting("ClickSound", "None"),
+			Description = T("ClickSoundHint"),
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetSetting("ClickSound", v)
+					Lib:PlaySound(v, (Lib:GetSetting("ClickVolume", 50) or 50) / 100)
+				end
+			end,
+		})
+		look:Slider({
+			Name = T("SoundVolume"),
+			Icon = "volume-1",
+			Min = 0,
+			Max = 100,
+			Default = Lib:GetSetting("ClickVolume", 50),
+			Suffix = "%",
+			Save = false,
+			Callback = function(v)
+				Lib:SetSetting("ClickVolume", v)
+			end,
+		})
+		look:Toggle({
+			Name = T("NotifySound"),
+			Icon = "bell",
+			Default = Lib:GetSetting("NotifySound", false),
+			Save = false,
+			Callback = function(on)
+				Lib:SetSetting("NotifySound", on)
+			end,
+		})
+		look:Dropdown({
 			Name = T("OpenAnimation"),
 			Icon = "move",
 			Values = { "Planet", "Rise", "Zoom", "Drop", "Slide", "Swing", "Wipe", "Unfold", "Scan", "Glitch", "Fade", "None" },
@@ -481,6 +519,142 @@ return function(Window)
 		end)
 
 		-- Widgets
+		-- screen: blur, fps cap, cursor, snapping, animation speed
+		local screen = tab:RightSection({ Name = T("Screen"), Icon = "image" })
+		screen:Slider({
+			Name = T("MenuBlur"),
+			Icon = "eye",
+			Min = 0,
+			Max = 24,
+			Default = Lib:GetSetting("MenuBlur", 0),
+			Description = T("MenuBlurHint"),
+			Save = false,
+			Callback = function(v)
+				Lib:SetMenuBlur(v)
+			end,
+		})
+		screen:Dropdown({
+			Name = T("FpsCap"),
+			Icon = "gauge",
+			Values = { "0", "30", "60", "90", "120", "144", "165", "240", "360" },
+			Display = function(v)
+				return v == "0" and T("Unlimited") or (v .. " FPS")
+			end,
+			Default = tostring(Lib:GetSetting("FpsCap", 0)),
+			Save = false,
+			Callback = function(v)
+				if v and not Lib:SetFpsCap(tonumber(v)) and v ~= "0" then
+					Lib:Notify({ Title = T("FpsCap"), Content = T("NoFpsCap"), Type = "warning", Duration = 4 })
+				end
+			end,
+		})
+		screen:Dropdown({
+			Name = T("Cursor"),
+			Icon = "mouse",
+			Values = { "Default", "Proximity", "Dot", "Crosshair" },
+			Display = function(v)
+				return T("Cursor" .. v)
+			end,
+			Default = Lib:GetSetting("Cursor", "Default"),
+			Description = T("CursorHint"),
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetCursor(v)
+				end
+			end,
+		})
+		screen:Toggle({
+			Name = T("Snap"),
+			Icon = "layout-grid",
+			Default = Lib:GetSetting("Snap", true),
+			Description = T("SnapHint"),
+			Save = false,
+			Callback = function(on)
+				Lib:SetSnap(on)
+			end,
+		})
+		screen:Slider({
+			Name = T("AnimationSpeed"),
+			Icon = "gauge",
+			Min = 50,
+			Max = 200,
+			Step = 10,
+			Default = Lib:GetSetting("AnimationSpeed", 100),
+			Suffix = "%",
+			Save = false,
+			Callback = function(v)
+				Lib:SetSetting("AnimationSpeed", v)
+				if Tween.Speed > 0 then
+					Tween.Speed = 100 / math.max(v, 10)
+				end
+			end,
+		})
+
+		-- server
+		local server = tab:RightSection({ Name = T("Server"), Icon = "server" })
+		local function copy(text, what)
+			Env.Clipboard(text)
+			Lib:Notify({ Title = T("Copied"), Content = what, Duration = 2.5 })
+		end
+		server:ButtonGroup({
+			{ Name = "JobId", Callback = function()
+				copy(game.JobId, "JobId")
+			end },
+			{ Name = "PlaceId", Callback = function()
+				copy(tostring(game.PlaceId), "PlaceId")
+			end },
+		})
+		server:Button({ Name = T("CopyJoinScript"), Icon = "code", Callback = function()
+			copy(("game:GetService(\"TeleportService\"):TeleportToPlaceInstance(%d, %q, game.Players.LocalPlayer)"):format(game.PlaceId, game.JobId), T("CopyJoinScript"))
+		end })
+		server:Button({ Name = T("Rejoin"), Icon = "refresh", Callback = function()
+			local ts = game:GetService("TeleportService")
+			local lp = game:GetService("Players").LocalPlayer
+			if #game:GetService("Players"):GetPlayers() <= 1 then
+				ts:Teleport(game.PlaceId, lp)
+			else
+				ts:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp)
+			end
+		end })
+		server:Button({ Name = T("ServerHop"), Icon = "globe", Callback = function()
+			Lib:Notify({ Title = T("ServerHop"), Content = T("Searching"), Duration = 3 })
+			task.spawn(function()
+				local body = Env.HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId))
+				local ok, data = pcall(function()
+					return game:GetService("HttpService"):JSONDecode(body or "")
+				end)
+				if ok and type(data) == "table" and data.data then
+					for _, srv in data.data do
+						if srv.id ~= game.JobId and (srv.playing or 0) < (srv.maxPlayers or 0) then
+							game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, srv.id, game:GetService("Players").LocalPlayer)
+							return
+						end
+					end
+				end
+				Lib:Notify({ Title = T("ServerHop"), Content = T("NoServer"), Type = "warning", Duration = 4 })
+			end)
+		end })
+
+		-- output: what the library said
+		local output = tab:RightSection({ Name = T("Output"), Icon = "terminal", Collapsible = true, Collapsed = true })
+		local console = output:Console({ Height = 150 })
+		Lib.OutputConsole = console
+		for _, n in Lib.NotificationHistory or {} do
+			pcall(console.Log, console, (n.Title and (n.Title .. ": ") or "") .. tostring(n.Content or ""))
+		end
+		output:ButtonGroup({
+			{ Name = T("Clear"), Callback = function()
+				pcall(console.Clear, console)
+			end },
+			{ Name = T("TestNotification"), Callback = function()
+				Lib:Notify({ Title = "Proximity", Content = T("TestNotificationBody"), Duration = 4 })
+			end },
+			{ Name = T("TestWarning"), Callback = function()
+				Lib:Notify({ Title = "Proximity", Content = T("TestNotificationBody"), Type = "warning", Duration = 4 })
+			end },
+		})
+
 		local widgets = tab:RightSection({ Name = T("Widgets"), Icon = "layout-grid" })
 		local function widgetToggle(name, icon, key, make)
 			widgets:Toggle({

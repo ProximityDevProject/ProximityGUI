@@ -29,6 +29,7 @@ local Locale = require("../Locale")
 local Shared = require("../Shared")
 
 local HttpService = game:GetService("HttpService")
+local Keys = require("../Core/Keys")
 
 local Base = {}
 Base.__index = Base
@@ -147,6 +148,7 @@ function Base:_userSet(value: any)
 	self:Set(value)
 	if not Util.Equal(old, self.Value) then
 		self.Library:_pushHistory(self, old, Util.DeepCopy(self.Value))
+		self.Library:_click()
 	end
 end
 
@@ -349,6 +351,11 @@ function Base:_mount(parent: Instance, order: number?)
 	if self.Frame then
 		self.Frame.LayoutOrder = order or self.Frame.LayoutOrder
 		self:_wireRow()
+		if self.GetQuickBind and self:GetQuickBind() then
+			task.defer(function()
+				self:_renderQuickChip()
+			end)
+		end
 	end
 	for _, link in self.Links do
 		self:_mountLink(link)
@@ -584,6 +591,7 @@ function Base:OpenContextMenu(at: Vector2?)
 		return
 	end
 	local items = self:_contextItems()
+	self:_universalItems(items)
 	if #items == 0 then
 		return
 	end
@@ -803,5 +811,230 @@ function Base:Destroy()
 	self.Changed:DisconnectAll()
 end
 Base.Remove = Base.Destroy
+
+-- ═══ Right-click: any element can get a key, an exact value, its options ═══
+--[[
+	Every element (toggle, button, slider, dropdown, colour, input...) can be
+	given a key from its right-click menu, even when the script gave it no
+	keybind of its own:
+	  toggle      flips
+	  button      presses
+	  dropdown    goes to the next value
+	  slider, colour, input, range...  jump to the value saved with the bind
+	                and back to the previous one on the next press
+	Binds are saved per player (settings), shown as a chip on the row and in
+	the keybind list.
+	  element:SetQuickBind("Ctrl+E")   element:GetQuickBind()   element:SetQuickBind(nil)
+]]
+
+function Base:_quickId(): string
+	if self.Flag then
+		return "flag:" .. self.Flag
+	end
+	local parts = { self.Window and self.Window.Title or "?" }
+	local section = self.Section
+	if section then
+		local page = section.Page
+		table.insert(parts, page and page.Tab and page.Tab.Name or "?")
+		table.insert(parts, section.Name or "?")
+	end
+	table.insert(parts, self.Type or "?")
+	table.insert(parts, tostring(self.Name or self.Text or "?"))
+	return table.concat(parts, "/")
+end
+
+local function allQuick(Lib)
+	local binds = Lib:GetSetting("QuickBinds", nil)
+	return type(binds) == "table" and binds or {}
+end
+
+function Base:GetQuickBind(): string?
+	local entry = allQuick(self.Library)[self:_quickId()]
+	return entry and entry.K or nil
+end
+
+function Base:SetQuickBind(key: string?)
+	local Lib = self.Library
+	local binds = table.clone(allQuick(Lib))
+	local id = self:_quickId()
+	if key == nil or key == "None" then
+		binds[id] = nil
+	else
+		local value = nil
+		if self.Type ~= "Toggle" and self.Type ~= "Button" and self.Type ~= "Dropdown" then
+			local ok, encoded = pcall(function()
+				return self:_serialize()
+			end)
+			value = ok and encoded or nil
+		end
+		binds[id] = { K = key, V = value }
+	end
+	Lib:SetSetting("QuickBinds", binds)
+	self:_renderQuickChip()
+	Lib:_ensureQuickListener()
+	if Lib.RefreshKeybindList then
+		pcall(Lib.RefreshKeybindList, Lib)
+	end
+	return self
+end
+
+-- what a press does for this element
+function Base:_quickPress()
+	if self._destroyed or self:IsLocked() then
+		return
+	end
+	local Lib = self.Library
+	if self.Type == "Toggle" then
+		self:_userSet(not self.Value)
+	elseif self.Type == "Button" then
+		if self.Press then
+			self:Press()
+		else
+			self:Fire()
+		end
+		Lib:_click()
+	elseif self.Type == "Dropdown" and not self.Multi and type(self.Values) == "table" and #self.Values > 0 then
+		local index = table.find(self.Values, self.Value) or 0
+		self:_userSet(self.Values[index % #self.Values + 1])
+	else
+		local entry = allQuick(Lib)[self:_quickId()]
+		if not entry or entry.V == nil then
+			self:Fire()
+			return
+		end
+		local now = Util.DeepCopy(self.Value)
+		local before = Util.DeepCopy(self.Value)
+		self:_deserialize(entry.V)
+		if Util.Equal(now, self.Value) and self._quickPrev ~= nil then
+			-- already at the bound value: go back to where it was
+			self:Set(Util.DeepCopy(self._quickPrev))
+			self._quickPrev = nil
+		else
+			self._quickPrev = now
+		end
+		Lib:_pushHistory(self, before, Util.DeepCopy(self.Value))
+		Lib:_click()
+	end
+end
+
+-- a small key chip on the row
+function Base:_renderQuickChip()
+	local key = self:GetQuickBind()
+	if not self._quickLink then
+		if not key then
+			return
+		end
+		local link = { _mounted = false, Type = "QuickBindLink" }
+		local owner = self
+		function link._buildInline(_, holder, order)
+			local chip = Util.Label({ Text = "", FontFace = Theme.Fonts.Mono, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Center, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18), BackgroundTransparency = 0, LayoutOrder = order, Parent = holder })
+			Util.Padding(chip, 0, 6, 0, 6)
+			Util.Corner(4, chip)
+			Theme.Paint(chip, { BackgroundColor3 = "Surface2", TextColor3 = "TextDim" })
+			Theme.Paint(Util.Stroke(chip), { Color = "Stroke" })
+			link.Chip = chip
+			owner:_renderQuickChip()
+		end
+		function link._render() end
+		self._quickLink = link
+		table.insert(self.Links, link)
+		self:_mountLink(link)
+	end
+	local chip = self._quickLink.Chip
+	if chip then
+		chip.Visible = key ~= nil
+		chip.Text = key and Keys.Display(key) or ""
+	end
+end
+
+-- waits for the next key or mouse button (Esc cancels, Backspace removes)
+function Base:_captureQuickBind()
+	local Lib = self.Library
+	local T = Locale.T
+	local UIS = game:GetService("UserInputService")
+	local note = Lib:Notify({ Title = T("PressKey"), Content = T("PressKeyHint"), Duration = 6 })
+	local conn
+	conn = UIS.InputBegan:Connect(function(input)
+		local name = Keys.FromInput(input)
+		if not name or name == "MB1" or Keys.IsModifier(name) then
+			return
+		end
+		conn:Disconnect()
+		if note and note.Close then
+			pcall(note.Close, note)
+		end
+		if name == "Escape" then
+			return
+		end
+		if name == "Backspace" or name == "Delete" then
+			self:SetQuickBind(nil)
+			return
+		end
+		self:SetQuickBind(Keys.Combo(name))
+		Lib:Notify({ Title = T("BindSet"), Content = tostring(self.Name or self.Type) .. "  ·  " .. Keys.Display(Keys.Combo(name)), Duration = 3 })
+	end)
+	task.delay(6, function()
+		if conn.Connected then
+			conn:Disconnect()
+		end
+	end)
+end
+
+-- the part of the right-click menu every element gets
+function Base:_universalItems(items)
+	local T = Locale.T
+	local Lib = self.Library
+	if self.Type == "Label" or self.Type == "Paragraph" or self.Type == "Divider" then
+		return items
+	end
+	local function add(item)
+		if #items > 0 and not items[#items].Separator and not item.Separator and not items._sep then
+			table.insert(items, { Separator = true })
+			items._sep = true
+		end
+		table.insert(items, item)
+	end
+	-- an exact value, typed in
+	local numeric = type(self.Value) == "number"
+	if (numeric or self.Type == "Input") and self.Window and self.Window.Prompt then
+		add({ Text = T("SetValue"), Icon = "pencil", Hint = numeric and tostring(self.Value) or nil, Callback = function()
+			task.spawn(function()
+				local text = self.Window:Prompt({ Title = tostring(self.Name or T("SetValue")), Default = tostring(self.Value or ""), Placeholder = numeric and (tostring(self.Min or "") .. " - " .. tostring(self.Max or "")) or "" })
+				if text == nil then
+					return
+				end
+				if numeric then
+					local n = tonumber((string.gsub(text, ",", ".")))
+					if n then
+						self:_userSet(n)
+					end
+				else
+					self:_userSet(text)
+				end
+			end)
+		end })
+	end
+	-- the element's own options panel
+	if self._options then
+		add({ Text = T("Options"), Icon = "sliders-horizontal", Callback = function()
+			for _, link in self.Links do
+				if link.Type == "OptionsLink" and link.Button then
+					self._options:Toggle(link.Button)
+				end
+			end
+		end })
+	end
+	-- a key for anything
+	local key = self:GetQuickBind()
+	add({ Text = key and T("ChangeBind") or T("AddBind"), Icon = "keyboard", Hint = key and Keys.Display(key) or nil, Callback = function()
+		self:_captureQuickBind()
+	end })
+	if key then
+		add({ Text = T("RemoveBind"), Icon = "x", Callback = function()
+			self:SetQuickBind(nil)
+		end })
+	end
+	return items
+end
 
 return Base

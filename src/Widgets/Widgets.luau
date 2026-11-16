@@ -127,6 +127,11 @@ return function(Lib)
 		local duration = options.Duration or options.Time or options.Delay or 4
 		local handle = { Title = options.Title, Content = options.Content or options.Text or options.Description or "" }
 		table.insert(Lib.NotificationHistory, { Title = handle.Title, Content = handle.Content, Type = kind, Time = os.time() })
+		if Lib:GetSetting("NotifySound", false) then
+			task.spawn(function()
+				Lib:PlaySound((kind == "warning" or kind == "error") and "warning" or "notification", (Lib:GetSetting("ClickVolume", 50) or 50) / 100)
+			end)
+		end
 		Lib.Unread = (Lib.Unread or 0) + 1
 		Lib.NotificationsChanged:Fire()
 		while #Lib.NotificationHistory > 50 do

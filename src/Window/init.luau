@@ -82,6 +82,9 @@ function Window.new(Lib, options)
 	self.LoadingStyle = self.Loading.Style or Lib:GetSetting("LoadingStyle", "Planet")
 	self:SetScale(options.Scale or Lib:GetSetting("Scale", "Auto"))
 	self:_setupToggleButton()
+	if Lib._attachScreen then
+		Lib:_attachScreen(self)
+	end
 	if self.Loading.Enabled and self.LoadingStyle == "Planet" then
 		self.Loader = Loader.new(self, self.Loading)
 		self.Holder.Visible = false
@@ -855,6 +858,10 @@ function Window:_makeDraggable(handle)
 		if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
 			dragging = false
 			self:_saveState()
+			self._restPosition = self.Holder.Position
+			if self.Library._snapWindow then
+				self.Library:_snapWindow(self)
+			end
 		end
 	end)
 end

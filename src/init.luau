@@ -23,6 +23,7 @@ local Theme = require("./Theme")
 local Icons = require("./Icons")
 local Locale = require("./Locale")
 local Shared = require("./Shared")
+local Media = require("./Media")
 local Overlay = require("./Widgets/Overlay")
 
 -- Re-running the script replaces the previous instance cleanly.
@@ -63,6 +64,7 @@ local Library = {
 	Signal = Signal,
 	Maid = Maid,
 	Tween = Tween,
+	Media = Media,
 	Theme = Theme,
 	Icons = Icons,
 	Keys = Keys,
@@ -816,5 +818,65 @@ end
 function Library:GetFonts()
 	return Theme.FontList()
 end
+
+-- ═══ Interface sounds ════════════════════════════════════════════════════
+-- Library:PlaySound("wood", 0.5) plays one of Media.Lists.ui; the menu's own
+-- clicks use the Click sound setting (None by default) and its volume.
+function Library:PlaySound(name, volume)
+	if not name or name == "None" then
+		return nil
+	end
+	return Media:Play("ui", string.lower(name), { Volume = volume or 0.5 })
+end
+
+local lastClick = 0
+function Library:_click()
+	local style = self:GetSetting("ClickSound", "None")
+	if style == "None" or os.clock() - lastClick < 0.07 then
+		return
+	end
+	lastClick = os.clock()
+	task.spawn(function()
+		self:PlaySound(style, (self:GetSetting("ClickVolume", 50) or 50) / 100)
+	end)
+end
+
+-- ═══ Quick binds (any element, from its right-click menu) ═════════════════
+function Library:_ensureQuickListener()
+	if self._quickConn then
+		return
+	end
+	local UIS = game:GetService("UserInputService")
+	self._quickConn = UIS.InputBegan:Connect(function(input, processed)
+		if UIS:GetFocusedTextBox() then
+			return
+		end
+		local name = Keys.FromInput(input)
+		if not name or Keys.IsModifier(name) then
+			return
+		end
+		local binds = self:GetSetting("QuickBinds", nil)
+		if type(binds) ~= "table" or next(binds) == nil then
+			return
+		end
+		for _, element in self.AllElements do
+			if element.GetQuickBind then
+				local key = element:GetQuickBind()
+				if key and Keys.MatchesCombo(key, name) then
+					task.spawn(element._quickPress, element)
+				end
+			end
+		end
+	end)
+	Shared.Maid:Give(self._quickConn)
+end
+task.defer(function()
+	local binds = Library:GetSetting("QuickBinds", nil)
+	if type(binds) == "table" and next(binds) ~= nil then
+		Library:_ensureQuickListener()
+	end
+end)
+
+require("./Widgets/Screen")(Library)
 
 return Library
