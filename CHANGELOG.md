@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.9 - smoother navigation
+
+- One highlight pill glides between tabs on a spring, its accent stripe squeezing on the way; it follows the list when it scrolls
+- Pages arrive from the direction you travel (down the list from below, up from above, back from the left) and their sections light up one by one; the header title slides in with the new name
+- The page no longer reflows to one column while the window grows or shrinks
+- The new loading screens get a slowly drifting starfield and a glowing head on the progress bar
+
 ## 1.2.8 - springs and a new look
 
 - Menu animations rewritten on a physics spring: the window lands with a natural settle, and pressing the key mid-way turns it around keeping its speed

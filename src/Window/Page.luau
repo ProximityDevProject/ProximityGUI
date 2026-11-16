@@ -111,7 +111,14 @@ function Page:_layoutColumns()
 	if not self._row then
 		return
 	end
-	local width = self.Window.Content.AbsoluteSize.X / math.max(Shared.Scale or 1, 0.01)
+	-- the real (unscaled) width: divide by the window's current scale, which
+	-- also covers the open / hide animation, so the layout never reflows mid-motion
+	local holder = self.Window.Holder
+	local k = holder and holder.Size.X.Offset > 0 and holder.AbsoluteSize.X / holder.Size.X.Offset or (Shared.Scale or 1)
+	if k < 0.08 then
+		return -- too small to measure (the window is just appearing or hidden)
+	end
+	local width = self.Window.Content.AbsoluteSize.X / k
 	local single = self.Columns == 1 or width < 520
 	if single then
 		self._left.Size = UDim2.new(1, 0, 0, 0)

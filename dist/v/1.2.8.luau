@@ -3160,57 +3160,59 @@ BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(0.5,-
 BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(0.5,-
 5,0,0),Position=UDim2.new(0.5,5,0,0),Parent=row})Util.List(right,10)self._full,
 self._left,self._right,self._row=full,left,right,row self:_layoutColumns()end
-function Page:_layoutColumns()if not self._row then return end local width=self.
-Window.Content.AbsoluteSize.X/math.max(Shared.Scale or 1,0.01)local single=self.
-Columns==1 or width<520 if single then self._left.Size=UDim2.new(1,0,0,0)self.
-_right.Size=UDim2.new(1,0,0,0)self._right.Position=UDim2.new(0,0,0,0)if not self
-._stack then self._stack=Util.List(self._row,10)end self._right.LayoutOrder=2
-self._left.LayoutOrder=1 else if self._stack then self._stack:Destroy()self.
-_stack=nil end self._left.Size=UDim2.new(0.5,-5,0,0)self._right.Size=UDim2.new(
-0.5,-5,0,0)self._right.Position=UDim2.new(0.5,5,0,0)end end function Page:
-_column(side)self:_ensureMounted()if side=='Right'then return self._right elseif
-side=='Full'then return self._full end return self._left end function Page:
-Select()self.Window:_selectPage(self)return self end Page.Open=Page.Select
-function Page:IsSelected()return self.Window.CurrentPage==self end function Page
-:ScrollTo(gui)if not self.Frame or not gui then return end local s=Shared.Scale
-or 1 local y=(gui.AbsolutePosition.Y-self.Frame.AbsolutePosition.Y)/s+self.Frame
-.CanvasPosition.Y-24 Tween.Play(self.Frame,{CanvasPosition=Vector2.new(0,math.
-max(0,y))},0.3)end function Page:GetSections()return table.clone(self.Sections)
-end local Tab={}Tab.__index=Tab function Tab.new(window,options)options=type(
-options)=='string'and{Name=options}or(options or{})local self=setmetatable({},
-Tab)self.Window=window self.Name=options.Name or options.Title or'Tab'self.Icon=
-options.Icon self.Description=options.Description or options.Desc self.Badge=
-options.Badge self.Visible=options.Visible~=false self.Pages={}self.Selected=
-Signal.new()self.Order=options.Order self._total,self._done=0,0 return self end
-function Tab:_defaultPage()if not self.Pages[1]then local page=Page.new(self,{
-Name=self.Name,Implicit=true,Columns=self.Columns})table.insert(self.Pages,page)
-end return self.Pages[1]end function Tab:Section(options)return self:
-_defaultPage():Section(options)end Tab.AddSection=Tab.Section Tab.DrawSection=
-Tab.Section Tab.CreateSection=Tab.Section function Tab:LeftSection(o)return self
-:_defaultPage():LeftSection(o)end function Tab:RightSection(o)return self:
-_defaultPage():RightSection(o)end function Tab:FullSection(o)return self:
-_defaultPage():FullSection(o)end function Tab:SubTab(options)options=type(
-options)=='string'and{Name=options}or(options or{})local first=self.Pages[1]if
-first and first.Implicit and#first.Sections==0 and not options.Hidden then table
-.remove(self.Pages,1)end local page=Page.new(self,options)table.insert(self.
-Pages,page)if self.Window.CurrentTab==self then self.Window:_refreshPills()end
-return page end Tab.SubPage=Tab.SubTab Tab.AddSubTab=Tab.SubTab Tab.Page=Tab.
-SubTab function Tab:GetPage(name)for _,page in self.Pages do if page.Name==name
-then return page end end return nil end function Tab:Select()self.Window:
-SelectTab(self)return self end Tab.Open=Tab.Select function Tab:IsSelected()
-return self.Window.CurrentTab==self end function Tab:SetName(name)self.Name=name
-if self._label then self._label.Text=name end if self:IsSelected()then self.
-Window:_refreshHeader()end return self end function Tab:SetIcon(icon)self.Icon=
-icon if self._icon then self._icon.Image=Icons.Get(icon)or''end return self end
-function Tab:SetDescription(text)self.Description=text if self:IsSelected()then
-self.Window:_refreshHeader()end return self end function Tab:SetBadge(text)self.
-Badge=text if self._badge then self._badge.Visible=text~=nil and text~=''self.
-_badge.Text=text and tostring(text)or''end return self end function Tab:
-SetVisible(visible)self.Visible=visible if self.Button then self.Button.Visible=
-visible end return self end function Tab:GetSections()local out={}for _,page in
-self.Pages do for _,s in page.Sections do table.insert(out,s)end end return out
-end function Tab:GetElements()local out={}for _,s in self:GetSections()do for _,
-el in s:AllElements()do table.insert(out,el)end end return out end function Tab:
+function Page:_layoutColumns()if not self._row then return end local holder=self
+.Window.Holder local k=holder and holder.Size.X.Offset>0 and holder.AbsoluteSize
+.X/holder.Size.X.Offset or(Shared.Scale or 1)if k<0.08 then return end local
+width=self.Window.Content.AbsoluteSize.X/k local single=self.Columns==1 or width
+<520 if single then self._left.Size=UDim2.new(1,0,0,0)self._right.Size=UDim2.
+new(1,0,0,0)self._right.Position=UDim2.new(0,0,0,0)if not self._stack then self.
+_stack=Util.List(self._row,10)end self._right.LayoutOrder=2 self._left.
+LayoutOrder=1 else if self._stack then self._stack:Destroy()self._stack=nil end
+self._left.Size=UDim2.new(0.5,-5,0,0)self._right.Size=UDim2.new(0.5,-5,0,0)self.
+_right.Position=UDim2.new(0.5,5,0,0)end end function Page:_column(side)self:
+_ensureMounted()if side=='Right'then return self._right elseif side=='Full'then
+return self._full end return self._left end function Page:Select()self.Window:
+_selectPage(self)return self end Page.Open=Page.Select function Page:IsSelected(
+)return self.Window.CurrentPage==self end function Page:ScrollTo(gui)if not self
+.Frame or not gui then return end local s=Shared.Scale or 1 local y=(gui.
+AbsolutePosition.Y-self.Frame.AbsolutePosition.Y)/s+self.Frame.CanvasPosition.Y-
+24 Tween.Play(self.Frame,{CanvasPosition=Vector2.new(0,math.max(0,y))},0.3)end
+function Page:GetSections()return table.clone(self.Sections)end local Tab={}Tab.
+__index=Tab function Tab.new(window,options)options=type(options)=='string'and{
+Name=options}or(options or{})local self=setmetatable({},Tab)self.Window=window
+self.Name=options.Name or options.Title or'Tab'self.Icon=options.Icon self.
+Description=options.Description or options.Desc self.Badge=options.Badge self.
+Visible=options.Visible~=false self.Pages={}self.Selected=Signal.new()self.Order
+=options.Order self._total,self._done=0,0 return self end function Tab:
+_defaultPage()if not self.Pages[1]then local page=Page.new(self,{Name=self.Name,
+Implicit=true,Columns=self.Columns})table.insert(self.Pages,page)end return self
+.Pages[1]end function Tab:Section(options)return self:_defaultPage():Section(
+options)end Tab.AddSection=Tab.Section Tab.DrawSection=Tab.Section Tab.
+CreateSection=Tab.Section function Tab:LeftSection(o)return self:_defaultPage():
+LeftSection(o)end function Tab:RightSection(o)return self:_defaultPage():
+RightSection(o)end function Tab:FullSection(o)return self:_defaultPage():
+FullSection(o)end function Tab:SubTab(options)options=type(options)=='string'and
+{Name=options}or(options or{})local first=self.Pages[1]if first and first.
+Implicit and#first.Sections==0 and not options.Hidden then table.remove(self.
+Pages,1)end local page=Page.new(self,options)table.insert(self.Pages,page)if
+self.Window.CurrentTab==self then self.Window:_refreshPills()end return page end
+Tab.SubPage=Tab.SubTab Tab.AddSubTab=Tab.SubTab Tab.Page=Tab.SubTab function Tab
+:GetPage(name)for _,page in self.Pages do if page.Name==name then return page
+end end return nil end function Tab:Select()self.Window:SelectTab(self)return
+self end Tab.Open=Tab.Select function Tab:IsSelected()return self.Window.
+CurrentTab==self end function Tab:SetName(name)self.Name=name if self._label
+then self._label.Text=name end if self:IsSelected()then self.Window:
+_refreshHeader()end return self end function Tab:SetIcon(icon)self.Icon=icon if
+self._icon then self._icon.Image=Icons.Get(icon)or''end return self end function
+Tab:SetDescription(text)self.Description=text if self:IsSelected()then self.
+Window:_refreshHeader()end return self end function Tab:SetBadge(text)self.Badge
+=text if self._badge then self._badge.Visible=text~=nil and text~=''self._badge.
+Text=text and tostring(text)or''end return self end function Tab:SetVisible(
+visible)self.Visible=visible if self.Button then self.Button.Visible=visible end
+return self end function Tab:GetSections()local out={}for _,page in self.Pages
+do for _,s in page.Sections do table.insert(out,s)end end return out end
+function Tab:GetElements()local out={}for _,s in self:GetSections()do for _,el
+in s:AllElements()do table.insert(out,el)end end return out end function Tab:
 Destroy()for _,s in self:GetSections()do s:Destroy()end for _,page in self.Pages
 do if page.Frame then page.Frame:Destroy()end end if self.Button then self.
 Button:Destroy()end local tabs=self.Window.Tabs local i=table.find(tabs,self)if
