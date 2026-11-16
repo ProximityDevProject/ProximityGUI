@@ -987,11 +987,19 @@ function Window:SetBackground(spec)
 	return self
 end
 
--- Topbar planet button (default), floating bubble, or nothing.
+-- ToggleButton: nil (default) = a floating bubble on phones only, nothing on
+-- PC (the menu key opens it there); "Bubble" / "Topbar" force one; false = none.
 function Window:_setupToggleButton()
 	local mode = self.Options.ToggleButton
 	if mode == false then
 		return
+	end
+	if mode == nil then
+		if UIS.TouchEnabled and not UIS.KeyboardEnabled then
+			mode = "Bubble"
+		else
+			return
+		end
 	end
 	if mode == "Bubble" then
 		self:_buildBubble(true)

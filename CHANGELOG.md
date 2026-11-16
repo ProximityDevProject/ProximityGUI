@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.5
+
+- The floating planet button now shows only on phones; on PC the menu key opens the window and nothing sits over the game UI (`ToggleButton = "Bubble"` or `"Topbar"` still force one)
+
 ## 1.2.4 - tested in game
 
 - The intro can no longer skip its own assembly when the script is slow to start: its clock counts rendered frames

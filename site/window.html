@@ -43,7 +43,7 @@
     Navigation = "Sidebar",        -- or "Rail"
     Loading = { Style = "Planet", MinTime = 0.6 },   -- Style = "Skeleton" for the in-window shell, false to skip
     KeySystem = false,             -- see below
-    ToggleButton = "Topbar",       -- "Bubble", or false
+    ToggleButton = nil,            -- bubble on phones only; "Bubble", "Topbar" or false
     Decoration = true,             -- faint planet in the corner
     Backdrop = "Stars",            -- "Grid", "Dots", "None"
     Background = nil,              -- { Image = "...", Dim = 0.6 } or { Gradient = { c1, c2 } }
@@ -112,7 +112,7 @@ Silent:Toggle({ Name = "Hit chance" })</code></pre>
 Window:SetNavigation("Sidebar")   -- full names</code></pre>
 
   <h2 id="open">Open and close</h2>
-  <p>The window grows out of the planet button next to the Roblox menu and folds back into it when hidden. With <code>ToggleButton = "Bubble"</code> it uses a draggable round button instead.</p>
+  <p>On phones the window grows out of the floating planet button and folds back into it when hidden. On PC it opens with the menu key and fades in place, unless you set <code>ToggleButton = "Bubble"</code> or <code>"Topbar"</code>.</p>
 <pre><code class="lua">Window:Open()  Window:Close()  Window:Toggle()  print(Window:IsOpen())</code></pre>
 
   <h2 id="mini">Mini mode</h2>

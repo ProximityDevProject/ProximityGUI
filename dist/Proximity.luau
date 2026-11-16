@@ -4059,25 +4059,26 @@ BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ScaleType=Enum.ScaleType.Crop
 Size=UDim2.fromScale(1,1),BackgroundColor3=Color3.new(0,0,0),
 BackgroundTransparency=1-(spec.Dim or 0.55),ZIndex=0,Parent=layer})return self
 end function Window:_setupToggleButton()local mode=self.Options.ToggleButton if
-mode==false then return end if mode=='Bubble'then self:_buildBubble(true)else
-local ok,button=pcall(self.Library._topbarButton,self.Library,self)if ok and
-button then self.TopbarButton=button else self:_buildBubble(true)end end end
-function Window:_applyEconomy()local eco=self.Library.Economy self._economy=eco
-if eco then self:SetBackdrop('None')if self._decor then self._decor.Visible=
-false end elseif self.BackdropPattern=='None'and self.Library:GetSetting(
-'Backdrop','Stars')~='None'then self:SetBackdrop(self.Library:GetSetting(
-'Backdrop','Stars'))if self._decor then self._decor.Visible=true end end end
-function Window:_scrollKey(page)return'Scroll.'..self.Title..'/'..page.Tab.Name
-..'/'..page.Name end function Window:_restoreScroll()for _,tab in self.Tabs do
-for _,page in tab.Pages do local y=self.Library:GetSetting(self:_scrollKey(page)
-)if y and page.Frame then task.delay(0.15,function()page.Frame.CanvasPosition=
-Vector2.new(0,y)end)end end end end function Window:_afterReady()local Lib=self.
-Library local log=self.Options.Changelog if type(log)=='table'and log.Version
-and Lib:GetSetting('Seen.'..self.Title)~=log.Version then Lib:SetSetting('Seen.'
-..self.Title,log.Version)local notes={}for _,line in log.Notes or log do if
-type(line)=='string'then table.insert(notes,'\u{2022}  '..line)end end task.
-spawn(function()self:Dialog({Title=Locale.T('WhatsNew',log.Version),Content=
-table.concat(notes,string.char(10)),Buttons={{Text=Locale.T('Ok'),Style=
+mode==false then return end if mode==nil then if UIS.TouchEnabled and not UIS.
+KeyboardEnabled then mode='Bubble'else return end end if mode=='Bubble'then self
+:_buildBubble(true)else local ok,button=pcall(self.Library._topbarButton,self.
+Library,self)if ok and button then self.TopbarButton=button else self:
+_buildBubble(true)end end end function Window:_applyEconomy()local eco=self.
+Library.Economy self._economy=eco if eco then self:SetBackdrop('None')if self.
+_decor then self._decor.Visible=false end elseif self.BackdropPattern=='None'and
+self.Library:GetSetting('Backdrop','Stars')~='None'then self:SetBackdrop(self.
+Library:GetSetting('Backdrop','Stars'))if self._decor then self._decor.Visible=
+true end end end function Window:_scrollKey(page)return'Scroll.'..self.Title..
+'/'..page.Tab.Name..'/'..page.Name end function Window:_restoreScroll()for _,tab
+in self.Tabs do for _,page in tab.Pages do local y=self.Library:GetSetting(self:
+_scrollKey(page))if y and page.Frame then task.delay(0.15,function()page.Frame.
+CanvasPosition=Vector2.new(0,y)end)end end end end function Window:_afterReady()
+local Lib=self.Library local log=self.Options.Changelog if type(log)=='table'and
+log.Version and Lib:GetSetting('Seen.'..self.Title)~=log.Version then Lib:
+SetSetting('Seen.'..self.Title,log.Version)local notes={}for _,line in log.Notes
+or log do if type(line)=='string'then table.insert(notes,'\u{2022}  '..line)end
+end task.spawn(function()self:Dialog({Title=Locale.T('WhatsNew',log.Version),
+Content=table.concat(notes,string.char(10)),Buttons={{Text=Locale.T('Ok'),Style=
 'Primary'}}})end)end if self.Options.CheckUpdates~=false and Lib.VersionUrl then
 Lib:CheckForUpdates()end if self.Options.Version and self.Options.VersionUrl
 then Lib:CheckForUpdates(self.Options.VersionUrl,self.Options.Version,self.Title
@@ -5207,7 +5208,7 @@ local Locale=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.
 k()local Overlay=__DARKLUA_BUNDLE_MODULES.l()local shared=Env.Shared()local
 previousVersion=nil if shared.Library and shared.Library.Unload then
 previousVersion=shared.Library.Version pcall(shared.Library.Unload,shared.
-Library,true)end local Library={Version='1.2.4',VersionUrl=
+Library,true)end local Library={Version='1.2.5',VersionUrl=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/VERSION]]
 ,ToggleStyle='Switch',DensityName='Normal',Flags={},Elements={},AllElements={},
 Windows={},Debug=false,Unloaded=false,Anonymous=false,_classes={},_custom={},
