@@ -344,7 +344,7 @@ return function(Window)
 		look:Dropdown({
 			Name = T("Navigation"),
 			Icon = "sidebar",
-			Values = { "Sidebar", "Rail" },
+			Values = { "Sidebar", "Rail", "Bottom" },
 			Display = function(v)
 				return T(v)
 			end,
@@ -706,6 +706,14 @@ return function(Window)
 			{ Name = T("TestNotification"), Callback = function()
 				Lib:Notify({ Title = "Proximity", Content = T("TestNotificationBody"), Duration = 4 })
 			end },
+			{ Name = T("CopyReport"), Callback = function()
+				Env.Clipboard(Lib:ErrorReport())
+				Lib:Notify({ Title = T("CopyReport"), Content = T("ReportCopied"), Duration = 3 })
+			end },
+			{ Name = T("SelfTest"), Callback = function()
+				local ok, problems = Lib:SelfTest()
+				pcall(console.Log, console, ok and T("SelfTestOk") or (T("SelfTestFailed") .. ": " .. table.concat(problems, "; ")), ok and "success" or "error")
+			end },
 			{ Name = T("SlowCallbacks"), Callback = function()
 				for _, p in Lib:GetProfile(8) do
 					pcall(console.Log, console, ("%s  ·  %d calls  ·  avg %.1f ms  ·  max %.1f ms"):format(p.Name, p.Calls, p.Average * 1000, p.Max * 1000))
@@ -733,6 +741,12 @@ return function(Window)
 		widgetToggle("FriendsHere", "users", Lib.FriendsHere, "_friendsWidget")
 		widgetToggle("LookingAtMe", "eye", Lib.LookingAtMe, "_lookWidget")
 		widgetToggle("Inventory", "inventory", Lib.InventoryViewer, "_invWidget")
+		widgets:Toggle({ Name = T("LargeDescriptions"), Icon = "type", Default = Lib:GetSetting("LargeDescriptions", false), Save = false, Callback = function(on)
+			Lib:SetLargeDescriptions(on)
+		end })
+		widgets:Toggle({ Name = T("Vibration"), Icon = "activity", Description = T("VibrationHint"), Default = Lib:GetSetting("Vibration", false), Save = false, Callback = function(on)
+			Lib:SetSetting("Vibration", on)
+		end })
 		widgets:Toggle({ Name = T("Hints"), Icon = "info", Description = T("HintsHint"), Default = Lib:GetSetting("Hints", false), Save = false, Callback = function(on)
 			Lib:SetHints(on)
 		end })

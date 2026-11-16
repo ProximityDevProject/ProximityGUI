@@ -36,6 +36,8 @@ function Slider.new(section, options)
 		self.Min, self.Max = self.Max, self.Min
 	end
 	self.Danger = options.Danger
+	-- while dragging, callbacks run at most this often (seconds); the last value always lands
+	self.Throttle = options.Throttle or 0.05
 	self.Marks = options.Marks
 	self.Labels = options.Labels or options.TextProps
 	if self.Labels then
@@ -290,15 +292,29 @@ function Slider:_build(parent)
 		else
 			fineX, fineV = nil, nil
 		end
+		local target
 		if self.Range then
 			local cur = self.Value
 			if which == "A" then
-				self:Set({ Min = math.min(v, cur.Max), Max = cur.Max })
+				target = { Min = math.min(v, cur.Max), Max = cur.Max }
 			else
-				self:Set({ Min = cur.Min, Max = math.max(v, cur.Min) })
+				target = { Min = cur.Min, Max = math.max(v, cur.Min) }
 			end
 		else
-			self:Set(v)
+			target = v
+		end
+		-- the value and the track move every frame; callbacks are spaced out
+		local now = os.clock()
+		if now - (self._lastFire or 0) >= self.Throttle then
+			self._lastFire = now
+			self._pendingFire = false
+			self:Set(target)
+		else
+			local before = Util.DeepCopy(self.Value)
+			self:Set(target, true)
+			if not Util.Equal(before, self.Value) then
+				self._pendingFire = true
+			end
 		end
 	end
 	trackHolder.InputBegan:Connect(function(input)
@@ -332,8 +348,13 @@ function Slider:_build(parent)
 			if self._knobB then
 				Tween.Play(self._knobB, { Size = UDim2.fromOffset(10, 10) }, 0.15)
 			end
+			if self._pendingFire then
+				self._pendingFire = false
+				self:_fireCallbacks()
+			end
 			if not Util.Equal(self._dragStart, self.Value) then
 				self.Library:_pushHistory(self, self._dragStart, Util.DeepCopy(self.Value))
+				self.Library:_click()
 			end
 		end
 	end)

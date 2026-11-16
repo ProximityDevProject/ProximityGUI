@@ -32,6 +32,11 @@ local HttpService = game:GetService("HttpService")
 local Keys = require("../Core/Keys")
 
 local Base = {}
+
+local function Lib_large()
+	local Lib = Shared.Lib
+	return Lib and Lib.GetSetting and Lib:GetSetting("LargeDescriptions", false) or false
+end
 Base.__index = Base
 
 -- Creates a subclass: local Toggle = Base.extend("Toggle")
@@ -154,6 +159,9 @@ function Base:_userSet(value: any)
 	if not Util.Equal(old, self.Value) then
 		self.Library:_pushHistory(self, old, Util.DeepCopy(self.Value))
 		self.Library:_click()
+		if self.Type == "Toggle" and self.Library._haptic then
+			self.Library:_haptic()
+		end
 		-- a toggle can play a hit sound when it turns on (option Sound, or the Toggle sound setting)
 		if self.Type == "Toggle" and self.Value == true then
 			local sound = (self.Opts and self.Opts.Sound) or self.Library:GetSetting("ToggleSound", "None")
@@ -502,9 +510,9 @@ function Base:_row(parent: Instance, height: number?)
 			Name = "Description",
 			Text = self.Description,
 			FontFace = Theme.Fonts.Regular,
-			TextSize = Theme.Size.Small,
+			TextSize = Lib_large() and 12 or Theme.Size.Small,
 			TextTruncate = Enum.TextTruncate.AtEnd,
-			Size = UDim2.new(1, 0, 0, 13),
+			Size = UDim2.new(1, 0, 0, Lib_large() and 15 or 13),
 			Position = UDim2.new(0, 0, 0.5, 2),
 			Parent = textBox,
 		})

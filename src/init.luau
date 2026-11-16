@@ -23,6 +23,7 @@ local Theme = require("./Theme")
 local Icons = require("./Icons")
 local Locale = require("./Locale")
 local Shared = require("./Shared")
+local UIS_ = game:GetService("UserInputService")
 local Media = require("./Media")
 local Overlay = require("./Widgets/Overlay")
 
@@ -86,6 +87,12 @@ do
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		DisplayOrder = 9999,
 	})
+	-- phones: keep everything clear of the notch and rounded corners
+	if UIS_.TouchEnabled and not UIS_.KeyboardEnabled then
+		pcall(function()
+			root.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+		end)
+	end
 	Env.Protect(root)
 	root.Parent = Env.GuiParent()
 	local windows = Util.New("Frame", { Name = "Windows", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 10, Parent = root })
@@ -566,8 +573,11 @@ function Library:Window(options)
 			return nil
 		end
 	end
-	Shared.Density = self.Densities[self:GetSetting("Density", options.Density or "Normal")] or 1
-	self.DensityName = self:GetSetting("Density", options.Density or "Normal")
+	-- phones get the touch density by default: rows tall enough for a thumb
+	local phone = UIS_.TouchEnabled and not UIS_.KeyboardEnabled
+	local defaultDensity = options.Density or (phone and "Touch" or "Normal")
+	Shared.Density = self.Densities[self:GetSetting("Density", defaultDensity)] or 1
+	self.DensityName = self:GetSetting("Density", defaultDensity)
 	self.ToggleStyle = self:GetSetting("ToggleStyle", options.ToggleStyle or "Switch")
 	local font = self:GetSetting("Font", options.Font)
 	if font then
@@ -1015,6 +1025,122 @@ function Library:Localize(tables)
 end
 function Library:T(key, ...)
 	return Locale.T(key, ...)
+end
+
+-- ═══ Accessibility ═════════════════════════════════════════════════════════
+-- bigger row descriptions
+function Library:SetLargeDescriptions(on)
+	self:SetSetting("LargeDescriptions", on and true or false)
+	local root = Shared.Gui and Shared.Gui.Root
+	if root then
+		for _, d in root:GetDescendants() do
+			if d:IsA("TextLabel") and d.Name == "Description" then
+				d.TextSize = on and 12 or Theme.Size.Small
+				d.Size = UDim2.new(1, 0, 0, on and 15 or 13)
+			end
+		end
+	end
+	return self
+end
+
+-- a short buzz on the gamepad (and phones that support it) when a toggle flips
+function Library:_haptic()
+	if not self:GetSetting("Vibration", false) then
+		return
+	end
+	task.spawn(function()
+		local HS = game:GetService("HapticService")
+		for _, input in { Enum.UserInputType.Gamepad1, Enum.UserInputType.Touch } do
+			local ok, supported = pcall(HS.IsVibrationSupported, HS, input)
+			if ok and supported then
+				pcall(HS.SetMotor, HS, input, Enum.VibrationMotor.Small, 0.4)
+				task.wait(0.06)
+				pcall(HS.SetMotor, HS, input, Enum.VibrationMotor.Small, 0)
+			end
+		end
+	end)
+end
+
+-- ═══ Error report ══════════════════════════════════════════════════════════
+Library.RecentErrors = {}
+Library.ErrorOccurred:Connect(function(message, trace)
+	table.insert(Library.RecentErrors, { Time = os.date("%H:%M:%S"), Message = message, Trace = trace })
+	while #Library.RecentErrors > 20 do
+		table.remove(Library.RecentErrors, 1)
+	end
+end)
+-- everything support needs, as text (Settings > Output > Copy report)
+function Library:ErrorReport()
+	local lines = {
+		"Proximity " .. tostring(self.Version),
+		"Executor: " .. tostring(Env.ExecutorName()),
+		"Place: " .. tostring(game.PlaceId) .. "  Job: " .. tostring(game.JobId),
+		"Elements: " .. #self.AllElements .. "  Windows: " .. #self.Windows,
+		"Time: " .. os.date("%Y-%m-%d %H:%M:%S"),
+		"",
+		"Errors:",
+	}
+	for _, e in self.RecentErrors do
+		table.insert(lines, ("[%s] %s"):format(e.Time, tostring(e.Message)))
+		if e.Trace then
+			table.insert(lines, "    " .. string.gsub(tostring(e.Trace), "\n", "\n    "))
+		end
+	end
+	if #self.RecentErrors == 0 then
+		table.insert(lines, "(none)")
+	end
+	table.insert(lines, "")
+	table.insert(lines, "Recent notifications:")
+	for i = math.max(1, #self.NotificationHistory - 9), #self.NotificationHistory do
+		local n = self.NotificationHistory[i]
+		if n then
+			table.insert(lines, ("- %s: %s"):format(tostring(n.Title or ""), tostring(n.Content or "")))
+		end
+	end
+	return table.concat(lines, "\n")
+end
+
+-- ═══ Self test ═════════════════════════════════════════════════════════════
+-- Library:SelfTest() builds every element type in a hidden window, changes
+-- each value, then removes it all. Returns ok, list of problems.
+function Library:SelfTest()
+	local problems = {}
+	local window = self.Windows[1]
+	if not window then
+		return false, { "no window" }
+	end
+	local tab = window:Tab({ Name = "__selftest", Hidden = true })
+	local section = tab:Section({ Name = "Self test" })
+	local cases = {
+		{ "Toggle", { Name = "t" }, true },
+		{ "Slider", { Name = "s", Min = 0, Max = 10 }, 5 },
+		{ "Dropdown", { Name = "d", Values = { "a", "b" } }, "b" },
+		{ "Input", { Name = "i" }, "hello" },
+		{ "Keybind", { Name = "k" }, "E" },
+		{ "ColorPicker", { Name = "c" }, Color3.new(1, 0, 0) },
+		{ "Segmented", { Name = "seg", Values = { "x", "y" } }, "y" },
+		{ "Stepper", { Name = "st" }, 3 },
+		{ "Gallery", { Name = "g", Items = { "one", "two" } }, "two" },
+		{ "Button", { Name = "b" }, nil },
+		{ "Label", { Text = "l" }, nil },
+		{ "Paragraph", { Title = "p", Content = "c" }, nil },
+	}
+	for _, case in cases do
+		local ok, err = pcall(function()
+			local el = section[case[1]](section, case[2])
+			if case[3] ~= nil then
+				el:Set(case[3])
+				assert(el:Get() ~= nil, "value lost")
+			end
+		end)
+		if not ok then
+			table.insert(problems, case[1] .. ": " .. tostring(err))
+		end
+	end
+	pcall(function()
+		tab:Destroy()
+	end)
+	return #problems == 0, problems
 end
 
 require("./Lifecycle")(Library)

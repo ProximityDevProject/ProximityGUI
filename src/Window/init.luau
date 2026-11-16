@@ -97,7 +97,7 @@ function Window.new(Lib, options)
 		end
 		self:Open()
 	end
-	self:SetNavigation(options.Navigation or Lib:GetSetting("Navigation", "Sidebar"))
+	self:SetNavigation(options.Navigation or Lib:GetSetting("Navigation", touch and "Bottom" or "Sidebar"))
 	self:_applyEconomy()
 	local bg = Lib:GetSetting("Background")
 	if options.Background or type(bg) == "table" then
@@ -639,6 +639,11 @@ function Window:Tab(options)
 	self._navOrder += 1
 	tab.Order = tab.Order or self._navOrder
 	self:_buildTabButton(tab)
+	if self.Navigation == "Bottom" then
+		task.defer(function()
+			self:_refreshBottomBar()
+		end)
+	end
 	if self.Skeleton and not tab.Hidden then
 		self.Skeleton:AddTab(tab)
 	end
@@ -1109,8 +1114,20 @@ end
 	Window:SetNavigation("Rail")      a slim column of icons; names show on hover
 ]]
 function Window:SetNavigation(mode)
-	mode = mode == "Rail" and "Rail" or "Sidebar"
+	mode = (mode == "Rail" or mode == "Bottom") and mode or "Sidebar"
 	self.Navigation = mode
+	-- phones: a tab bar along the bottom, under the thumb; no sidebar
+	if mode == "Bottom" then
+		self.Sidebar.Visible = false
+		self.Main.Size = UDim2.new(1, 0, 1, -58)
+		self.Main.Position = UDim2.fromOffset(0, 0)
+		self:_refreshBottomBar()
+		return self
+	end
+	self.Sidebar.Visible = true
+	if self._bottomBar then
+		self._bottomBar.Visible = false
+	end
 	local rail = mode == "Rail"
 	local width = rail and 64 or self.SidebarWidth
 	local t = self.State == "Ready" and 0.25 or 0
@@ -1137,6 +1154,48 @@ function Window:SetNavigation(mode)
 		self._profile.Avatar.Position = rail and UDim2.new(0.5, -14, 0.5, -14) or UDim2.new(0, 8, 0.5, -14)
 	end
 	return self
+end
+
+function Window:_refreshBottomBar()
+	if self.Navigation ~= "Bottom" then
+		return
+	end
+	local bar = self._bottomBar
+	if not bar then
+		bar = Util.New("Frame", { Name = "BottomBar", Size = UDim2.new(1, 0, 0, 58), Position = UDim2.new(0, 0, 1, -58), BorderSizePixel = 0, ZIndex = 4, Parent = self.Canvas })
+		Theme.Paint(bar, { BackgroundColor3 = "Bg2" })
+		local line = Util.New("Frame", { Size = UDim2.new(1, 0, 0, 1), BorderSizePixel = 0, ZIndex = 5, Parent = bar })
+		Theme.Paint(line, { BackgroundColor3 = "Stroke" })
+		local list = Util.New("ScrollingFrame", { Name = "List", BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.new(1, -8, 1, -4), Position = UDim2.fromOffset(4, 2), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 0, ZIndex = 5, Parent = bar })
+		Util.List(list, 2, Enum.FillDirection.Horizontal, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+		self._bottomBar, self._bottomList = bar, list
+		self.TabChanged:Connect(function()
+			self:_refreshBottomBar()
+		end)
+	end
+	bar.Visible = true
+	for _, c in self._bottomList:GetChildren() do
+		if c:IsA("GuiButton") then
+			c:Destroy()
+		end
+	end
+	local order = 0
+	for _, tab in self.Tabs do
+		if tab.Visible ~= false and not tab.Hidden then
+			order += 1
+			local on = self.CurrentTab == tab
+			local b = Util.New("TextButton", { Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(66, 50), BackgroundTransparency = on and 0 or 1, LayoutOrder = tab.Order or order, ZIndex = 6, Parent = self._bottomList })
+			Util.Corner(10, b)
+			Theme.Paint(b, { BackgroundColor3 = "Surface2" })
+			local icon = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = Icons.Get(tab.Icon) or Icons.Get("layers") or "", Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 7), ZIndex = 7, Parent = b })
+			Theme.Paint(icon, { ImageColor3 = on and "Accent" or "TextMute" })
+			local label = Util.Label({ Text = tab.Name, FontFace = Theme.Fonts.Medium, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -4, 0, 12), Position = UDim2.new(0, 2, 1, -17), ZIndex = 7, Parent = b })
+			Theme.Paint(label, { TextColor3 = on and "Text" or "TextMute" })
+			b.Activated:Connect(function()
+				self:SelectTab(tab)
+			end)
+		end
+	end
 end
 
 function Window:GetNavigation()
