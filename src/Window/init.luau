@@ -135,6 +135,72 @@ end
 	real artwork can be loaded (getcustomasset) it fades in on top.
 	Logo = nil -> planet artwork, false -> vector only, anything else -> custom icon.
 ]]
+-- The header logo: a small real 3D planet with a tilted glowing ring that
+-- slowly turns while the window is open (falls back to the flat logo for a
+-- custom Logo, economy mode or when ViewportFrames are unavailable).
+function Window:_drawLogo3D(parent, size)
+	if (self.Logo and self.Logo ~= true) or self.Library.Economy then
+		return self:_drawLogo(parent, size)
+	end
+	local ok, holder = pcall(function()
+		local holder = Util.New("Frame", { Name = "Logo", BackgroundTransparency = 1, Size = UDim2.fromOffset(size, size), Parent = parent })
+		-- a soft lit rim behind the model, brightest towards the light
+		local rimFrame = Util.New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(0.62, 1, 0.62, 1), ZIndex = 4, Parent = holder })
+		Util.Round(rimFrame)
+		local rim = Util.Stroke(rimFrame, Color3.new(1, 1, 1), 1, 0)
+		Util.Gradient(rim, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.55, 1), NumberSequenceKeypoint.new(0.8, 0.2), NumberSequenceKeypoint.new(1, 0) }), -40)
+		local vp = Util.New("ViewportFrame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Ambient = Color3.fromRGB(26, 26, 32), LightColor = Color3.fromRGB(200, 200, 210), LightDirection = -Vector3.new(0.72, 0.55, 0.42).Unit, ZIndex = 3, Parent = holder })
+		local cam = Instance.new("Camera")
+		cam.FieldOfView = 30
+		cam.CFrame = CFrame.new(0, 0, 9.6)
+		cam.Parent = vp
+		vp.CurrentCamera = cam
+		local model = Instance.new("Model")
+		local function part(props)
+			local p = Instance.new("Part")
+			p.Anchored, p.CanCollide, p.CastShadow = true, false, false
+			p.Material = Enum.Material.SmoothPlastic
+			for k, v in props do
+				p[k] = v
+			end
+			p.Parent = model
+			return p
+		end
+		local body = part({ Shape = Enum.PartType.Ball, Size = Vector3.one * 2, Color = Color3.fromRGB(16, 16, 19) })
+		model.PrimaryPart = body
+		-- two cloud belts
+		for _, b in { { 0.35, 0.08 }, { -0.3, 0.06 } } do
+			local d = 2 * math.sqrt(1 - b[1] * b[1]) * 1.006
+			local belt = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(b[2], d, d), Color = Color3.fromRGB(34, 34, 40) })
+			belt.CFrame = CFrame.new(0, b[1], 0) * CFrame.Angles(0, 0, math.rad(90))
+		end
+		-- the ring: neon segments in two bands
+		for _, band in { { 1.55, 0.22, 0.25 }, { 1.85, 0.12, 0.5 } } do
+			local n = 40
+			for i = 0, n - 1 do
+				local a = i / n * math.pi * 2
+				local seg = part({ Size = Vector3.new(band[2], 0.01, (math.pi * 2 * band[1]) / n * 1.02), Color = Color3.fromRGB(235, 235, 240), Material = Enum.Material.Neon, Transparency = band[3] })
+				seg.CFrame = CFrame.new(math.cos(a) * band[1], 0, math.sin(a) * band[1]) * CFrame.Angles(0, -a, 0)
+			end
+		end
+		model.Parent = vp
+		local tilt = CFrame.Angles(0, 0, math.rad(17)) * CFrame.Angles(math.rad(14), 0, 0)
+		local angle = 0
+		self.Maid:Connect(game:GetService("RunService").RenderStepped, function(dt)
+			if self._isOpen and holder.Parent and not self.Library.Economy then
+				angle += dt * 0.6
+				model:PivotTo(tilt * CFrame.Angles(0, angle, 0))
+			end
+		end)
+		model:PivotTo(tilt)
+		return holder
+	end)
+	if ok then
+		return holder
+	end
+	return self:_drawLogo(parent, size)
+end
+
 function Window:_drawLogo(parent, size)
 	local holder = Util.New("Frame", { Name = "Logo", BackgroundTransparency = 1, Size = UDim2.fromOffset(size, size), Parent = parent })
 	local custom = self.Logo
@@ -370,6 +436,76 @@ function Window:SetBackdrop(pattern)
 				Theme.Paint(d, { BackgroundColor3 = "TextMute" })
 			end
 		end
+	elseif spec.Pattern == "Nebula" then
+		-- soft clouds drifting very slowly, brightest near the top right
+		local clouds = {}
+		for i = 1, 7 do
+			local size = rng:NextInteger(180, 360)
+			local c = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(size, size * 0.7), Position = UDim2.fromScale(rng:NextNumber(0.2, 1), rng:NextNumber(0, 0.8)), BorderSizePixel = 0, BackgroundTransparency = 0.965 - i * 0.002, ZIndex = 1, Parent = layer })
+			Util.Round(c)
+			Theme.Paint(c, { BackgroundColor3 = "Accent" })
+			Util.Gradient(c, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1) }), rng:NextInteger(0, 180))
+			table.insert(clouds, { c, c.Position, rng:NextNumber() * 6, rng:NextNumber(0.02, 0.05) })
+		end
+		self._backdropConn = RunService.Heartbeat:Connect(function()
+			if not self._isOpen or Tween.Speed == 0 or self.Library.Economy then
+				return
+			end
+			local t = os.clock()
+			for _, item in clouds do
+				local base = item[2]
+				item[1].Position = UDim2.fromScale(base.X.Scale + math.sin(t * item[4] + item[3]) * 0.04, base.Y.Scale + math.cos(t * item[4] * 0.8 + item[3]) * 0.03)
+			end
+		end)
+		self.Maid:Give(self._backdropConn)
+	elseif spec.Pattern == "Aurora" then
+		-- a few wide bands of light that slowly sway (a live wallpaper)
+		local bands = {}
+		for i = 1, 3 do
+			local band = Util.New("Frame", { Size = UDim2.new(1.6, 0, 0, 140), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.15 + i * 0.12), Rotation = -12 + i * 4, BorderSizePixel = 0, BackgroundTransparency = 0.94, ZIndex = 1, Parent = layer })
+			Theme.Paint(band, { BackgroundColor3 = "Accent" })
+			local g = Util.Gradient(band, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }), 90)
+			table.insert(bands, { band, g, i })
+		end
+		self._backdropConn = RunService.Heartbeat:Connect(function()
+			if not self._isOpen or Tween.Speed == 0 or self.Library.Economy then
+				return
+			end
+			local t = os.clock()
+			for _, item in bands do
+				item[1].Rotation = -12 + item[3] * 4 + math.sin(t * 0.25 + item[3]) * 3
+				item[2].Offset = Vector2.new(math.sin(t * 0.18 + item[3] * 2) * 0.25, 0)
+			end
+		end)
+		self.Maid:Give(self._backdropConn)
+	elseif spec.Pattern == "Comets" then
+		-- stars, and now and then a comet streaks across
+		self:SetBackdrop({ Pattern = "Stars", Transparency = alpha })
+		self.BackdropPattern = "Comets"
+		local conn
+		conn = RunService.Heartbeat:Connect(function()
+			if not self._isOpen or Tween.Speed == 0 or self.Library.Economy or math.random() > 0.004 then
+				return
+			end
+			local y = math.random() * 0.6
+			local comet = Util.New("Frame", { Size = UDim2.fromOffset(90, 1), Position = UDim2.fromScale(1.05, y), Rotation = -18, BorderSizePixel = 0, BackgroundTransparency = 0.3, ZIndex = 1, Parent = layer })
+			Theme.Paint(comet, { BackgroundColor3 = "Accent" })
+			Util.Gradient(comet, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }))
+			Tween.Play(comet, { Position = UDim2.fromScale(-0.2, y + 0.25), BackgroundTransparency = 1 }, 1.4, Enum.EasingStyle.Sine)
+			task.delay(1.5, function()
+				comet:Destroy()
+			end)
+		end)
+		local stars = self._backdropConn
+		self._backdropConn = {
+			Disconnect = function()
+				conn:Disconnect()
+				if stars then
+					stars:Disconnect()
+				end
+			end,
+		}
+		self.Maid:Give(conn)
 	end
 	return self
 end
@@ -387,8 +523,8 @@ function Window:_buildSidebar()
 
 	-- brand (drag handle)
 	local brand = Util.New("Frame", { Name = "Brand", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 62), ZIndex = 3, Parent = side })
-	local logo = self:_drawLogo(brand, 26)
-	logo.Position = UDim2.fromOffset(16, 18)
+	local logo = self:_drawLogo3D(brand, 30)
+	logo.Position = UDim2.fromOffset(14, 16)
 	self._brandLogo = logo
 	local title = Util.Label({ Text = self.Title, FontFace = Theme.Fonts.Bold, TextSize = 15, Size = UDim2.new(1, -60, 0, 18), Position = UDim2.fromOffset(52, 16), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 3, Parent = brand })
 	Theme.Paint(title, { TextColor3 = "Text" })

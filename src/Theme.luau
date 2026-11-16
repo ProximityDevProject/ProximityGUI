@@ -87,7 +87,63 @@ Theme.Presets = {
 		Accent = rgb(205, 222, 240),
 	},
 }
-Theme.Order = { "Eclipse", "OLED", "Graphite", "Moon", "Ash", "Steel" }
+-- 1.3 themes
+Theme.Presets.Paper = {
+	Bg = rgb(244, 244, 246),
+	Bg2 = rgb(238, 238, 241),
+	Surface = rgb(250, 250, 251),
+	Surface2 = rgb(236, 236, 240),
+	Surface3 = rgb(226, 226, 231),
+	Elevated = rgb(255, 255, 255),
+	Stroke = rgb(214, 214, 220),
+	StrokeHi = rgb(184, 184, 192),
+	Text = rgb(16, 16, 18),
+	TextDim = rgb(84, 84, 92),
+	TextMute = rgb(136, 136, 144),
+	Accent = rgb(12, 12, 14),
+	AccentInk = rgb(255, 255, 255),
+	Info = rgb(60, 70, 90),
+	Shadow = rgb(120, 120, 130),
+}
+Theme.Presets.Midnight = {
+	Bg = rgb(6, 8, 16),
+	Bg2 = rgb(9, 11, 21),
+	Surface = rgb(12, 15, 27),
+	Surface2 = rgb(17, 21, 36),
+	Surface3 = rgb(23, 28, 46),
+	Elevated = rgb(19, 23, 40),
+	Stroke = rgb(29, 35, 58),
+	StrokeHi = rgb(48, 57, 90),
+	Text = rgb(232, 236, 250),
+	TextDim = rgb(140, 150, 182),
+	TextMute = rgb(86, 95, 128),
+	Accent = rgb(200, 214, 255),
+}
+Theme.Presets["Graphite Blue"] = {
+	Bg = rgb(13, 15, 19),
+	Bg2 = rgb(16, 18, 23),
+	Surface = rgb(19, 22, 28),
+	Surface2 = rgb(25, 29, 37),
+	Surface3 = rgb(32, 37, 47),
+	Elevated = rgb(28, 32, 41),
+	Stroke = rgb(39, 45, 57),
+	StrokeHi = rgb(60, 70, 88),
+	TextDim = rgb(150, 160, 178),
+	Accent = rgb(130, 170, 255),
+	AccentInk = rgb(8, 12, 22),
+}
+Theme.Presets["Mono Glass"] = {
+	Bg = rgb(18, 18, 20),
+	Bg2 = rgb(22, 22, 25),
+	Surface = rgb(28, 28, 31),
+	Surface2 = rgb(36, 36, 40),
+	Surface3 = rgb(46, 46, 51),
+	Elevated = rgb(40, 40, 45),
+	Stroke = rgb(62, 62, 70),
+	StrokeHi = rgb(92, 92, 102),
+	Glass = 0.22, -- window see-through amount for this theme
+}
+Theme.Order = { "Eclipse", "OLED", "Graphite", "Moon", "Ash", "Steel", "Paper", "Midnight", "Graphite Blue", "Mono Glass" }
 
 Theme.Current = "Eclipse"
 Theme.Tokens = table.clone(base)
@@ -339,7 +395,9 @@ function Theme.Set(spec: string | { [string]: any }, animate: boolean?)
 			return false
 		end
 		for k, v in preset do
-			tokens[k] = v
+			if typeof(v) == "Color3" then
+				tokens[k] = v
+			end
 		end
 		Theme.Current = spec
 	elseif type(spec) == "table" then

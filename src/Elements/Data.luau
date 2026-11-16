@@ -500,6 +500,9 @@ function Table:_view()
 end
 
 function Table:SetRows(rows)
+	if self.Loading then
+		self:SetLoading(false)
+	end
 	self.Rows = table.clone(rows or {})
 	self:_refresh()
 	return self
@@ -608,6 +611,36 @@ function Table:_build(parent)
 	list:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
 		self:_drawVisible()
 	end)
+end
+
+-- table:SetLoading(true): shimmering placeholder rows until data arrives
+function Table:SetLoading(on)
+	self.Loading = on and true or false
+	if not self._list then
+		return self
+	end
+	if on and not self._skeleton then
+		local layer = Util.New("Frame", { Name = "Loading", BackgroundTransparency = 1, Size = self._list.Size, Position = self._list.Position, ZIndex = 5, Parent = self._list.Parent })
+		for i = 0, 5 do
+			local bar = Util.New("Frame", { Size = UDim2.new(1, -16 - (i % 3) * 30, 0, self.RowHeight - 8), Position = UDim2.fromOffset(8, 4 + i * (self.RowHeight + 4)), BorderSizePixel = 0, ZIndex = 5, Parent = layer })
+			Util.Corner(4, bar)
+			Theme.Paint(bar, { BackgroundColor3 = "Surface3" })
+			local shine = Util.Gradient(bar, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.6) }), 18)
+			task.spawn(function()
+				while shine.Parent do
+					shine.Offset = Vector2.new(-1, 0)
+					Tween.Await(shine, { Offset = Vector2.new(1, 0) }, 1.1, Enum.EasingStyle.Sine)
+				end
+			end)
+		end
+		self._skeleton = layer
+		self._list.Visible = false
+	elseif not on and self._skeleton then
+		self._skeleton:Destroy()
+		self._skeleton = nil
+		self._list.Visible = true
+	end
+	return self
 end
 
 function Table:_refresh()

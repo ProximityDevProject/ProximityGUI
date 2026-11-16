@@ -120,6 +120,11 @@ styles.Switch = {
 		Tween.Play(r.Stroke, { Thickness = on and 2.5 or 1, Transparency = on and 0.75 or 0 }, t)
 		Theme.Paint(r.Knob, { BackgroundColor3 = on and "AccentInk" or "TextDim" }, t)
 		Tween.Play(r.Knob, { Position = on and UDim2.new(1, -15, 0.5, 0) or UDim2.new(0, 3, 0.5, 0) }, t * 1.3, Enum.EasingStyle.Back)
+		-- the knob stretches while it travels and springs back to round
+		if t > 0 then
+			r.Knob.Size = UDim2.fromOffset(17, 11)
+			Tween.Play(r.Knob, { Size = UDim2.fromOffset(12, 12) }, t * 2.2, Enum.EasingStyle.Elastic)
+		end
 	end,
 }
 

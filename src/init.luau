@@ -604,8 +604,90 @@ function Library:SetTheme(name, animate)
 		if accent then
 			Theme.SetToken("Accent", accent, false)
 		end
+		-- glass themes make the window see-through (the Transparency setting still wins)
+		local glass = Theme.Presets[name] and Theme.Presets[name].Glass
+		if self:GetSetting("Transparency", nil) == nil then
+			for _, w in self.Windows do
+				w:SetTransparency(glass or 0)
+			end
+		end
+		if self:GetSetting("HighContrast", false) then
+			self:SetHighContrast(true)
+		end
 	end
 	return ok
+end
+
+-- stronger text and edges for bright screens and tired eyes
+function Library:SetHighContrast(on)
+	self:SetSetting("HighContrast", on and true or false)
+	if on then
+		local t = Theme.Tokens
+		local light = (t.Bg.R + t.Bg.G + t.Bg.B) / 3 > 0.5
+		Theme.Set({
+			TextDim = t.Text:Lerp(t.TextDim, 0.35),
+			TextMute = t.Text:Lerp(t.TextMute, 0.55),
+			Stroke = t.StrokeHi,
+			StrokeHi = light and Color3.new(0.25, 0.25, 0.28) or Color3.new(0.55, 0.55, 0.6),
+		})
+	elseif Theme.Presets[self:GetSetting("Theme", "Eclipse")] then
+		Theme.Set(self:GetSetting("Theme", "Eclipse"))
+	end
+	return self
+end
+
+-- Sharp / Soft / Round corners everywhere (now and for later rows)
+local cornerScale = { Sharp = 0.35, Soft = 1, Round = 1.8 }
+function Library:SetRoundness(style)
+	style = cornerScale[style] and style or "Soft"
+	self:SetSetting("Roundness", style)
+	local k = cornerScale[style]
+	self.CornerScale = k
+	local root = Shared.Gui and Shared.Gui.Root
+	if root then
+		for _, d in root:GetDescendants() do
+			if d:IsA("UICorner") then
+				local r = d.CornerRadius
+				if r.Scale == 0 then
+					local base = d:GetAttribute("BaseRadius")
+					if not base then
+						base = r.Offset
+						d:SetAttribute("BaseRadius", base)
+					end
+					d.CornerRadius = UDim.new(0, math.floor(base * k + 0.5))
+				end
+			end
+		end
+	end
+	return self
+end
+
+-- an accent taken from the player's character colours (or team colour)
+function Library:AccentFromAvatar()
+	local player = game:GetService("Players").LocalPlayer
+	local color
+	pcall(function()
+		local char = player.Character
+		local bc = char and char:FindFirstChildOfClass("BodyColors")
+		if bc then
+			color = bc.TorsoColor3
+		end
+		local shirt = char and char:FindFirstChild("UpperTorso") or (char and char:FindFirstChild("Torso"))
+		if not color and shirt then
+			color = shirt.Color
+		end
+		if player.Team and player.TeamColor then
+			color = color or player.TeamColor.Color
+		end
+	end)
+	if not color then
+		return nil
+	end
+	-- keep it light enough to read on dark themes
+	local h, s, v = color:ToHSV()
+	color = Color3.fromHSV(h, math.min(s, 0.55), math.max(v, 0.85))
+	self:SetAccent(color)
+	return color
 end
 
 function Library:GetTheme()
@@ -909,6 +991,16 @@ task.defer(function()
 	local n = Library:GetSetting("TextSize", 13)
 	if n and n ~= 13 then
 		Library:SetTextSize(n)
+	end
+end)
+
+task.defer(function()
+	local style = Library:GetSetting("Roundness", "Soft")
+	if style ~= "Soft" then
+		Library:SetRoundness(style)
+	end
+	if Library:GetSetting("HighContrast", false) then
+		Library:SetHighContrast(true)
 	end
 end)
 

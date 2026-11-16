@@ -216,6 +216,54 @@ return function(Lib)
 		close.Activated:Connect(function()
 			handle:Close()
 		end)
+		-- swipe it away sideways (mouse or finger); a short drag springs back
+		do
+			local UIS = game:GetService("UserInputService")
+			local swiping, startX = false, 0
+			card.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					swiping, startX = true, input.Position.X
+				end
+			end)
+			local moveConn = UIS.InputChanged:Connect(function(input)
+				if swiping and not closed and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+					local dx = (input.Position.X - startX) / (notifyScale.Scale or 1)
+					card.Position = UDim2.fromOffset(dx, 0)
+				end
+			end)
+			local endConn
+			endConn = UIS.InputEnded:Connect(function(input)
+				if not swiping or (input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch) then
+					return
+				end
+				swiping = false
+				local dx = card.Position.X.Offset
+				if math.abs(dx) > 90 and not closed then
+					closed = true
+					local i = table.find(active, handle)
+					if i then
+						table.remove(active, i)
+					end
+					Tween.Play(card, { Position = UDim2.fromOffset(dx > 0 and 360 or -360, 0) }, 0.2)
+					task.delay(0.18, function()
+						Tween.Play(wrap, { Size = UDim2.new(1, 0, 0, 0) }, 0.18)
+						task.delay(0.2, function()
+							wrap:Destroy()
+						end)
+					end)
+				elseif not closed then
+					Tween.Play(card, { Position = UDim2.fromOffset(0, 0) }, 0.35, Enum.EasingStyle.Back)
+				end
+			end)
+			wrap.Destroying:Connect(function()
+				moveConn:Disconnect()
+				endConn:Disconnect()
+			end)
+		end
+		-- the Output section in Settings keeps a copy
+		if Lib.OutputConsole then
+			pcall(Lib.OutputConsole.Log, Lib.OutputConsole, (handle.Title and (handle.Title .. ": ") or "") .. tostring(handle.Content or ""), kind)
+		end
 		-- slide in once the card knows its height
 		local function fitWrap()
 			local h = math.floor(card.AbsoluteSize.Y / notifyScale.Scale + 0.5)

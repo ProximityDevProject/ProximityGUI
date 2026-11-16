@@ -170,7 +170,7 @@ return function(Window)
 		look:Dropdown({
 			Name = T("Backdrop"),
 			Icon = "backdrop",
-			Values = { "Stars", "Grid", "Dots", "None" },
+			Values = { "Stars", "Comets", "Nebula", "Aurora", "Grid", "Dots", "None" },
 			Default = Lib:GetSetting("Backdrop", "Stars"),
 			Save = false,
 			Callback = function(v)
@@ -209,6 +209,29 @@ return function(Window)
 			end,
 		})
 
+		look:Segmented({
+			Name = T("Corners"),
+			Values = { "Sharp", "Soft", "Round" },
+			Default = Lib:GetSetting("Roundness", "Soft"),
+			Save = false,
+			Callback = function(v)
+				Lib:SetRoundness(v)
+			end,
+		})
+		look:Toggle({
+			Name = T("HighContrast"),
+			Icon = "sun",
+			Default = Lib:GetSetting("HighContrast", false),
+			Save = false,
+			Callback = function(on)
+				Lib:SetHighContrast(on)
+			end,
+		})
+		look:Button({ Name = T("AccentFromAvatar"), Icon = "user", Callback = function()
+			if not Lib:AccentFromAvatar() then
+				Lib:Notify({ Content = T("NoAvatarColor"), Type = "warning", Duration = 3 })
+			end
+		end })
 		look:Segmented({
 			Name = T("TextSize"),
 			Values = { "12", "13", "14" },
