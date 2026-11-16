@@ -49,6 +49,28 @@ end
 
 function Base.new(class, section, options: { [string]: any })
 	options = options or {}
+	-- option names from Rayfield, Orion and Linoria, so their scripts move over with fewer edits
+	if options.Default == nil and options.CurrentValue ~= nil then
+		options.Default = options.CurrentValue
+	end
+	if options.MultipleOptions ~= nil and options.Multi == nil then
+		options.Multi = options.MultipleOptions == true
+	end
+	if options.Default == nil and options.CurrentOption ~= nil then
+		local current = options.CurrentOption
+		options.Default = (type(current) == "table" and not options.Multi) and current[1] or current
+	end
+	if type(options.Range) == "table" then
+		options.Min = options.Min or options.Range[1]
+		options.Max = options.Max or options.Range[2]
+		options.Range = nil
+	end
+	if options.Rounding ~= nil and options.Decimals == nil then
+		options.Decimals = options.Rounding
+	end
+	if options.ValueName ~= nil and options.Suffix == nil then
+		options.Suffix = " " .. tostring(options.ValueName)
+	end
 	local Lib = Shared.Lib
 	local self = setmetatable({}, class)
 	self.Type = class.Kind

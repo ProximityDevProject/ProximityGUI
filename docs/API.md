@@ -1,5 +1,7 @@
 # Proximity UI · API reference
 
+<sub><b>English</b> · <a href="API.ru.md">Русский</a></sub>
+
 > Every option is optional unless marked **required**. Every element also has the [shared element API](#shared-element-api).
 > Names in `Code` are the canonical spelling; aliases are listed in [MIGRATION.md](MIGRATION.md).
 
@@ -16,6 +18,13 @@
 - [Notifications and widgets](#notifications-and-widgets)
 - [Locale](#locale)
 - [Icons](#icons)
+- [Script lifecycle](#script-lifecycle)
+- [More elements](#more-elements)
+- [Sounds, media, screen](#sounds-media-screen)
+- [Tool widgets](#tool-widgets)
+- [Looks and accessibility](#looks-and-accessibility)
+- [Right-click menu and quick binds](#right-click-menu-and-quick-binds)
+- [Events](#events)
 - [Extending](#extending)
 - [Toolkit](#toolkit)
 
@@ -24,13 +33,13 @@
 ## Library
 
 ```lua
-local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau"))()
+local Proximity = loadstring(game:HttpGet("https://proximitydevproject.github.io/ProximityGUI/Proximity.lua"))()
 ```
 
 | Member | Description |
 |---|---|
 | `Proximity:Window(options)` | Create a window. See [Window](#window). Aliases: `CreateWindow`, `Proximity.new(options)` |
-| `Proximity.Version` · `:GetVersion()` | `"1.0.0"` |
+| `Proximity.Version` · `:GetVersion()` | `"1.3.0"` |
 | `Proximity.Flags` | `flag → live value` of every flagged element |
 | `Proximity.Elements` | `flag → element` |
 | `:GetFlag(flag)` · `:SetFlag(flag, value)` · `:GetElement(flag)` | read / write by flag |
@@ -74,13 +83,14 @@ local Window = Proximity:Window({
 	Watermark = true, KeybindList = true,
 	Profile = true, Status = "Premium",
 	ConfigButton = true,               -- config chip in the header
-	Animation = "Planet",              -- open / hide motion: Rise, Zoom, Drop, Slide, Swing, Wipe, Unfold, Scan, Fade, None
+	Animation = "Planet",              -- open / hide motion: Rise, Zoom, Drop, Slide, Swing, Wipe, Unfold, Scan, Glitch, Fade, None
 	ToggleButton = nil,                -- default: floating bubble on phones only, none on PC; "Bubble", "Topbar" or false
 	Resizable = true, Draggable = true,
 	UnlockMouse = true,                -- frees the cursor in first-person games while open
-	Backdrop = "Stars",                -- "Stars" | "Grid" | "Dots" | "None"
+	Backdrop = "Stars",                -- "Stars" | "Grid" | "Dots" | "Nebula" | "Aurora" | "Comets" | "None"
 	HiddenHint = true,                 -- one-time "press X to show" toast
 	SidebarWidth = 196,
+	Navigation = nil,                  -- "Sidebar", "Rail" or "Bottom" (phones default to "Bottom")
 })
 ```
 
@@ -96,7 +106,7 @@ local Window = Proximity:Window({
 | `:SetKeybind(key)` · `:GetKeybind()` | menu key (`SetMenuKey`) |
 | `:SetTransparency(0 - 0.4)` | glass |
 | `:SetRim(bool)` | animated eclipse rim |
-| `:SetBackdrop("Stars" \| "Grid" \| "Dots" \| "None")` | background pattern |
+| `:SetBackdrop(name)` | background pattern |
 | `:SetDecoration(bool)` | planet in the corner |
 | `:SetDraggable(bool)` | |
 | `:Command({ Name, Icon, Hint, Callback })` | action in the `Ctrl+K` palette |
@@ -108,6 +118,8 @@ local Window = Proximity:Window({
 | `:Destroy()` | remove this window |
 | Signals | `.Ready`, `.Opened`, `.Closed`, `.TabChanged(tab, old)`, `.PageChanged(page, old)` |
 
+The window resizes from any of its four corners.
+
 ## Loading skeleton
 
 The window is created as a skeleton immediately. Elements you declare are stored instantly and built by a scheduler that spends at most `Loading.Budget` seconds per frame. The skeleton shows:
@@ -118,6 +130,8 @@ The window is created as a skeleton immediately. Elements you declare are stored
 - a **Show now** button after 2.5 s (disable with `Loading.Skip = false`)
 
 The window becomes **Ready** when the queue is empty, every task is done, declarations have been quiet for 0.2 s (or you called `:SetReady()`), and the auto-load config is applied. The skeleton never flashes: it stays at least `Loading.MinTime` seconds.
+
+Instead of the skeleton you can pick a loading screen: `Loading = { Style = "Planet" | "Orbit" | "Eclipse" | "Constellation" | "Terminal" | "Skeleton" | "None" }`. Players can change it in Settings.
 
 | Method | Description |
 |---|---|
@@ -155,7 +169,7 @@ Every element (except pure layout ones where noted) supports:
 
 | Member | Description |
 |---|---|
-| `Name`, `Icon`, `Description`, `Tooltip`, `Flag`, `Default`, `Callback`, `Risky`, `Badge`, `Visible`, `Locked` (`true` or reason string), `Save = false` | common options. `Icon` puts an icon before the title of any row |
+| `Name`, `Icon`, `Description`, `Tooltip`, `Flag`, `Default`, `Callback`, `Risky`, `Badge`, `Visible`, `Locked` (`true` or reason string), `Save = false`, `New = true \| days`, `Sound` | common options. `Icon` puts an icon before the title of any row. `Badge` takes text or a kind: `"risky"`, `"beta"`, `"vip"`, `"new"`. `New` shows a NEW badge that goes away once seen (7 days by default). `Sound` on a toggle plays a hit sound when it turns on |
 | `:Get()` · `:Set(value, silent?)` · `:Reset()` · `:GetDefault()` · `:SetDefault(v)` · `:IsDefault()` | value (`GetValue`, `SetValue`) |
 | `.Changed` · `:OnChanged(fn(new, old))` | fires on every change, also silent ones |
 | `:SetCallback(fn)` · `:AddCallback(fn)` · `:Fire()` | callbacks run only for non-silent changes; errors never break the UI |
@@ -167,6 +181,7 @@ Every element (except pure layout ones where noted) supports:
 | `:Options(fn \| nil)` | gear button that opens a floating panel; returns that panel (a Section). Aliases `Settings`, `AddOption` |
 | `:Highlight()` · `:Focus()` · `:GetPath()` | navigation (`Focus` opens the tab, scrolls and flashes the row) |
 | `:Copy()` · `:Paste(text?)` · `:OpenContextMenu()` | clipboard (also from right click) |
+| `:SetQuickBind(key \| nil)` · `:GetQuickBind()` | quick bind, see [right click](#right-click-menu-and-quick-binds) |
 | `:Destroy()` · `.Destroyed` | removal |
 
 ## Elements
@@ -176,19 +191,20 @@ Every element (except pure layout ones where noted) supports:
 Methods `:Toggle()`, `:On()`, `:Off()`, `:IsOn()`, `:SetStyle()`. `Section:Checkbox{}` is a toggle with `Style = "Checkbox"`. Risky toggles ask once before turning on.
 
 ### Button
-`Section:Button({ Name, Callback, Icon, Hint, Style = "Secondary" | "Primary" | "Ghost" | "Danger", Confirm = false | "text", DoubleClick = false, Cooldown = 0 })`
-Methods `:Press()` (`Click`), `:SetStyle`, `:SetIcon`, `:SetHint`, `:SetCooldown`. A keybind attached to a button presses it.
+`Section:Button({ Name, Callback, Icon, Hint, Style = "Secondary" | "Primary" | "Ghost" | "Danger", Confirm = false | "text", DoubleClick = false, Cooldown = 0, Hold = false | seconds })`
+`Hold = 1` makes a hold-to-confirm button that fills while pressed. Methods `:Press()` (`Click`), `:SetStyle`, `:SetIcon`, `:SetHint`, `:SetCooldown`. A keybind attached to a button presses it.
 
 ### ButtonGroup
 `Section:ButtonGroup({ { Name, Callback, Style }, ... })` - buttons side by side.
 
 ### Slider · RangeSlider · TextSlider
 ```lua
-Section:Slider({ Name, Min = 0, Max = 100, Default, Step = 1, Suffix, Prefix, Format = fn(v), Icon, Presets = { Low = 10, High = 90 } })
+Section:Slider({ Name, Min = 0, Max = 100, Default, Step = 1, Suffix, Prefix, Format = fn(v), Icon, Presets = { Low = 10, High = 90 },
+                 Danger = 400, Marks = { 0, 50, 100 }, Throttle = 0.05 })
 Section:RangeSlider({ Name, Min, Max, Default = { 10, 250 } })        -- value { Min =, Max = }
 Section:TextSlider({ Name, Labels = { "Slow", "Medium", "Fast" }, Default = "Medium" })   -- callback(label, index)
 ```
-Methods `:SetMin`, `:SetMax`, `:SetLimits(min, max)` (`SetRange`), `:SetStep`, `:Increment(n?)`, `:Decrement(n?)`, `:GetPercent()`, `:GetText()`. Double click the value to type; arrow keys nudge while hovered (Shift ×10). `Decimals = n` works as `Step = 10^-n`.
+Methods `:SetMin`, `:SetMax`, `:SetLimits(min, max)` (`SetRange`), `:SetStep`, `:Increment(n?)`, `:Decrement(n?)`, `:GetPercent()`, `:GetText()`. Double click the value to type; arrow keys nudge while hovered (Shift ×10). Hold Shift while dragging for fine steps. `Danger` paints the fill red past that value, `Marks` draws ticks, `Throttle` limits how often the callback runs while dragging (the last value always arrives). `Decimals = n` works as `Step = 10^-n`.
 
 ### Dropdown · MultiDropdown · PlayerDropdown
 ```lua
@@ -238,7 +254,7 @@ Section:Table({
 	OnSelect = fn(row),
 })
 ```
-Methods `:SetRows`, `:AddRow`, `:RemoveRow(index | row | fn)`, `:Clear`, `:GetRows`, `:GetSelected`, `:SortBy(key, desc)`, `:SetFilter(fn)`, `:SetQuery(text)`. Click a header to sort. Only visible rows exist (pooled), so thousands of rows stay smooth. Aliases `Catalog`, `List`.
+Methods `:SetRows`, `:AddRow`, `:RemoveRow(index | row | fn)`, `:Clear`, `:GetRows`, `:GetSelected`, `:SortBy(key, desc)`, `:SetFilter(fn)`, `:SetQuery(text)`, `:SetLoading(bool)` (shimmering placeholder rows). Click a header to sort. Only visible rows exist (pooled), so thousands of rows stay smooth. Aliases `Catalog`, `List`.
 
 ### Card · Image · Console · Code
 ```lua
@@ -264,8 +280,8 @@ Dialogs yield, so call them from a callback or `task.spawn`. A tour with a `Key`
 | Method | Contents |
 |---|---|
 | `Window:Home({ Name, Icon, Status, Welcome, Badge, Version })` | profile card, live session tiles with FPS/ping sparklines, account, server. Adds a home button to the header |
-| `Window:SettingsTab({ Name, Icon, Configs = true, Tour })` | theme, accent, glass, scale, backdrop, rim, reduced motion, menu key, language (with flags), watermark, keybind list, notification position, anonymous mode, theme editor (export / import), shortcuts, unload. Adds a settings button to the header |
-| `Window:ConfigTab({ Name, Icon, Tab })` | name, list (with delete), save (asks before overwriting), load (shows the diff first), export / import, auto load, auto save |
+| `Window:SettingsTab({ Name, Icon, Configs = true, Tour })` | theme, accent, glass, scale, backdrop, rim, reduced motion, menu key, language (with flags), watermark, keybind list, notification position, anonymous mode, theme editor (export / import), sounds, screen, server, output, widgets, shortcuts, unload. Adds a settings button to the header |
+| `Window:ConfigTab({ Name, Icon, Tab })` | name, list (with delete), save (asks before overwriting), load (shows the diff first), export / import as JSON and Lua, compare, a profile for this game, auto load, auto save |
 | `Window:Favorites({ Name, Icon })` | shortcuts to starred features (right click → ☆) |
 
 Settings are stored in `<Folder>/settings.json` and never mixed into configs.
@@ -296,7 +312,7 @@ Signals: `ConfigsChanged`, `ConfigLoaded(name, applied, total)`, `ConfigSaved(na
 
 ## Themes
 
-Presets: `Eclipse` (default), `OLED`, `Graphite`, `Moon`, `Ash`, `Steel` - all black-based with a near-white accent.
+Presets: `Eclipse` (default), `OLED`, `Graphite`, `Moon`, `Ash`, `Steel`, `Paper`, `Midnight`, `Graphite Blue`, `Mono Glass`.
 Tokens: `Bg, Bg2, Surface, Surface2, Surface3, Elevated, Stroke, StrokeHi, Text, TextDim, TextMute, Accent, AccentInk, Risky, Success, Warning, Error, Info, Shadow`.
 
 ```lua
@@ -316,7 +332,7 @@ local n = Proximity:Notify({ Title = "Saved", Content = "legit", Type = "success
 n:SetContent("…") n:SetProgress(0.5) n:Extend(3) n:Close()
 Proximity:SetNotifyPosition("TopRight")    -- TopRight, BottomRight, TopLeft, BottomLeft, TopCenter
 ```
-Hovering a notification pauses its timer. At most five are shown; the last 50 are kept in `NotificationHistory`.
+Hovering a notification pauses its timer, and a swipe sideways dismisses it. At most five are shown; the last 50 are kept in `NotificationHistory`.
 
 ```lua
 local wm = Proximity:Watermark({ Text = "Proximity", Items = { "FPS", "Ping", "Time", "Game", "Player" } })
@@ -338,7 +354,128 @@ Proximity:SetLanguage("de")
 
 ## Icons
 
-818 [Lucide](https://lucide.dev/icons) icons by name (`"crosshair"`, `"lucide-crosshair"`), plus 130+ names for typical script features: `aimbot`, `silent`, `triggerbot`, `esp`, `chams`, `tracer`, `fly`, `noclip`, `speed`, `teleport`, `farm`, `loot`, `quest`, `boss`, `shop`, `server`, `rejoin`, `serverhop`, `webhook`, `premium`, `anonymous`, `planet` and more (see `src/Icons/init.luau`). Anything else works too: `rbxassetid://…`, a number, `rbxthumb://…`, or an image URL (downloaded once, cached, needs `getcustomasset`). `Proximity:RegisterIcon("logo", "https://…/logo.png")`.
+818 [Lucide](https://lucide.dev/icons) icons by name (`"crosshair"`, `"lucide-crosshair"`), the Proximity set of 86 own icons (`"px:aimbot"`), plus 130+ names for typical script features: `aimbot`, `silent`, `triggerbot`, `esp`, `chams`, `tracer`, `fly`, `noclip`, `speed`, `teleport`, `farm`, `loot`, `quest`, `boss`, `shop`, `server`, `rejoin`, `serverhop`, `webhook`, `premium`, `anonymous`, `planet` and more (see `src/Icons/init.luau`). Anything else works too: `rbxassetid://…`, a number, `rbxthumb://…`, or an image URL (downloaded once, cached, needs `getcustomasset`). `Proximity:RegisterIcon("logo", "https://…/logo.png")`.
+
+## Script lifecycle
+
+Everything your script does through these calls is undone by `Proximity:Unload()`, so a player can remove the script and get the game back as it was.
+
+```lua
+Proximity:Connect(RunService.Heartbeat, fn)          -- disconnected on unload
+Proximity:Spawn(fn, ...)                             -- thread cancelled on unload
+Proximity:Loop(fn, 0.5)                              -- runs every 0.5 s until unload
+Proximity:Create("Highlight", { Parent = char })     -- destroyed on unload
+Proximity:SetProperty(camera, "FieldOfView", 100)    -- the old value comes back on unload
+Proximity:HookFunction(target, replacement)          -- restored on unload (needs hookfunction)
+Proximity:HookMetamethod(game, "__namecall", fn)     -- restored on unload
+Proximity:Track(thing)                               -- anything with Destroy, Disconnect, or a function
+Proximity:OnUnload(fn)
+Proximity:Bind("aim.silent", function(on) end)       -- runs now, on every change and with false on unload
+```
+
+| Member | Description |
+|---|---|
+| `:Batch(fn)` | many `:Set` calls inside `fn`, one redraw at the end |
+| `:Use(plugin)` | a plugin is a function `(Proximity)` or a table with `Init(Proximity)`; it can add elements, themes, commands |
+| `:Element(name, class)` | shorter `RegisterElement` |
+| `:GetElement(id)` | find an element by flag, by its `Id` option or by `"Window/Tab/Section/Type/Name"` |
+| `:Deprecated(old, new)` | keep an old method name working with a one-time warning |
+| `:ExportFlags("json" \| "lua")` | every flag value as text, for sharing or debugging |
+| `:GameProfileName()` | the profile name for this game; with game profiles on, auto load picks the config saved for this place |
+| `:GetProfile(limit?)` | the slowest callbacks: `{ { Name, Calls, Total, Max } }` |
+| `:Localize({ ru = { ... } })` · `:T(key, ...)` | translate your own strings; the menu follows the player's language |
+| `:ErrorReport()` | text with the version, executor, settings and the last errors, ready to paste into an issue |
+| `:SelfTest()` | builds and checks every element type in a hidden window, returns `ok, report` |
+
+## More elements
+
+```lua
+Section:Segmented({ Name = "Mode", Values = { "Legit", "Rage", "Off" }, Default = "Legit" })   -- :SetValues(list)
+Section:Stepper({ Name = "Bullets", Min = 1, Max = 10, Step = 1, Default = 3, Suffix = "x" })
+Section:Gallery({ Name = "Knife", Columns = 3, Height = 220, Items = {
+	{ Name = "Default", Image = 10734898934 },
+	{ Name = "Fade", Image = 10734919691, Rarity = "Rare", Badge = "NEW", Description = "Factory new" },
+} })                                                    -- :GetItem(), :SetItems(list), :Open(), :Close()
+Section:Canvas({ Height = 120, Build = function(frame) end })   -- an empty frame you draw into
+```
+
+The gallery shows the current item large at the top. Click it to open every item in a grid with search and rarity stripes.
+
+Section blocks build a group of elements in one call:
+
+| Method | Description |
+|---|---|
+| `Section:CrosshairEditor({ Flag })` | style, size, gap, thickness, colour, outline and spin with a live preview; drives `Proximity:SetCrosshair` |
+| `Section:EspPreview({ Box, Name, Health, Distance, Tracer })` | a dummy figure that shows your ESP settings, `preview:Set(key, value)` |
+| `Section:MusicPlayer({ Songs = { { Name, Id } } })` | play, pause, next, volume |
+| `Section:Discord({ Invite, Name })` | a server card with copy and join buttons |
+| `Section:CodeEditor({ Name, Default, Height, Run })` | a monospaced editor with line numbers and a Run button |
+
+## Sounds, media, screen
+
+```lua
+Proximity:PlaySound("wood", 0.5)                     -- default, experience, halloween, pride, wood, notification, warning
+Proximity.Media:Play("hitsounds", "neverlose", { Volume = 0.8 })
+Proximity.Media:Get("hitmarkers", "outline_cross")   -- a content id for an ImageLabel
+Proximity.Media:Preload("hitsounds")
+```
+
+Media is downloaded once from this repository into `Proximity/media/` and loaded with `getcustomasset`. Kinds: `ui`, `hitsounds` (16), `hitmarkers` (12), `images`. Players pick click, notification and toggle sounds in Settings.
+
+| Method | Description |
+|---|---|
+| `:SetMenuBlur(size)` | blur the game behind the open menu (0 turns it off) |
+| `:SetFpsCap(n)` | `setfpscap` when the executor has it |
+| `:SetCursor("Default" \| "Proximity" \| "Dot" \| "Crosshair")` | cursor while the menu is open |
+| `:SetSnap(on)` | windows snap to screen edges and corners after a drag |
+| `:SetCrosshair({ Enabled, Style = "Cross" \| "Dot" \| "Circle" \| "T", Size, Gap, Thickness, Color, Outline, Spin })` | a crosshair overlay |
+
+## Tool widgets
+
+Each is a draggable panel that remembers its place. Players can turn them on in Settings.
+
+`:SessionData()` · `:EventFeed()` (joins, leaves, deaths) · `:ChatLog()` · `:FriendsHere()` · `:LookingAtMe()` · `:InventoryViewer()` · `:MusicPlayer({ Songs })`
+
+`:SetPriority(player, "Friendly" | "Neutral" | "Enemy")` · `:GetPriority(player)` · `.PriorityChanged` - one place for player tags that every feature can read.
+
+## Looks and accessibility
+
+| Method | Description |
+|---|---|
+| `:SetTheme(name)` | 10 presets: `Eclipse`, `OLED`, `Graphite`, `Moon`, `Ash`, `Steel`, `Paper`, `Midnight`, `Graphite Blue`, `Mono Glass` |
+| `:ImportTheme(theme, "Rayfield" \| "Linoria" \| "Orion", name?)` | turn another library's theme table into a Proximity theme |
+| `:SetHighContrast(on)` | stronger strokes and text |
+| `:SetRoundness("Sharp" \| "Soft" \| "Round")` | corner style everywhere |
+| `:AccentFromAvatar()` | take the accent from your character's colours |
+| `:SetTextSize(11 - 16)` | every text in the menu scales with it |
+| `:SetLargeDescriptions(on)` | bigger description text under rows |
+| `:SetHints(on)` | beginner mode: descriptions show right away on hover |
+
+On phones the tabs move to a bar at the bottom, rows get taller and the window keeps clear of the notch. Gamepads vibrate lightly on changes (setting "Vibration").
+
+## Right-click menu and quick binds
+
+Right-click (or long press) any element to:
+
+- type an exact value
+- open its options
+- add, change or remove a key for it, even when the script gave none
+
+A bound toggle flips, a button presses, a dropdown steps through its values, and a slider jumps to the value it had when you bound it and back.
+
+Quick binds are saved per player in settings, not in configs. In code: `element:SetQuickBind("Ctrl+E")`, `element:GetQuickBind()`, `element:SetQuickBind(nil)`.
+
+## Events
+
+| Where | Signals |
+|---|---|
+| Library | `FlagChanged(flag, new, old)`, `FavoritesChanged`, `IdentityChanged`, `KeybindsChanged`, `DirtyChanged`, `WindowReady(window)`, `ConfigsChanged`, `ConfigLoaded(name, applied, total)`, `ConfigSaved(name)`, `PriorityChanged`, `Unloading`, `Unloaded` |
+| Window | `Ready`, `Opened`, `Closed`, `TabChanged(tab, old)`, `PageChanged(page, old)` |
+| Tab, page | `Selected` |
+| Section | `Changed` (the header toggle) |
+| Element | `Changed(new, old)`, `Destroyed`; Keybind also has `StateChanged(active)` |
+
+Every signal has `:Connect(fn)`, `:Once(fn)` and `:Wait(timeout?)`. Connect through `Proximity:Connect(signal, fn)` and it is cleaned up on unload.
 
 ## Extending
 
@@ -363,8 +500,8 @@ end
 Proximity:RegisterElement("Rating", Rating)
 Section:Rating({ Name = "Quality", Flag = "quality" })
 ```
-Your element gets flags, configs, search, tooltips, locking, dependencies, context menu and undo for free.
+Your element gets flags, configs, search, tooltips, locking, dependencies, context menu, quick binds and undo for free.
 
 ## Toolkit
 
-The building blocks are exported for your own UI: `Proximity.Util` (`New`, `Corner`, `Stroke`, `Padding`, `List`, `Gradient`, `Label`, `Fuzzy`, `ToHex`, `FromHex`, `Base64Encode`, `SafeCall`, `Debounce`, `Throttle`, …), `Proximity.Signal`, `Proximity.Maid`, `Proximity.Tween` (`Play`, `Await`, `Value`, `Speed`), `Proximity.Theme`, `Proximity.Icons`, `Proximity.Keys`, `Proximity.Env` (`Caps`, `Write`, `Read`, `List`, `Clipboard`, `HttpGet`, `CustomAsset`, `ExecutorName`).
+The building blocks are exported for your own UI: `Proximity.Util` (`New`, `Corner`, `Stroke`, `Padding`, `List`, `Gradient`, `Label`, `Fuzzy`, `ToHex`, `FromHex`, `Base64Encode`, `SafeCall`, `Debounce`, `Throttle`, …), `Proximity.Signal`, `Proximity.Maid`, `Proximity.Tween` (`Play`, `Await`, `Value`, `Speed`), `Proximity.Theme`, `Proximity.Icons`, `Proximity.Keys`, `Proximity.Media`, `Proximity.Env` (`Caps`, `Write`, `Read`, `List`, `Clipboard`, `HttpGet`, `CustomAsset`, `ExecutorName`).

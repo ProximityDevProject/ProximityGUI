@@ -11,6 +11,7 @@
     ["generator.html", "Builder"],
     ["executors.html", "Executors"],
     ["changelog.html", "Changelog"],
+    ["community.html", "Community"],
   ];
   const LOADER = 'loadstring(game:HttpGet("https://proximitydevproject.github.io/ProximityGUI/Proximity.lua"))()';
   window.PROXIMITY_LOADER = LOADER;
@@ -28,7 +29,7 @@
   document.body.prepend(nav);
 
   const foot = document.createElement("footer");
-  foot.innerHTML = `<div class="wrap in"><span>Proximity UI · MIT · made for Roblox scripts</span><span><a href="https://github.com/ProximityDevProject/ProximityGUI">GitHub</a> · <a href="changelog.html">Changelog</a> · <a href="executors.html">Executors</a></span></div>`;
+  foot.innerHTML = `<div class="wrap in"><span>Proximity UI · MIT · made for Roblox scripts</span><span><a href="https://github.com/ProximityDevProject/ProximityGUI">GitHub</a> · <a href="changelog.html">Changelog</a> · <a href="executors.html">Executors</a> · <a href="community.html">Community</a></span></div>`;
   document.body.append(foot);
 
   // fill loader placeholders
@@ -76,7 +77,7 @@
     b.onclick = () => copyText(pre.querySelector("code").textContent, b);
     pre.append(b);
   });
-  document.querySelectorAll("[data-copy-loader]").forEach((b) => (b.onclick = () => copyText(LOADER, b)));
+  document.querySelectorAll("[data-copy-loader]").forEach((b) => (b.onclick = () => copyText(window.PROXIMITY_LOADER, b)));
 
   // table of contents spy
   const toc = document.querySelector(".toc");
@@ -110,7 +111,16 @@
     const q = document.getElementById("sq").value.trim();
     const list = (await ensureIndex()).map((e) => [score(q, e.t + " " + (e.d || "")), e]).filter((x) => !q || x[0] >= 0).sort((a, b) => b[0] - a[0]).slice(0, 12);
     sel = 0;
-    document.getElementById("sr").innerHTML = list.map(([, e], i) => `<a href="${e.u}" class="${i === 0 ? "on" : ""}">${e.t}<small>${e.p}${e.d ? " · " + e.d : ""}</small></a>`).join("") || '<p style="padding:14px;color:var(--mute)">Nothing found</p>';
+    const mark = (t) => {
+      if (!q) return t;
+      const i = t.toLowerCase().indexOf(q.toLowerCase());
+      if (i >= 0) return t.slice(0, i) + "<mark>" + t.slice(i, i + q.length) + "</mark>" + t.slice(i + q.length);
+      let out = "", qi = 0; const ql = q.toLowerCase();
+      for (const ch of t) { if (qi < ql.length && ch.toLowerCase() === ql[qi]) { out += "<mark>" + ch + "</mark>"; qi++; } else out += ch; }
+      return qi === ql.length ? out : t;
+    };
+    const withHl = (u) => { if (!q) return u; const [path, hash] = u.split("#"); return path + "?hl=" + encodeURIComponent(q) + (hash ? "#" + hash : ""); };
+    document.getElementById("sr").innerHTML = list.map(([, e], i) => `<a href="${withHl(e.u)}" class="${i === 0 ? "on" : ""}">${mark(e.t)}<small>${e.p}${e.d ? " · " + mark(e.d) : ""}</small></a>`).join("") || '<p style="padding:14px;color:var(--mute)">Nothing found</p>';
   }
   const open = () => { dlg.classList.add("open"); const i = document.getElementById("sq"); i.value = ""; render(); setTimeout(() => i.focus(), 10); };
   const close = () => dlg.classList.remove("open");
@@ -171,6 +181,104 @@
       b.addEventListener("pointerleave", () => (b.style.transform = ""));
     });
   }
+
+  // ── light / dark theme ─────────────────────────────────────────────
+  const root = document.documentElement;
+  let theme = "dark";
+  try { theme = localStorage.getItem("px-theme") || "dark"; } catch (e) {}
+  root.dataset.theme = theme;
+  const themeBtn = document.createElement("button");
+  themeBtn.className = "theme-btn"; themeBtn.type = "button";
+  const sun = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const moon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>';
+  const paintThemeBtn = () => {
+    themeBtn.innerHTML = theme === "light" ? moon : sun;
+    themeBtn.setAttribute("aria-label", theme === "light" ? "Dark theme" : "Light theme");
+    themeBtn.title = theme === "light" ? "Dark theme" : "Light theme";
+  };
+  paintThemeBtn();
+  themeBtn.onclick = () => {
+    theme = theme === "light" ? "dark" : "light";
+    root.classList.add("theme-anim");
+    root.dataset.theme = theme;
+    try { localStorage.setItem("px-theme", theme); } catch (e) {}
+    paintThemeBtn();
+    setTimeout(() => root.classList.remove("theme-anim"), 500);
+  };
+  navIn.insertBefore(themeBtn, nav.querySelector(".search-btn"));
+
+  // ── version picker: every loadstring on the site follows it ───────
+  let pinned = "";
+  try { pinned = localStorage.getItem("px-ver") || ""; } catch (e) {}
+  const loaderFor = (v) => (v ? LOADER.replace("/Proximity.lua", "/v/" + v + ".lua") : LOADER);
+  const applyVersion = () => {
+    window.PROXIMITY_LOADER = loaderFor(pinned);
+    document.querySelectorAll("[data-loader]").forEach((el) => (el.textContent = window.PROXIMITY_LOADER));
+    verBtn.firstChild.textContent = pinned ? "v" + pinned : "Latest";
+  };
+  const verWrap = document.createElement("div"); verWrap.className = "ver";
+  const verBtn = document.createElement("button"); verBtn.type = "button"; verBtn.className = "ver-btn";
+  verBtn.setAttribute("aria-label", "Library version for the loadstrings");
+  verBtn.innerHTML = 'Latest<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>';
+  verBtn.firstChild.textContent = "Latest";
+  const verMenu = document.createElement("div"); verMenu.className = "ver-menu"; verMenu.setAttribute("role", "menu");
+  verWrap.append(verBtn, verMenu);
+  navIn.insertBefore(verWrap, themeBtn);
+  verBtn.onclick = async (e) => {
+    e.stopPropagation();
+    if (!verMenu.dataset.filled) {
+      let list = [];
+      try { list = await (await fetch("assets/versions.json")).json(); } catch (err) {}
+      verMenu.innerHTML = `<b>Loadstring version</b><button data-v="">Latest<small>always the newest build</small></button>` +
+        list.map((v) => `<button data-v="${v}">v${v}<small>fixed, never changes</small></button>`).join("");
+      verMenu.dataset.filled = "1";
+    }
+    verMenu.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === pinned));
+    verWrap.classList.toggle("open");
+  };
+  verMenu.onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    pinned = b.dataset.v;
+    try { localStorage.setItem("px-ver", pinned); } catch (err) {}
+    applyVersion(); verWrap.classList.remove("open");
+  };
+  addEventListener("click", (e) => { if (!verWrap.contains(e.target)) verWrap.classList.remove("open"); });
+  applyVersion();
+
+  // ── search: show where the words matched, and mark them on arrival ─
+  const params = new URLSearchParams(location.search);
+  const hl = (params.get("hl") || "").trim();
+  if (hl.length > 1) {
+    const scope = document.querySelector("article") || document.querySelector("main") || document.body;
+    const re = new RegExp(hl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement.closest("script,style,.nav,.sdlg") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+    const hits = []; let n;
+    while ((n = walker.nextNode()) && hits.length < 40) if (re.test(n.nodeValue)) hits.push(n), (re.lastIndex = 0);
+    hits.forEach((node) => {
+      const span = document.createElement("span");
+      span.innerHTML = node.nodeValue.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]).replace(re, (m) => `<mark class="hl">${m}</mark>`);
+      node.replaceWith(...span.childNodes);
+    });
+    if (!location.hash && hits.length) { const first = document.querySelector("mark.hl"); if (first) setTimeout(() => first.scrollIntoView({ block: "center" }), 300); }
+    setTimeout(() => document.querySelectorAll("mark.hl").forEach((m) => m.classList.add("fade")), 6000);
+  }
+
+  // ── phones: a tab bar at the bottom ────────────────────────────────
+  const tabbar = document.createElement("nav");
+  tabbar.className = "tabbar"; tabbar.setAttribute("aria-label", "Main pages");
+  const TB = [
+    ["index.html", "Home", '<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'],
+    ["start.html", "Start", '<path d="M5 12h14M13 6l6 6-6 6"/>'],
+    ["elements.html", "Elements", '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h6M7 13h10M7 17h4"/>'],
+    ["generator.html", "Builder", '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/>'],
+  ];
+  tabbar.innerHTML = TB.map(([h, n, d]) => `<a href="${h}"${h === here ? ' class="on" aria-current="page"' : ""}><svg viewBox="0 0 24 24">${d}</svg><span>${n}</span></a>`).join("") +
+    `<button type="button" id="tbSearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Search</span></button>`;
+  document.body.append(tabbar);
+  document.getElementById("tbSearch").onclick = open;
+
+  // ── offline: pages you opened once keep working without internet ──
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 
   // ── page enters softly ─────────────────────────────────────────────
   requestAnimationFrame(() => document.body.classList.add("ready"));

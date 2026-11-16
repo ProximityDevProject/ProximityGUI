@@ -1,16 +1,13 @@
 <div align="center">
 
-<img src="assets/icon-256.png" width="128" alt="Proximity" />
+<b>English</b> · <a href="README.ru.md">Русский</a>
 
-# Proximity UI
+<img src="assets/readme/banner.svg" alt="Proximity UI - a black and white interface library for Roblox scripts" width="100%" />
 
-**A black & white interface library for Roblox scripts.**
-Calm surfaces, one white accent, and a planet that builds your menu while the script loads.
-
-[![version](https://img.shields.io/badge/version-1.2.9-ffffff?style=flat-square&labelColor=0b0b0c)](CHANGELOG.md)
-[![license](https://img.shields.io/badge/license-MIT-ffffff?style=flat-square&labelColor=0b0b0c)](LICENSE)
-[![luau](https://img.shields.io/badge/luau-strict%20friendly-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md)
-[![icons](https://img.shields.io/badge/icons-818%20lucide-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md#icons)
+[![version](https://img.shields.io/badge/version-1.3.0-ffffff?style=for-the-badge&labelColor=0b0b0c)](CHANGELOG.md)
+[![license](https://img.shields.io/badge/license-MIT-ffffff?style=for-the-badge&labelColor=0b0b0c)](LICENSE)
+[![executor](https://img.shields.io/badge/tested-Potassium-ffffff?style=for-the-badge&labelColor=0b0b0c)](https://proximitydevproject.github.io/ProximityGUI/executors.html)
+[![docs](https://img.shields.io/badge/docs-website-ffffff?style=for-the-badge&labelColor=0b0b0c)](https://proximitydevproject.github.io/ProximityGUI/)
 
 </div>
 
@@ -18,154 +15,126 @@ Calm surfaces, one white accent, and a planet that builds your menu while the sc
 local Proximity = loadstring(game:HttpGet("https://proximitydevproject.github.io/ProximityGUI/Proximity.lua"))()
 ```
 
-**Docs, a code generator and live executor status: https://proximitydevproject.github.io/ProximityGUI/**
-Fixed version: `https://proximitydevproject.github.io/ProximityGUI/v/1.2.9.lua` · straight from the repo: `https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau`
+<sub>Fixed version: <code>https://proximitydevproject.github.io/ProximityGUI/v/1.3.0.lua</code> · straight from the repo: <code>https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau</code></sub>
 
-<table>
-<tr>
-<td width="50%"><img src="assets/screenshots/skeleton.png" alt="Loading skeleton with per-tab progress" /><br/><sub><b>Loading skeleton</b> - every tab builds with its own progress, your steps show as stages</sub></td>
-<td width="50%"><img src="assets/screenshots/combat.png" alt="Combat tab" /><br/><sub><b>Sections</b> - toggle headers, tabs inside a section, linked keybinds and colors</sub></td>
-</tr>
-<tr>
-<td><img src="assets/screenshots/palette.png" alt="Ctrl+K command palette" /><br/><sub><b>Ctrl + K</b> - jump to any feature, tab or action</sub></td>
-<td><img src="assets/screenshots/misc.png" alt="Data elements" /><br/><sub><b>Data</b> - live graphs, progress, sortable tables with row actions</sub></td>
-</tr>
-</table>
+**Website with docs, a menu builder and live executor status: https://proximitydevproject.github.io/ProximityGUI/** (English and Russian)
 
 ---
-
-## New in 1.2
-
-- **Planet intro**: the screen dims, a 3D planet assembles from points, turns into the Proximity artwork while the script loads with real progress and time left, then bursts and the window grows out of it
-- **Key system** with one option, `KeySystem = true / false`
-- **Window**: opens from and folds into a planet button next to the Roblox menu, icons-only navigation, mini mode, custom background, keyboard and gamepad control, remembered scroll
-- **Look**: 9 toggle styles, about 50 fonts including Monocraft, density from compact to touch, chips in multi dropdowns, glow on active things, red stripe on risky sections
-- **Elements and widgets**: player list, range filters in tables, key combos like Ctrl+Shift+X, player panel with a 3D model, FPS graph, stopwatch, your own HUD panels, a watermark with 16 items
-- **Configs**: protected files, backups, undo delete, short share codes
-- **Care**: notification center, what's new dialog, update check, `OnError`, clear option warnings, debug overlay, automatic FPS saving
-
-## Why Proximity
-
-| | |
-|---|---|
-| **Skeleton loading** | The window appears instantly as a skeleton that mirrors the real layout. Every tab fills its own progress bar while its elements are built (4 ms per frame, so the game never freezes). Your own loading work shows up as steps. When everything is ready, the skeleton fades into the finished interface. |
-| **Eclipse design** | Near-black surfaces, hairline borders, a single white accent on sliders, switches and the active tab, plus a slow light rim that circles the window. Six monochrome presets, any custom accent, and a live theme editor. |
-| **Everything is state** | Elements exist the moment you create them: `Get`, `Set`, flags and callbacks work before anything is drawn. Configs save JSON-safe values for every element type, including colors with alpha and keybinds with modes. |
-| **Built for real hubs** | Toggle-headers that switch a whole section, tabs inside a section, option panels behind a gear, sub-pages with a back arrow, tables with sorting and search, live stat tiles with sparklines, a dashboard tab and a ready-made settings tab. |
-| **Comfort** | `Ctrl+K` command palette, undo and redo, right-click menu on every row (reset, copy, paste, favorite), favorites tab, exact value entry on sliders, onboarding tour, anonymous mode for streamers, Russian and English out of the box. |
-| **Safe** | No changes to `Lighting` or `Workspace`, no `loadstring` inside, safe fallbacks when file or clipboard APIs are missing, and running the script again cleanly replaces the old instance. |
 
 ## Quick start
 
 ```lua
-local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau"))()
+local Proximity = loadstring(game:HttpGet("https://proximitydevproject.github.io/ProximityGUI/Proximity.lua"))()
 
-local Window = Proximity:Window({ Title = "My Hub", Keybind = Enum.KeyCode.RightShift })
+local Window = Proximity:Window({ Title = "My Hub", Animation = "Swing", Loading = { Style = "Planet" } })
 
-local Main = Window:Tab({ Name = "Main", Icon = "home" })
-local Farm = Main:Section({ Name = "Farming" })
+local Combat = Window:Tab({ Name = "Combat", Icon = "crosshair" })
+local Aim = Combat:Section({ Name = "Aim", Toggle = true, Flag = "aim" })
 
-local auto = Farm:Toggle({ Name = "Auto farm", Flag = "farm.auto", Callback = function(on)
-	print("auto farm", on)
-end })
-auto:Keybind({ Default = Enum.KeyCode.F, Mode = "Toggle" })
-auto:Options(function(o)
-	o:Slider({ Name = "Radius", Min = 10, Max = 200, Default = 60, Suffix = " st", Flag = "farm.radius" })
-end)
+Aim:Toggle({ Name = "Silent aim", Flag = "aim.silent", Callback = function(on) end })
+    :Keybind({ Default = "Ctrl+X", Mode = "Hold" })
+Aim:Slider({ Name = "FOV", Min = 10, Max = 500, Default = 135, Danger = 400 })
+Aim:Gallery({ Name = "Knife", Items = { { Name = "Default", Image = 10734898934 }, { Name = "Fade", Image = 10734919691, Rarity = "Rare" } } })
 
-Window:SettingsTab()   -- theme, accent, scale, language, widgets, configs, unload
+Proximity:Bind("aim.silent", function(on) end)   -- runs now, on every change and with false on unload
+Window:SettingsTab()                             -- themes, sounds, screen, server, output, configs
 ```
 
-There is no `Init()` to remember: the window notices when your script has finished declaring things and reveals itself.
-For long setups, report progress yourself:
+No `Init()` to call: the window notices when your script has finished and reveals itself.
 
-```lua
-Window:Step("Loading item database", function(step)
-	for i, chunk in chunks do
-		load(chunk)
-		step:Progress(i / #chunks)
-	end
-end)
-```
-
-## What's inside
+## Features
 
 <table>
-<tr><td valign="top">
-
-**Elements**
-Toggle · Checkbox · Button · ButtonGroup
-Slider · RangeSlider · TextSlider
-Dropdown · MultiDropdown · PlayerDropdown
-Input · Keybind · ColorPicker (alpha)
-Label · Paragraph · Divider · Spacer
-Navigate · Progress · Stat · StatGrid
-Graph · Table · Card · Image · Console · Code
-
-</td><td valign="top">
-
-**Containers**
-Window → Category → Tab → SubTab / SubPage
-Section (Left · Right · Full)
-Section toggle header · Tabs in a section
-Option panels (`element:Options()`)
-Dialog · Confirm · Prompt
-Command palette · Tour
-
-</td><td valign="top">
-
-**Systems**
-Configs: save, load, delete, rename, diff,
-export / import strings, auto load, auto save
-Themes and live theme editor · Locale
-Notifications with actions · Watermark
-Keybind list · Dock (corner snapping)
-Undo / redo · Favorites · Anonymous mode
-
-</td></tr>
+<tr>
+<td width="33%" valign="top"><img src="assets/readme/icons/planet.svg" width="40"/><br/><b>7 loading screens</b><br/><sub>Planet, Orbit, Eclipse, Constellation, Terminal, Skeleton or none. Each one shows real progress and the time left.</sub></td>
+<td width="33%" valign="top"><img src="assets/readme/icons/orbit.svg" width="40"/><br/><b>12 menu animations on springs</b><br/><sub>Planet, Rise, Zoom, Drop, Slide, Swing, Wipe, Unfold, Scan, Glitch, Fade. Press the key mid-way and they turn around smoothly.</sub></td>
+<td width="33%" valign="top"><img src="assets/readme/icons/keyboard.svg" width="40"/><br/><b>A key for anything</b><br/><sub>Right-click any element: add a key, type an exact value, open its options. Works even where the script gave no keybind.</sub></td>
+</tr>
+<tr>
+<td valign="top"><img src="assets/readme/icons/search.svg" width="40"/><br/><b>Ctrl + K that forgives typos</b><br/><sub>Finds features, tabs and actions, understands the wrong keyboard layout ("ghbdtn" finds "привет") and small mistakes.</sub></td>
+<td valign="top"><img src="assets/readme/icons/save.svg" width="40"/><br/><b>Configs that travel</b><br/><sub>Protected files, backups, undo delete, share codes, JSON and Lua export, compare, a profile per game, auto save.</sub></td>
+<td valign="top"><img src="assets/readme/icons/zap.svg" width="40"/><br/><b>Unload takes everything back</b><br/><sub>Connections, loops, changed properties, hooks, created instances and binds all go through the library and are undone.</sub></td>
+</tr>
+<tr>
+<td valign="top"><img src="assets/readme/icons/palette.svg" width="40"/><br/><b>10 themes and a 3D logo</b><br/><sub>Eclipse, OLED, Graphite, Moon, Ash, Steel, Paper, Midnight, Graphite Blue, Mono Glass. High contrast, corner style, accent from your character.</sub></td>
+<td valign="top"><img src="assets/readme/icons/image.svg" width="40"/><br/><b>Gallery cards</b><br/><sub>Picture cards for skins or teleports: the current choice large on top, every option below, rarity stripes, search.</sub></td>
+<td valign="top"><img src="assets/readme/icons/layers.svg" width="40"/><br/><b>45+ elements</b><br/><sub>Toggle (9 styles), sliders with danger zones, Segmented, Stepper, dropdowns, tables, player list, ESP preview, crosshair editor, code editor.</sub></td>
+</tr>
+<tr>
+<td valign="top"><img src="assets/readme/icons/activity.svg" width="40"/><br/><b>Widgets</b><br/><sub>Watermark, keybind list, session data, event feed, chat log, friends here, who is looking at you, inventory viewer, music player.</sub></td>
+<td valign="top"><img src="assets/readme/icons/music.svg" width="40"/><br/><b>Sounds and media</b><br/><sub>Click sounds, notification sounds, 16 hit sounds, 12 hit markers, cursors - downloaded once and cached.</sub></td>
+<td valign="top"><img src="assets/readme/icons/gauge.svg" width="40"/><br/><b>Phone friendly</b><br/><sub>A tab bar at the bottom, touch density, safe areas, swipe-away notifications, a floating planet button.</sub></td>
+</tr>
 </table>
 
-The full reference with every option and method is in **[docs/API.md](docs/API.md)**. The complete showcase script is **[examples/Full.luau](examples/Full.luau)**.
+## Compared with other libraries
 
-## Keyboard
+| | Proximity | Rayfield | Orion | Linoria |
+|---|:---:|:---:|:---:|:---:|
+| Loading screen with real progress | yes | intro only | intro only | - |
+| Search across the whole menu (Ctrl + K) | yes | - | - | - |
+| Undo and redo | yes | - | - | - |
+| A key on any element from its right-click menu | yes | - | - | - |
+| Choice of open animations | 12 | - | - | - |
+| Configs | yes, with share codes and per-game profiles | yes | yes | yes (add-on) |
+| Themes | 10 + editor + import from these three | yes | partly | yes (add-on) |
+| Unload undoes what the script changed | yes | - | - | - |
+| Bottom tab bar on phones | yes | - | - | - |
 
-| Keys | Action |
-|---|---|
-| your menu key (default `RightShift`) | show / hide |
-| `Ctrl + K` | search features, tabs and commands |
-| `Ctrl + Z` / `Ctrl + Y` | undo / redo the last change |
-| `Ctrl + S` | save the current config |
-| right click on a row | reset · copy · paste · copy flag · favorite |
-| right click on a key chip | change the keybind mode |
-| double click on a slider value | type an exact number |
-| `Esc` | close the top popup or dialog |
+<sub>Based on the public versions of those libraries. If something here is out of date, open an issue and we will fix it.</sub>
 
-## Coming from another library
+## Screenshots
 
-Most constructor names from CompKiller, Neverlose Reloaded and MugiHub work as aliases (`AddToggle`, `DrawTab`, `DrawSection`, `Page`, `SubPage`, `Colorpicker`, `Textbox`, `Notification`, …). See [docs/MIGRATION.md](docs/MIGRATION.md).
+<table>
+<tr>
+<td width="50%"><img src="assets/screenshots/combat.png" alt="Combat tab" /><br/><sub><b>Sections</b> - toggle headers, tabs inside a section, linked keybinds and colours</sub></td>
+<td width="50%"><img src="assets/screenshots/palette.png" alt="Ctrl+K command palette" /><br/><sub><b>Ctrl + K</b> - jump to any feature, tab or action</sub></td>
+</tr>
+<tr>
+<td><img src="assets/screenshots/skeleton.png" alt="Loading skeleton" /><br/><sub><b>Skeleton loading</b> - every tab builds with its own progress</sub></td>
+<td><img src="assets/screenshots/misc.png" alt="Data elements" /><br/><sub><b>Data</b> - live graphs, progress and sortable tables</sub></td>
+</tr>
+</table>
+
+## For script authors
+
+```lua
+-- everything your script does can be taken back on unload
+Proximity:Connect(game:GetService("RunService").Heartbeat, function() end)
+Proximity:SetProperty(workspace.CurrentCamera, "FieldOfView", 100)   -- restored on unload
+Proximity:HookFunction(someFunction, function(...) end)              -- unhooked on unload
+Proximity:Loop(function() end, 0.5)
+
+Proximity:Batch(function() ... end)          -- many :Set calls, one redraw
+Proximity:Use(myPlugin)                      -- plugins: elements, themes, anything
+Proximity:Localize({ ru = { Aim = "Аим" } })  -- your script in other languages
+Proximity:ImportTheme(rayfieldTheme, "Rayfield")
+```
+
+Full reference: **[docs/API.md](docs/API.md)** (English) · **[docs/API.ru.md](docs/API.ru.md)** (Russian) · showcase script: **[examples/Full.luau](examples/Full.luau)**
+
+## FAQ
+
+**Which executors work?** It is tested on Potassium. Anything with the usual file, clipboard and `getcustomasset` functions should work; without them Proximity still runs and keeps configs in memory. Live status: [executors](https://proximitydevproject.github.io/ProximityGUI/executors.html).
+
+**Does it work on phones?** Yes: a tab bar at the bottom, bigger rows and a floating planet button to open the menu.
+
+**How do players update?** The loadstring always points to the latest build. Use the `/v/<version>.lua` link to stay on one version.
+
+**How do I remove it?** `Proximity:Unload()` or the hold-to-confirm button in Settings. Everything your script registered with the library is undone.
+
+**Terms.** *Flag* - the key a value is saved under in configs. *Section* - a card of elements inside a tab. *Page* - one view of a tab (tabs can have sub pages). *Bind* - a key that triggers an element.
 
 ## Building from source
 
-The source is split into modules under `src/` and bundled into one file with [darklua](https://github.com/seaofvoices/darklua).
-
 ```bash
-darklua process src/init.luau dist/Proximity.luau -c .darklua.json
+sh tests/build.sh
 ```
 
-```bash
-lune run tests/compile.luau
-```
+The source in `src/` is bundled with [darklua](https://github.com/seaofvoices/darklua) and checked with [Lune](https://lune-org.github.io/docs) and [selene](https://github.com/Kampfkarren/selene). See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits
 
-Proximity is original code. Ideas were studied in CompKiller (MIT, 4lpaca), Neverlose Reloaded (MIT) and MugiHub Gen 2 (MIT); the Lucide icon asset map comes from CompKiller. Icons: [Lucide](https://lucide.dev) (ISC). See [THIRD_PARTY.md](THIRD_PARTY.md).
+Proximity is original code. Ideas were studied in CompKiller, Neverlose Reloaded and MugiHub Gen 2 (all MIT). Icons: the Proximity set (MIT) and [Lucide](https://lucide.dev) (ISC). Media is described in [THIRD_PARTY.md](THIRD_PARTY.md).
 
----
-
-<div align="center">
-
-**Русский:** Proximity - чёрно-белая GUI-библиотека для скриптов Roblox. Одна строка загрузки, скелет загрузки по вкладкам, конфиги, темы, поиск `Ctrl+K`, отмена действий, локализация RU/EN. Документация: [docs/API.md](docs/API.md).
-
-<sub>MIT © Proximity</sub>
-
-</div>
+<div align="center"><sub>MIT © Proximity</sub></div>

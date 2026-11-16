@@ -4,6 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Executors - Proximity UI</title>
+<meta name="description" content="Which Roblox executors run Proximity UI, with live status and history for every executor.">
+<meta name="theme-color" content="#050506">
+<link rel="canonical" href="https://proximitydevproject.github.io/ProximityGUI/executors.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Proximity UI">
+<meta property="og:title" content="Executors - Proximity UI">
+<meta property="og:description" content="Which Roblox executors run Proximity UI, with live status and history for every executor.">
+<meta property="og:url" content="https://proximitydevproject.github.io/ProximityGUI/executors.html">
+<meta property="og:image" content="https://proximitydevproject.github.io/ProximityGUI/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Executors - Proximity UI">
+<meta name="twitter:description" content="Which Roblox executors run Proximity UI, with live status and history for every executor.">
+<meta name="twitter:image" content="https://proximitydevproject.github.io/ProximityGUI/assets/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="assets/logo.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/style.css">
@@ -19,13 +36,30 @@
 .bar i { display: block; height: 100%; background: #fff }
 .feat { display: grid; gap: 8px; margin-top: 12px }
 .feat div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 8px 0; font-size: 14.5px }
+.allx-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 18px 0 14px }
+.allx-tools input { flex: 1 1 220px; min-width: 0; border: 1px solid var(--line2); background: var(--bg2); color: var(--fg); border-radius: 999px; padding: 10px 16px; font: 14px var(--body); outline: none; transition: border-color .25s }
+.allx-tools input:focus { border-color: var(--fg) }
+.allx td { vertical-align: middle }
+.allx tbody tr { cursor: pointer }
+.allx .nm { font-weight: 600; color: var(--fg) }
+.allx .nm small { display: block; font-weight: 400; color: var(--mute); font-size: 12px }
+.strip { display: flex; gap: 2px; align-items: flex-end; height: 18px }
+.strip i { width: 6px; height: 100%; border-radius: 2px; background: var(--line2) }
+.strip i.up { background: var(--ok) } .strip i.part { background: var(--warn) } .strip i.down { background: var(--bad) }
+.allx tr.open + tr.more td { padding: 0 14px 16px }
+.more .strip { height: 30px } .more .strip i { flex: 1; width: auto }
+.more .meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--dim); font-size: 13.5px; margin-top: 10px }
+.more .meta b { color: var(--fg); font-weight: 600 }
+.legend { display: flex; gap: 14px; color: var(--mute); font-size: 12.5px; margin-top: 10px; flex-wrap: wrap }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px }
+@media (max-width: 700px) { .allx .hide-sm { display: none } }
 </style>
 </head>
 <body>
 <div class="wrap" style="padding-block:44px 80px">
   <span class="eyebrow">Compatibility</span>
   <h1 style="font:600 clamp(30px,5vw,46px)/1.1 var(--display);margin:10px 0 10px">Executors</h1>
-  <p style="color:var(--dim);max-width:66ch;margin:0">Live status from the <a href="https://weao.xyz">WEAO</a> tracker next to our own test results. Only executors we tested ourselves are listed; more will come as we test them.</p>
+  <p style="color:var(--dim);max-width:66ch;margin:0">Live status from the <a href="https://weao.xyz">WEAO</a> tracker next to our own test results. Below it, every executor WEAO tracks, with a status history.</p>
 
   <div class="ex">
     <div class="card" style="transform:none">
@@ -63,6 +97,20 @@
     </div>
   </div>
 
+
+  <h2 style="font:500 22px var(--display);margin:56px 0 4px">Every executor on WEAO</h2>
+  <p style="color:var(--dim);max-width:70ch;margin:0">Status, sUNC and the last 14 days for each executor. A snapshot is saved every 3 hours, so you can see how fast an executor catches up after a Roblox update. Click a row for 60 days of history. We only vouch for the ones we tested above.</p>
+  <div class="allx-tools">
+    <input id="xq" placeholder="Find an executor..." aria-label="Find an executor">
+    <div class="chips" id="xplat"></div>
+  </div>
+  <div class="tablewrap"><table class="table allx">
+    <thead><tr><th>Executor</th><th>Status</th><th class="hide-sm">sUNC</th><th class="hide-sm">Price</th><th>Last 14 days</th></tr></thead>
+    <tbody id="xrows"><tr><td colspan="5" style="color:var(--mute)">Loading...</td></tr></tbody>
+  </table></div>
+  <div class="legend"><span><i style="background:var(--ok)"></i>working all day</span><span><i style="background:var(--warn)"></i>updating part of the day</span><span><i style="background:var(--bad)"></i>down all day</span><span><i style="background:var(--line2)"></i>no data yet</span></div>
+  <p style="color:var(--mute);font-size:12.5px;margin-top:8px" id="xsrc"></p>
+
   <h2 style="font:500 22px var(--display);margin:56px 0 12px">What the statuses mean</h2>
   <div class="tablewrap"><table class="table">
     <tr><th>Status</th><th>Meaning</th></tr>
@@ -72,6 +120,7 @@
   </table></div>
 </div>
 <script src="assets/app.js"></script>
+<script src="assets/i18n.js"></script>
 <script>
 (async () => {
   const set = (id, v) => (document.getElementById(id).textContent = v);
@@ -99,6 +148,71 @@
     document.getElementById("suncbar").style.width = "100%"; document.getElementById("uncbar").style.width = "99%";
     set("dec", "yes"); set("multi", "yes"); set("cost", "$22.99 Lifetime"); set("det", "yes");
   }
+})();
+</script>
+<script>
+(async () => {
+  const RAW = "https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/data/executors-history.json";
+  let hist = null;
+  for (const url of [RAW, "assets/executors.json"]) {
+    try { hist = await (await fetch(url, { cache: "no-store" })).json(); if (hist && hist.info) break; } catch (e) {}
+  }
+  const rows = document.getElementById("xrows");
+  if (!hist) { rows.innerHTML = '<tr><td colspan="5" style="color:var(--mute)">History did not load.</td></tr>'; return; }
+  const DAY = 86400, now = Math.floor(Date.now() / 1000);
+  const dayOf = (t) => Math.floor(t / DAY);
+  // per executor: day -> [up, total]
+  const byKey = {};
+  for (const [t, snap] of hist.points) {
+    const d = dayOf(t);
+    for (const k in snap) { const m = (byKey[k] ||= {}); const c = (m[d] ||= [0, 0]); c[0] += snap[k][0]; c[1]++; }
+  }
+  const strip = (k, days) => {
+    const m = byKey[k] || {}, today = dayOf(now);
+    let out = "";
+    for (let d = today - days + 1; d <= today; d++) {
+      const c = m[d], date = new Date(d * DAY * 1000).toLocaleDateString();
+      const cls = !c ? "" : c[0] === c[1] ? "up" : c[0] === 0 ? "down" : "part";
+      const tip = !c ? date + ": no data" : date + ": working " + Math.round((c[0] / c[1]) * 100) + "% of checks";
+      out += `<i class="${cls}" title="${tip}"></i>`;
+    }
+    return `<div class="strip">${out}</div>`;
+  };
+  const uptime = (k) => { let u = 0, n = 0; for (const d in byKey[k] || {}) { u += byKey[k][d][0]; n += byKey[k][d][1]; } return n ? Math.round((u / n) * 100) + "%" : "-"; };
+  const esc = (v) => String(v ?? "-").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const keys = Object.keys(hist.info).sort((a, b) => (hist.info[b].up - hist.info[a].up) || ((hist.info[b].sunc || 0) - (hist.info[a].sunc || 0)) || a.localeCompare(b));
+  const plats = ["All", ...new Set(keys.map((k) => hist.info[k].platform).filter(Boolean))];
+  let plat = "All";
+  const chips = document.getElementById("xplat");
+  chips.innerHTML = plats.map((p) => `<button class="chip-btn${p === "All" ? " on" : ""}" data-p="${esc(p)}">${esc(p)}</button>`).join("");
+  chips.onclick = (e) => { const b = e.target.closest("button"); if (!b) return; plat = b.dataset.p; chips.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); draw(); };
+  const q = document.getElementById("xq");
+  q.oninput = () => draw();
+  function draw() {
+    const term = q.value.trim().toLowerCase();
+    const list = keys.filter((k) => (plat === "All" || hist.info[k].platform === plat) && (!term || k.toLowerCase().includes(term)));
+    rows.innerHTML = list.map((k) => {
+      const i = hist.info[k];
+      return `<tr data-k="${esc(k)}"><td class="nm">${esc(i.name)}<small>${esc(i.platform)} · ${esc(i.version)}${i.beta ? " · beta" : ""}</small></td>
+        <td><span class="chip ${i.up ? "ok" : "warn"}">${i.up ? "Working" : "Updating"}</span></td>
+        <td class="hide-sm">${i.sunc == null ? "-" : i.sunc + "%"}</td>
+        <td class="hide-sm">${esc(i.free ? "Free" : i.cost)}</td>
+        <td>${strip(k, 14)}</td></tr>`;
+    }).join("") || '<tr><td colspan="5" style="color:var(--mute)">Nothing found</td></tr>';
+  }
+  rows.onclick = (e) => {
+    const tr = e.target.closest("tr[data-k]"); if (!tr) return;
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains("more")) { next.remove(); tr.classList.remove("open"); return; }
+    const k = tr.dataset.k, i = hist.info[k];
+    tr.classList.add("open");
+    tr.insertAdjacentHTML("afterend", `<tr class="more"><td colspan="5">${strip(k, 60)}
+      <div class="meta"><span>Uptime over the stored history <b>${uptime(k)}</b></span><span>UNC <b>${i.unc == null ? "-" : i.unc + "%"}</b></span>
+      <span>Decompiler <b>${i.decompiler ? "yes" : "no"}</b></span><span>Multi instance <b>${i.multi ? "yes" : "no"}</b></span>
+      <span>Last update <b>${esc(i.updated)}</b></span>${i.site ? `<a href="${esc(i.site)}" rel="noopener nofollow" target="_blank">Website</a>` : ""}</div></td></tr>`);
+  };
+  draw();
+  document.getElementById("xsrc").textContent = "Source: weao.xyz, snapshot " + new Date(hist.updated * 1000).toLocaleString() + " · " + hist.points.length + " snapshots stored";
 })();
 </script>
 </body>

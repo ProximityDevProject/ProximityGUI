@@ -1,6 +1,6 @@
 # Migration
 
-Proximity accepts the most common names from other libraries, so many scripts move over by changing the loader line and a few options.
+Proximity accepts the most common names from other libraries, so many scripts move over by changing the loader line and a few options. Guides below: CompKiller, Neverlose Reloaded, MugiHub Gen 2, Rayfield, Orion, Linoria.
 
 ## From CompKiller
 
@@ -52,3 +52,56 @@ Proximity accepts the most common names from other libraries, so many scripts mo
 | `Section:AddConfigManager({})` | `Window:ConfigTab()` |
 | `Section:AddAppearance()` | `Window:SettingsTab()` |
 | `Window:CreatePopup` | `element:Options()` |
+
+## From Rayfield
+
+Rayfield option names are read as they are (`CurrentValue`, `CurrentOption`, `MultipleOptions`, `Range`, `Increment`, `Options`), so most element calls only need a section to live in.
+
+| Rayfield | Proximity |
+|---|---|
+| `Rayfield:CreateWindow({ Name, LoadingTitle, ConfigurationSaving })` | `Proximity:Window({ Title, Loading = { Style = "Planet" } })` - configs are always on, `Window:ConfigTab()` shows them |
+| `Window:CreateTab("Main", 4483362458)` | `Window:Tab({ Name = "Main", Icon = 4483362458 })` |
+| `Tab:CreateSection("Aim")` then `Tab:CreateToggle{}` | `local Aim = Tab:Section("Aim")` then `Aim:Toggle{}` - elements always live in a section |
+| `Tab:CreateToggle({ Name, CurrentValue, Flag, Callback })` | `Aim:Toggle({ Name, CurrentValue, Flag, Callback })` (`Default` is the usual name) |
+| `Tab:CreateSlider({ Name, Range = { 0, 100 }, Increment, Suffix, CurrentValue })` | `Aim:Slider({ ... })` - same fields work |
+| `Tab:CreateDropdown({ Options, CurrentOption = { "A" }, MultipleOptions })` | `Aim:Dropdown({ ... })` - same fields work |
+| `Tab:CreateInput({ Name, PlaceholderText, RemoveTextAfterFocusLost })` | `Aim:Input({ Name, Placeholder, ClearOnFocus })` |
+| `Tab:CreateKeybind({ CurrentKeybind = "Q", HoldToInteract })` | `Aim:Keybind({ Default = "Q", Mode = "Hold" })` |
+| `Tab:CreateColorPicker({ Color })` | `Aim:ColorPicker({ Default = color })` |
+| `Tab:CreateLabel(text)` · `Tab:CreateParagraph({ Title, Content })` | `Aim:Label(text)` · `Aim:Paragraph({ Title, Content })` |
+| `Rayfield:Notify({ Title, Content, Duration, Image })` | `Proximity:Notify({ Title, Content, Duration, Icon })` |
+| `Rayfield.Flags.Name.CurrentValue` | `Proximity.Flags.Name` |
+| `Rayfield:LoadConfiguration()` | nothing - auto load runs by itself |
+| `Rayfield:Destroy()` | `Proximity:Unload()` |
+| a Rayfield theme table | `Proximity:ImportTheme(theme, "Rayfield")` |
+
+## From Orion
+
+| Orion | Proximity |
+|---|---|
+| `OrionLib:MakeWindow({ Name, SaveConfig, ConfigFolder, IntroEnabled })` | `Proximity:Window({ Title, Folder })` |
+| `Window:MakeTab({ Name, Icon })` | `Window:Tab({ Name, Icon })` |
+| `Tab:AddSection({ Name })` | `Tab:Section({ Name })` - add elements to it, not to the tab |
+| `Tab:AddToggle({ Name, Default, Save, Flag, Callback })` | `Section:Toggle({ ... })` - same fields; `Save = false` keeps it out of configs |
+| `Tab:AddSlider({ Name, Min, Max, Default, Increment, ValueName })` | `Section:Slider({ ... })` - same fields work |
+| `Tab:AddDropdown({ Options })` · `Tab:AddBind({ Default, Hold })` · `Tab:AddColorpicker` · `Tab:AddTextbox` | `Section:Dropdown` · `Section:Keybind({ Default, Mode = "Hold" })` · `Section:ColorPicker` · `Section:Input` |
+| `OrionLib:MakeNotification({ Name, Content, Time })` | `Proximity:Notify({ Title, Content, Duration })` |
+| `OrionLib:Init()` | nothing - the window shows itself when your script is done |
+| `OrionLib:Destroy()` | `Proximity:Unload()` |
+| `OrionLib.Flags[flag].Value` | `Proximity.Flags[flag]` |
+
+## From Linoria
+
+| Linoria | Proximity |
+|---|---|
+| `Library:CreateWindow({ Title, Center, AutoShow })` | `Proximity:Window({ Title })` |
+| `Window:AddTab("Main")` | `Window:Tab("Main")` |
+| `Tab:AddLeftGroupbox("Aim")` · `Tab:AddRightGroupbox` | `Tab:LeftSection("Aim")` · `Tab:RightSection` |
+| `Tab:AddLeftTabbox()` then `Tabbox:AddTab("A")` | `Section:Tabs({ "A", "B" })` |
+| `Groupbox:AddToggle("Idx", { Text, Default, Callback })` | `Section:Toggle({ Name, Default, Flag = "Idx", Callback })` (`Text` works for `Name`) |
+| `Groupbox:AddSlider("Idx", { Min, Max, Default, Rounding, Suffix })` | `Section:Slider({ Flag = "Idx", ... })` - same fields work |
+| `Toggles.Idx:OnChanged(fn)` · `Options.Idx.Value` | `Proximity.Elements.Idx:OnChanged(fn)` · `Proximity.Flags.Idx` |
+| `:AddKeyPicker("Idx", { Default, Mode })` · `:AddColorPicker("Idx", { Default })` | `toggle:Keybind({ Default, Mode })` · `toggle:ColorPicker({ Default })` |
+| `ThemeManager`, `SaveManager` | `Window:SettingsTab()` - themes and configs are built in |
+| `Library:Notify(text, time)` | `Proximity:Notify({ Content = text, Duration = time })` |
+| `Library:Unload()` · `Library:OnUnload(fn)` | same |

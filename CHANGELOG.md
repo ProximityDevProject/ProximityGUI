@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0 - a key for anything
+
+- Right-click any element: type an exact value, open its options, or give it a key even where the script gave none
+- 86 own Proximity icons, gallery cards with rarity and search, Segmented, Stepper and Canvas elements
+- Sliders with fine Shift drag, danger zones, marks and throttled callbacks; hold-to-confirm buttons; badge kinds and auto-expiring NEW
+- Unload takes back everything: connections, loops, properties, hooks, instances and binds made through the library
+- Batch, Use (plugins), Element, GetElement, Deprecated, ExportFlags, Localize, per-game config profiles, config compare, JSON and Lua export
+- Paper, Midnight, Graphite Blue and Mono Glass themes; high contrast, corner style, accent from your avatar, text size, theme import from Rayfield, Linoria and Orion
+- 3D planet logo; Nebula, Aurora and Comets backdrops; resize from every corner; menu blur, FPS cap, cursors and window snapping
+- Sounds: clicks, notifications, 16 hit sounds and 12 hit markers, cached once; toggle hit sounds
+- Tool widgets: session data, event feed, chat log, friends here, looking at me, inventory viewer, music player; crosshair editor, ESP preview, Discord card, code editor
+- Phones: bottom tab bar, touch density, safe areas, swipe-away notifications; gamepad vibration
+- Error report and self test in Settings; Rayfield, Orion and Linoria option names are understood
+- Website: Russian, light theme, version picker, search highlights, every executor with status history, community page, builder projects and templates, offline docs, link previews
+- README and API reference in English and Russian, migration guides from Rayfield, Orion and Linoria, a hub template
+
 ## 1.2.9 - smoother navigation
 
 - One highlight pill glides between tabs on a spring, its accent stripe squeezing on the way; it follows the list when it scrolls
