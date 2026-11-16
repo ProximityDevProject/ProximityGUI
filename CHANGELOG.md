@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4 - tested in game
+
+- The intro can no longer skip its own assembly when the script is slow to start: its clock counts rendered frames
+- Once the planet is whole, its tiles melt into a smooth sphere with soft patches (no honeycomb look)
+- Finer ring with 128 segments per band, no bright seams, a little dimmer
+
 ## 1.2.3 - softer ring, prettier assembly
 
 - The ring fades evenly from white on the lit side to grey on the far side, and the far side stays visible

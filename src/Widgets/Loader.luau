@@ -144,6 +144,19 @@ local function buildModel(viewport)
 	local body = part({ Name = "Body", Shape = Enum.PartType.Ball, Size = Vector3.one * 1.985, Color = Color3.fromRGB(9, 9, 11), Transparency = 1 })
 	body.Parent = model
 	model.PrimaryPart = body
+	local patches = {}
+	for _ = 1, 40 do
+		local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1))
+		if dir.Magnitude > 0.05 then
+			dir = dir.Unit
+			local sz = rng:NextNumber(0.12, 0.34)
+			local shade = rng:NextNumber() < 0.5 and rng:NextInteger(6, 8) or rng:NextInteger(14, 19)
+			local patch = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.01, sz, sz), Color = Color3.fromRGB(shade, shade, shade + 2), Transparency = 1 })
+			patch.CFrame = CFrame.lookAt(dir * 0.99, dir * 2) * CFrame.Angles(0, math.rad(90), 0)
+			patch.Parent = model
+			table.insert(patches, patch)
+		end
+	end
 
 	-- surface tiles on a Fibonacci sphere, overlapping a little
 	local tiles = {}
@@ -164,10 +177,10 @@ local function buildModel(viewport)
 	-- the ring: dusty neon segments in four bands
 	local segs = {}
 	local bands = { { 1.40, 0.16, 0.55 }, { 1.60, 0.20, 0.35 }, { 1.80, 0.12, 0.6 }, { 1.95, 0.08, 0.75 } }
-	local count = 72
+	local count = 128
 	for _, band in bands do
 		local r, width, base = band[1], band[2], band[3]
-		local length = (TAU * r) / count * 1.08
+		local length = (TAU * r) / count * 1.005
 		for i = 0, count - 1 do
 			local a = (i / count) * TAU
 			local dust = 0.5 + 0.25 * math.sin(a * 3 + r * 4) + 0.15 * math.sin(a * 7 + r) + rng:NextNumber(-0.12, 0.12)
@@ -180,11 +193,11 @@ local function buildModel(viewport)
 			seg.CFrame = CFrame.new(math.cos(a) * r, 0, math.sin(a) * r) * CFrame.Angles(0, -a, 0)
 			seg.Parent = model
 			-- a segment at angle a sits where a ring point with theta = a does
-			table.insert(segs, { Part = seg, Thr = thrRing(a, r), Base = math.clamp(base + (1 - dust) * 0.4, 0.25, 0.97), M = -1 })
+			table.insert(segs, { Part = seg, Thr = thrRing(a, r), Base = math.clamp(base + 0.18 + (1 - dust) * 0.4, 0.42, 0.97), M = -1 })
 		end
 	end
 	model.Parent = viewport
-	return model, body, tiles, segs
+	return model, body, tiles, segs, patches
 end
 
 -- ─── loader ───────────────────────────────────────────────────────────────
@@ -234,7 +247,7 @@ function Loader.new(window, options)
 		ImageTransparency = 0,
 		Size = UDim2.fromOffset(STAGE, STAGE),
 		Ambient = Color3.fromRGB(14, 14, 18),
-		LightColor = Color3.fromRGB(165, 165, 175),
+		LightColor = Color3.fromRGB(130, 130, 138),
 		LightDirection = -LIGHT,
 		ZIndex = 303,
 		Parent = stage,
@@ -249,9 +262,9 @@ function Loader.new(window, options)
 		}),
 		Parent = viewport,
 	})
-	local ok, planet, body, tiles, segs = pcall(buildModel, viewport)
+	local ok, planet, body, tiles, segs, patches = pcall(buildModel, viewport)
 	if ok then
-		self.Planet, self.Body, self.Tiles, self.Segs = planet, body, tiles, segs
+		self.Planet, self.Body, self.Tiles, self.Segs, self.Patches = planet, body, tiles, segs, patches
 	end
 
 	-- soft rim light over the model
@@ -344,7 +357,10 @@ function Loader:_buildProgress(root, s)
 end
 
 function Loader:_step(dt)
-	local t = os.clock() - self.Started
+	-- animation time counts rendered frames (capped), so a heavy start-up
+	-- frame can not skip the assembly; real time is still used for the ETA
+	self.T = (self.T or 0) + math.min(dt, 1 / 30)
+	local t = self.T
 	if t > BUILD_AT then
 		self.Build = math.min(1, self.Build + dt / BUILD_FOR * (self.Hurry and 2.5 or 1))
 	end
@@ -377,9 +393,23 @@ function Loader:_step(dt)
 					seg.Part.Transparency = 1 - (1 - seg.Base) * m
 				end
 			end
-			self.Body.Transparency = 1 - smooth((b - 0.75) / 0.3)
+			local bodyA = smooth((b - 0.75) / 0.3)
+			self.Body.Transparency = 1 - bodyA
+			for _, patch in self.Patches do
+				patch.Transparency = 1 - bodyA * 0.9
+			end
 			if b >= 1.07 then
 				self.Built = true
+				self.MeltAt = os.clock()
+			end
+		end
+		if self.MeltAt and not self.Melted then
+			local m = math.clamp((os.clock() - self.MeltAt) / 0.7, 0, 1)
+			for _, tile in self.Tiles do
+				tile.Part.Transparency = m
+			end
+			if m >= 1 then
+				self.Melted = true
 			end
 		end
 		if not self.Exploding then
@@ -479,7 +509,7 @@ function Loader:_step(dt)
 		self.Streak.BackgroundTransparency = math.min(1, 0.15 + pulse + hide)
 		self.Streak2.BackgroundTransparency = math.min(1, 0.4 + pulse + hide)
 	end
-	self:_progress(t)
+	self:_progress(os.clock() - self.Started)
 end
 
 function Loader:_progress(t)
