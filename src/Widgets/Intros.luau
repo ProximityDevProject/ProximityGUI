@@ -123,6 +123,7 @@ Styles.Orbit = {
 		logo.AnchorPoint = Vector2.new(0.5, 0.5)
 		logo.Position = UDim2.fromOffset(c.X, c.Y - 30)
 		logo.ZIndex = 305
+		logo.Visible = false
 		self.Logo = logo
 		self.BigPct = Util.Label({ Text = "0", FontFace = Theme.Fonts.MonoBold, TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(c.X, c.Y + 12), Size = UDim2.fromOffset(120, 34), ZIndex = 305, Parent = self.Stage })
 		self.BigPct.TextColor3 = WHITE
@@ -156,8 +157,10 @@ Styles.Orbit = {
 		end
 		self.BigPct.Text = tostring(math.floor(shown * 100 + 0.5))
 		self.BigPct.TextTransparency = 1 - appear
+		self.Logo.Visible = t > 0.35
 	end,
 	Burst = function(self)
+		self.Frozen = true
 		for _, r in self.Rings do
 			Tween.Play(r.Frame, { Size = UDim2.fromOffset(0, 0) }, 0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 			Tween.Play(r.Stroke, { Transparency = 1 }, 0.35)
@@ -179,10 +182,11 @@ Styles.Eclipse = {
 		self.R = R
 		-- corona: soft layered glow plus thin rays, brightest at totality
 		self.Corona = {}
-		for i, spec in { { 3.2, 0.985 }, { 2.4, 0.95 }, { 1.7, 0.86 } } do
-			local g = frame(self.Stage, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(c.X, c.Y), Size = UDim2.fromOffset(R * 2 * spec[1], R * 2 * spec[1]), BackgroundColor3 = WHITE, BackgroundTransparency = 1, ZIndex = 301 })
+		for i = 1, 18 do
+			local k = 1.04 + (i - 1) ^ 1.3 * 0.062
+			local g = frame(self.Stage, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(c.X, c.Y), Size = UDim2.fromOffset(R * 2 * k, R * 2 * k), BackgroundColor3 = WHITE, BackgroundTransparency = 1, ZIndex = 301 })
 			Util.Round(g)
-			self.Corona[i] = { Frame = g, Base = spec[2] }
+			self.Corona[i] = { Frame = g, K = k }
 		end
 		self.Rays = {}
 		for i = 1, 10 do
@@ -226,9 +230,10 @@ Styles.Eclipse = {
 		self.MoonStroke.Transparency = 1 - appear * 0.6
 		local total = smooth((cover - 0.9) / 0.1)
 		local pulse = 0.5 + 0.5 * math.sin(t * 2.2)
-		for i, g in self.Corona do
-			local base = g.Base + (1 - g.Base) * (1 - appear)
-			g.Frame.BackgroundTransparency = base - total * (0.06 + i * 0.03) - pulse * 0.01
+		-- faint while the sun shines, a soft bright halo at totality
+		for _, g in self.Corona do
+			local a = (0.006 + total * 0.024) * appear * (0.92 + 0.08 * pulse)
+			g.Frame.BackgroundTransparency = 1 - a
 		end
 		for i, ray in self.Rays do
 			ray.BackgroundTransparency = 1 - (0.12 + total * 0.5) * appear * (0.6 + 0.4 * math.sin(t * 1.3 + i))
@@ -237,6 +242,7 @@ Styles.Eclipse = {
 		self.Streak.BackgroundTransparency = 1 - total * 0.8
 	end,
 	Burst = function(self)
+		self.Frozen = true
 		local flash = dot(self.Stage, 12, 306)
 		flash.Position = self.Diamond.Position
 		Tween.Play(flash, { Size = UDim2.fromOffset(900, 900), BackgroundTransparency = 1 }, 0.7, Enum.EasingStyle.Quint)
@@ -245,7 +251,7 @@ Styles.Eclipse = {
 		end
 		Tween.Play(self.MoonStroke, { Transparency = 1 }, 0.3)
 		for _, g in self.Corona do
-			Tween.Play(g.Frame, { BackgroundTransparency = 1, Size = UDim2.fromOffset(g.Frame.Size.X.Offset * 1.4, g.Frame.Size.Y.Offset * 1.4) }, 0.6)
+			Tween.Play(g.Frame, { BackgroundTransparency = 1, Size = UDim2.fromOffset(g.Frame.Size.X.Offset * 1.5, g.Frame.Size.Y.Offset * 1.5) }, 0.6)
 		end
 		for _, ray in self.Rays do
 			Tween.Play(ray, { BackgroundTransparency = 1 }, 0.3)
@@ -348,13 +354,15 @@ Styles.Constellation = {
 		-- edges draw in order as progress grows, each growing from its first star
 		local n = #self.Edges
 		local want = shown * n
+		local prev = 1
 		for i, e in self.Edges do
 			local target = math.clamp(want - (i - 1), 0, 1)
-			if t < 1 then
-				target = 0
+			if t < 0.9 or prev < 0.55 then
+				target = math.min(target, e.Q)
 			end
-			if e.Q ~= target then
-				e.Q = math.min(target, e.Q + dt * 4)
+			prev = e.Q
+			if e.Q < target then
+				e.Q = math.min(target, e.Q + dt * 7)
 				local a, b = self.Stars[e[1]], self.Stars[e[2]]
 				placeLine(e.Line, a.P, a.P:Lerp(b.P, smooth(e.Q)))
 				e.Line.BackgroundTransparency = e.Q > 0 and 0.55 or 1
@@ -365,6 +373,7 @@ Styles.Constellation = {
 		end
 	end,
 	Burst = function(self)
+		self.Frozen = true
 		local c = self.Center
 		for _, e in self.Edges do
 			e.Line.BackgroundTransparency = 0.1
@@ -455,12 +464,29 @@ Styles.Terminal = {
 		self.Body.Text = table.concat(out, "\n")
 	end,
 	Stage = function(self, text)
-		self:_term("<font color=\"#7a7a84\">&gt;</font> " .. escape(text))
+		-- "Step name · 45%" updates the same line; a new step starts a new one
+		local base = string.match(text, "^(.-)%s*·") or text
+		local rich = "<font color=\"#7a7a84\">&gt;</font> " .. escape(text)
+		local last
+		for _, line in self.Lines do
+			if line.Base == base then
+				last = line
+			end
+		end
+		if last then
+			local plain = string.gsub(rich, "<[^>]+>", "")
+			plain = string.gsub(string.gsub(string.gsub(plain, "&lt;", "<"), "&gt;", ">"), "&amp;", "&")
+			last.Rich, last.Plain = rich, plain
+		else
+			self:_term(rich)
+			self.Lines[#self.Lines].Base = base
+		end
 	end,
 	Burst = function(self)
 		self:_term("<font color=\"#ffffff\">ready.</font>")
 		self.Typed += 999
-		task.wait(0.25)
+		task.wait(0.3)
+		self.Frozen = true
 		Tween.Play(self.PanelScale, { Scale = 1.03 }, 0.35, Enum.EasingStyle.Quint)
 		Tween.Play(self.Panel, { BackgroundTransparency = 1 }, 0.3)
 		Tween.Play(self.PanelStroke, { Transparency = 1 }, 0.3)
@@ -508,7 +534,9 @@ function Intros.new(window, options, style)
 		-- frame-based clock: a heavy start-up frame can not skip the intro
 		self.T += math.min(dt, 1 / 30)
 		local shown = self:_progress(os.clock() - self.Started)
-		def.Step(self, self.T, shown, math.min(dt, 1 / 30))
+		if not self.Frozen then
+			def.Step(self, self.T, shown, math.min(dt, 1 / 30))
+		end
 	end)
 	return self
 end
