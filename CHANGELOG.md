@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3 - softer ring, prettier assembly
+
+- The ring fades evenly from white on the lit side to grey on the far side, and the far side stays visible
+- Points come in white, grey and near-black, and spiral in around the planet's axis in the order the surface forms
+- Website: same changes, and the planet image no longer loses brightness off the planet disc
+
 ## 1.2.2 - built from points
 
 - The loader planet is really assembled now: ~1500 points land on it while it turns, and a build front lays down ~500 surface tiles and the ring segment by segment exactly where they land - the points flash and fuse as it passes

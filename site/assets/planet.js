@@ -104,9 +104,11 @@ void main(){
   vec3 sp = rp - L * dot(rp, L);
   // the planet's shadow only darkens the far part of the ring a little, and the
   // side away from the light stays clearly visible (it vanished before)
-  float shadow = dot(rp, L) < 0.0 ? mix(1.0, 0.6, smoothstep(1.05, 0.85, length(sp))) : 1.0;
-  float side = 0.68 + 0.32 * smoothstep(-1.0, 1.0, dot(normalize(rp + 1e-4), L) * 1.4);
-  float ring = min(1.0, ringMask * (0.12 + bandsR) * side * shadow * (1.0 - hidden) * 0.8 * rm);
+  float shadow = dot(rp, L) < 0.0 ? mix(1.0, 0.85, smoothstep(1.3, 0.6, length(sp))) : 1.0;
+  // one long, even fade from white on the lit side to dark grey on the far side
+  float lk = 0.5 + 0.5 * dot(normalize(rp + 1e-4), L);
+  float side = mix(0.62, 1.0, lk * lk * (3.0 - 2.0 * lk));
+  float ring = min(1.0, ringMask * (0.22 + bandsR) * side * shadow * (1.0 - hidden) * 0.8 * rm);
   float ringGlint = ringMask * pow(max(0.0, dot(normalize(vec3(q, 0.3)), L)), 22.0) * 0.9 * (1.0 - hidden) * rm;
   float re = redge * (1.0 - hidden) * 0.55;
   col = col * (1.0 - ring * 0.85) + vec3(1.0) * (ring * 0.85 + ringGlint + re);
@@ -170,6 +172,7 @@ void main(){
       pts.push({ k: 1, th, r, thr: thrRing(th, r), g: rnd() < 0.05, s: rnd(), fa: rnd() * TAU, fd: rnd() });
     }
     const grey = []; for (let i = 0; i < 256; i++) grey.push(`rgb(${i},${i},${i})`);
+    for (const p of pts) { const r = rnd(); p.tone = r < 0.45 ? 1 : r < 0.75 ? 0.62 : 0.34; p.dir = rnd() < 0.5 ? 1 : -1; }
 
     let w = 0, h = 0, dpr = 1, gdpr = 1;
     const host = ptsCanvas.parentElement;
@@ -192,7 +195,7 @@ void main(){
     }
 
     const t0 = performance.now();
-    const BUILD_AT = opts.buildAt ?? 1.15, BUILD_FOR = opts.buildFor ?? 2.4;
+    const BUILD_AT = opts.buildAt ?? 1.6, BUILD_FOR = opts.buildFor ?? 2.4;
     let pointsDone = false;
     function frame(now) {
       const t = reduce ? 30 : (now - t0) / 1000;
@@ -237,7 +240,8 @@ void main(){
             x = E1[0] * a1 + E2[0] * c1; y = E1[1] * a1 + E2[1] * c1; z = E1[2] * a1 + E2[2] * c1;
             const dd = x * x + y * y;
             const behind = dd < 1 && z < Math.sqrt(1 - dd);
-            const side = 0.68 + 0.32 * Math.min(1, Math.max(0, ((x * L[0] + y * L[1] + z * L[2]) / p.r * 1.4 + 1) / 2));
+            const lk = Math.min(1, Math.max(0, 0.5 + 0.5 * (x * L[0] + y * L[1] + z * L[2]) / p.r));
+            const side = 0.62 + 0.38 * lk * lk * (3 - 2 * lk);
             v = side * (p.g ? 1 : 0.75); alpha = 0.3 + v * 0.6;
             if (behind) alpha *= 1 - coverAt(x, y, b, cs, sn);
             const e = (b - p.thr) / 0.025;
@@ -245,14 +249,23 @@ void main(){
             alpha *= 1 - Math.min(1, Math.max(0, (b - p.thr - 0.02) / 0.05));
           }
           if (alpha <= 0.01) continue;
-          // fly in from far away, curving slightly as they come
-          const k = Math.min(1, Math.max(0, (t - p.s * 0.9) / 1.3)), ease = 1 - Math.pow(1 - k, 3);
+          // spiral in around the planet's own axis, in roughly the order the
+          // surface will form, tightening and settling onto the exact spot
+          const k = Math.min(1, Math.max(0, (t - p.thr * 0.75 - p.s * 0.35) / 1.4)), ease = 1 - Math.pow(1 - k, 4);
           if (k <= 0) continue;
-          const sx = cx + x * R, sy = cy - y * R;
-          const far = (0.9 + p.fd * 1.4) * Math.max(w, h) * 0.6, ang0 = p.fa + (1 - ease) * 0.9;
-          const px = sx + Math.cos(ang0) * far * (1 - ease), py = sy + Math.sin(ang0) * far * (1 - ease);
+          let px, py;
+          if (ease < 1) {
+            const left = 1 - ease, swirl = left * (2.4 + p.fd * 1.6) * p.dir, grow = 1 + left * left * (2.2 + p.fd * 3.2);
+            const lift = left * Math.sin(p.fa) * 0.9;
+            let fa, fh, fc;
+            if (!p.k) { fa = p.a; fh = p.h; fc = p.c; } else { fa = Math.cos(p.th) * p.r; fh = 0; fc = Math.sin(p.th) * p.r; }
+            const ws = Math.cos(spin + swirl), wn = Math.sin(spin + swirl);
+            const a1 = (fa * ws - fc * wn) * grow, c1 = (fa * wn + fc * ws) * grow, hh = fh * grow + lift;
+            px = cx + (E1[0] * a1 + N[0] * hh + E2[0] * c1) * R;
+            py = cy - (E1[1] * a1 + N[1] * hh + E2[1] * c1) * R;
+          } else { px = cx + x * R; py = cy - y * R; }
           ctx.globalAlpha = alpha * Math.min(1, k * 2.5);
-          ctx.fillStyle = grey[Math.round(60 + v * 195)];
+          ctx.fillStyle = grey[Math.max(38, Math.round((60 + v * 195) * (v > 0.9 ? Math.max(p.tone, 0.8) : p.tone)))];
           const size = p.k ? (p.g ? 2 : 1.3) : (z < 0 ? 1.1 : v > 0.6 ? 2 : 1.5);
           ctx.fillRect(px - size / 2, py - size / 2, size, size);
           drawn++;

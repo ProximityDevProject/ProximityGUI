@@ -45,7 +45,7 @@ local TILT_Z, TILT_X = math.rad(17), math.rad(15) -- ring seen almost edge on, r
 local FRAME = CFrame.Angles(0, 0, TILT_Z) * CFrame.Angles(TILT_X, 0, 0) -- planet axis = ring normal
 local LIGHT = Vector3.new(0.72, 0.55, 0.42).Unit
 local SPIN = 0.3 -- rad / s, turns in place around its axis
-local BUILD_AT, BUILD_FOR = 0.9, 1.9 -- when the surface starts forming, and for how long
+local BUILD_AT, BUILD_FOR = 1.45, 1.9 -- when the surface starts forming, and for how long
 local TAU = math.pi * 2
 
 local SHADES = {}
@@ -240,6 +240,15 @@ function Loader.new(window, options)
 		Parent = stage,
 	})
 	self.Viewport = viewport
+	Util.New("UIGradient", {
+		Rotation = -28,
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 156)),
+			ColorSequenceKeypoint.new(0.45, Color3.fromRGB(205, 205, 210)),
+			ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
+		}),
+		Parent = viewport,
+	})
 	local ok, planet, body, tiles, segs = pcall(buildModel, viewport)
 	if ok then
 		self.Planet, self.Body, self.Tiles, self.Segs = planet, body, tiles, segs
@@ -270,11 +279,12 @@ function Loader.new(window, options)
 	for _, p in self.Points do
 		local size = (p.Kind == "Ring" and p.Glint) and 3 or 2
 		p.Frame = Util.New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(size, size), BackgroundColor3 = WHITE, BackgroundTransparency = 1, ZIndex = 305, Parent = stage })
-		local a = rng:NextNumber() * TAU
-		local d = 280 + rng:NextNumber() * 520
-		p.From = Vector2.new(math.cos(a) * d, math.sin(a) * d)
-		p.Curl = (rng:NextNumber() - 0.5) * 1.6
-		p.Delay = rng:NextNumber() * 0.8
+		p.Curl = (rng:NextNumber() < 0.5 and -1 or 1) * (2.2 + rng:NextNumber() * 1.6)
+		p.Grow = 1.6 + rng:NextNumber() * 2.2
+		p.Lift = (rng:NextNumber() - 0.5) * 1.8
+		local tone = rng:NextNumber()
+		p.Tone = tone < 0.45 and 1 or tone < 0.75 and 0.62 or 0.36
+		p.Delay = p.Thr * 0.6 + rng:NextNumber() * 0.3
 		p.Seed = rng:NextNumber() * 10
 	end
 
@@ -412,14 +422,23 @@ function Loader:_step(dt)
 					op *= 1 - coverAt(v.X, v.Y, spin, b)
 				end
 			end
-			-- curl in along a gentle arc rather than a straight line
-			local k = math.clamp((t - p.Delay) / 1.15, 0, 1)
-			local e = 1 - (1 - k) ^ 3
-			local ang = p.Curl * (1 - e)
-			local cs, sn = math.cos(ang), math.sin(ang)
-			local from = Vector2.new(p.From.X * cs - p.From.Y * sn, p.From.X * sn + p.From.Y * cs)
-			local pos = c + from:Lerp(screen - c, e)
+			-- spiral in around the planet's own axis, roughly in the order the
+			-- surface forms, tightening onto the exact spot
+			local k = math.clamp((t - p.Delay) / 1.2, 0, 1)
+			local e = 1 - (1 - k) ^ 4
+			local pos = screen
+			if e < 1 then
+				local left = 1 - e
+				local fly = rotY(p.Base, p.Curl * left) * (1 + left * left * p.Grow) + Vector3.new(0, p.Lift * left, 0)
+				local fv = toView(fly, spin)
+				local fs = math.clamp(DIST / math.max(DIST - fv.Z, 0.5), 0.5, 2)
+				pos = c + Vector2.new(fv.X, -fv.Y) * RADIUS * fs
+			end
 			op = math.min(op, 1) * math.min(1, k * 3)
+			-- white, grey and near-black points; the fusing flash stays bright
+			if shade < 11 or p.Tone < 1 then
+				shade = math.max(2, math.floor(shade * (shade >= 10 and math.max(p.Tone, 0.8) or p.Tone) + 0.5))
+			end
 			if self.Exploding then
 				if not p.Dir then
 					local away = screen - c

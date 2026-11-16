@@ -3338,7 +3338,7 @@ and 380 or 600 local TILES=PHONE and 330 or 520 local RADIUS=92 local RING_IN,
 RING_OUT=1.36,2.02 local STAGE=420 local FOV=30 local DIST=(STAGE/2)/(RADIUS*
 math.tan(math.rad(FOV/2)))local TILT_Z,TILT_X=math.rad(17),math.rad(15)local
 FRAME=CFrame.Angles(0,0,TILT_Z)*CFrame.Angles(TILT_X,0,0)local LIGHT=Vector3.
-new(0.72,0.55,0.42).Unit local SPIN=0.3 local BUILD_AT,BUILD_FOR=0.9,1.9 local
+new(0.72,0.55,0.42).Unit local SPIN=0.3 local BUILD_AT,BUILD_FOR=1.45,1.9 local
 TAU=math.pi*2 local SHADES={}for i=0,11 do local v=i/11 SHADES[i]=Color3.new(v,v
 ,v)end local WHITE=Color3.new(1,1,1)local function rotY(v,a)local c,s=math.cos(a
 ),math.sin(a)return Vector3.new(v.X*c+v.Z*s,v.Y,-v.X*s+v.Z*c)end local function 
@@ -3415,12 +3415,15 @@ NumberSequenceKeypoint.new(1,0)}),-40)self.Crescent=crescent local viewport=Util
 .New('ViewportFrame',{Name='Model',BackgroundTransparency=1,ImageTransparency=0,
 Size=UDim2.fromOffset(STAGE,STAGE),Ambient=Color3.fromRGB(14,14,18),LightColor=
 Color3.fromRGB(165,165,175),LightDirection=-LIGHT,ZIndex=303,Parent=stage})self.
-Viewport=viewport local ok,planet,body,tiles,segs=pcall(buildModel,viewport)if
-ok then self.Planet,self.Body,self.Tiles,self.Segs=planet,body,tiles,segs end
-local rim=Util.New('Frame',{BackgroundTransparency=1,AnchorPoint=Vector2.new(0.5
-,0.5),Position=UDim2.fromOffset(c.X,c.Y),Size=UDim2.fromOffset(RADIUS*2+2,RADIUS
-*2+2),ZIndex=304,Parent=stage})Util.Round(rim)local rimStroke=Util.Stroke(rim,
-WHITE,1.6,1)Util.Gradient(rimStroke,nil,NumberSequence.new({
+Viewport=viewport Util.New('UIGradient',{Rotation=-28,Color=ColorSequence.new({
+ColorSequenceKeypoint.new(0,Color3.fromRGB(150,150,156)),ColorSequenceKeypoint.
+new(0.45,Color3.fromRGB(205,205,210)),ColorSequenceKeypoint.new(1,Color3.new(1,1
+,1))}),Parent=viewport})local ok,planet,body,tiles,segs=pcall(buildModel,
+viewport)if ok then self.Planet,self.Body,self.Tiles,self.Segs=planet,body,tiles
+,segs end local rim=Util.New('Frame',{BackgroundTransparency=1,AnchorPoint=
+Vector2.new(0.5,0.5),Position=UDim2.fromOffset(c.X,c.Y),Size=UDim2.fromOffset(
+RADIUS*2+2,RADIUS*2+2),ZIndex=304,Parent=stage})Util.Round(rim)local rimStroke=
+Util.Stroke(rim,WHITE,1.6,1)Util.Gradient(rimStroke,nil,NumberSequence.new({
 NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.6,1),
 NumberSequenceKeypoint.new(0.82,0.35),NumberSequenceKeypoint.new(0.93,0),
 NumberSequenceKeypoint.new(1,0.3)}),-40)self.RimStroke=rimStroke local rng=
@@ -3433,10 +3436,11 @@ NextNumber()*TAU local rr=RING_IN+(RING_OUT-RING_IN)*(rng:NextNumber()^1.4)table
 'Ring',Thr=thrRing(t,rr),Glint=rng:NextNumber()<0.06})end for _,p in self.Points
 do local size=(p.Kind=='Ring'and p.Glint)and 3 or 2 p.Frame=Util.New('Frame',{
 BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(size,
-size),BackgroundColor3=WHITE,BackgroundTransparency=1,ZIndex=305,Parent=stage})
-local a=rng:NextNumber()*TAU local d=280+rng:NextNumber()*520 p.From=Vector2.
-new(math.cos(a)*d,math.sin(a)*d)p.Curl=(rng:NextNumber()-0.5)*1.6 p.Delay=rng:
-NextNumber()*0.8 p.Seed=rng:NextNumber()*10 end local flare=Util.New('Frame',{
+size),BackgroundColor3=WHITE,BackgroundTransparency=1,ZIndex=305,Parent=stage})p
+.Curl=(rng:NextNumber()<0.5 and-1 or 1)*(2.2+rng:NextNumber()*1.6)p.Grow=1.6+rng
+:NextNumber()*2.2 p.Lift=(rng:NextNumber()-0.5)*1.8 local tone=rng:NextNumber()p
+.Tone=tone<0.45 and 1 or tone<0.75 and 0.62 or 0.36 p.Delay=p.Thr*0.6+rng:
+NextNumber()*0.3 p.Seed=rng:NextNumber()*10 end local flare=Util.New('Frame',{
 AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(10,10),BackgroundColor3=
 WHITE,BackgroundTransparency=1,ZIndex=307,Parent=stage})Util.Round(flare)local
 flareGlow=Util.New('Frame',{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
@@ -3504,24 +3508,26 @@ math.clamp((b-p.Thr-0.02)/0.06,0,1))else shade=5 op=0.28*(1-coverAt(v.X,v.Y,spin
 0.35+lit*0.65+(p.Glint and 0.3 or 0)+flash,0,1)*11)op=(0.3+lit*0.5+(p.Glint and
 0.2 or 0)+flash*0.3)*(1-math.clamp((b-p.Thr-0.02)/0.05,0,1))if v.Z<0 and(v.X*v.X
 +v.Y*v.Y)<1 then op*=1-coverAt(v.X,v.Y,spin,b)end end local k=math.clamp((t-p.
-Delay)/1.15,0,1)local e=1-(1-k)^3 local ang=p.Curl*(1-e)local cs,sn=math.cos(ang
-),math.sin(ang)local from=Vector2.new(p.From.X*cs-p.From.Y*sn,p.From.X*sn+p.From
-.Y*cs)local pos=c+from:Lerp(screen-c,e)op=math.min(op,1)*math.min(1,k*3)if self.
-Exploding then if not p.Dir then local away=screen-c p.Dir=(away.Magnitude>1 and
-away.Unit or Vector2.new(1,0))*(190+p.Seed*75)+Vector2.new((p.Seed-5)*9,(p.Seed%
-3-1.5)*12)end pos=screen+p.Dir*(1-(1-math.min(et/0.95,1))^3)*1.6 op=(v.Z>=-2E-2
-or p.Kind=='Ring')and math.clamp(0.75-et/0.9,0,1)or 0 shade=math.max(shade,7)end
-local f=p.Frame if op>0.01 then any=true f.Position=UDim2.fromOffset(pos.X,pos.Y
-)f.BackgroundTransparency=1-op f.BackgroundColor3=SHADES[shade]p.Shown=true
-elseif p.Shown then p.Shown=false f.BackgroundTransparency=1 end end if not any
-and self.Built and not self.Exploding then self.PointsGone=true end end if not
-self.Exploding then local dir=Vector2.new(LIGHT.X,-LIGHT.Y).Unit local fp=c+dir*
-RADIUS*0.99 self.Flare.Position=UDim2.fromOffset(fp.X,fp.Y)self.Streak.Position=
-UDim2.fromOffset(fp.X,fp.Y)self.Streak2.Position=UDim2.fromOffset(fp.X,fp.Y)
-local pulse=0.2+0.15*math.sin(t*2.3)local hide=1-settle self.Flare.
-BackgroundTransparency=math.min(1,pulse+hide)self.FlareGlow.
-BackgroundTransparency=math.min(1,0.8+pulse*0.3+hide)self.Streak.
-BackgroundTransparency=math.min(1,0.15+pulse+hide)self.Streak2.
+Delay)/1.2,0,1)local e=1-(1-k)^4 local pos=screen if e<1 then local left=1-e
+local fly=rotY(p.Base,p.Curl*left)*(1+left*left*p.Grow)+Vector3.new(0,p.Lift*
+left,0)local fv=toView(fly,spin)local fs=math.clamp(DIST/math.max(DIST-fv.Z,0.5)
+,0.5,2)pos=c+Vector2.new(fv.X,-fv.Y)*RADIUS*fs end op=math.min(op,1)*math.min(1,
+k*3)if shade<11 or p.Tone<1 then shade=math.max(2,math.floor(shade*(shade>=10
+and math.max(p.Tone,0.8)or p.Tone)+0.5))end if self.Exploding then if not p.Dir
+then local away=screen-c p.Dir=(away.Magnitude>1 and away.Unit or Vector2.new(1,
+0))*(190+p.Seed*75)+Vector2.new((p.Seed-5)*9,(p.Seed%3-1.5)*12)end pos=screen+p.
+Dir*(1-(1-math.min(et/0.95,1))^3)*1.6 op=(v.Z>=-2E-2 or p.Kind=='Ring')and math.
+clamp(0.75-et/0.9,0,1)or 0 shade=math.max(shade,7)end local f=p.Frame if op>0.01
+then any=true f.Position=UDim2.fromOffset(pos.X,pos.Y)f.BackgroundTransparency=1
+-op f.BackgroundColor3=SHADES[shade]p.Shown=true elseif p.Shown then p.Shown=
+false f.BackgroundTransparency=1 end end if not any and self.Built and not self.
+Exploding then self.PointsGone=true end end if not self.Exploding then local dir
+=Vector2.new(LIGHT.X,-LIGHT.Y).Unit local fp=c+dir*RADIUS*0.99 self.Flare.
+Position=UDim2.fromOffset(fp.X,fp.Y)self.Streak.Position=UDim2.fromOffset(fp.X,
+fp.Y)self.Streak2.Position=UDim2.fromOffset(fp.X,fp.Y)local pulse=0.2+0.15*math.
+sin(t*2.3)local hide=1-settle self.Flare.BackgroundTransparency=math.min(1,pulse
++hide)self.FlareGlow.BackgroundTransparency=math.min(1,0.8+pulse*0.3+hide)self.
+Streak.BackgroundTransparency=math.min(1,0.15+pulse+hide)self.Streak2.
 BackgroundTransparency=math.min(1,0.4+pulse+hide)end self:_progress(t)end
 function Loader:_progress(t)if self.Exploding then return end local window=self.
 Window local actual=window:GetLoadProgress()if window.State~='Loading'then
@@ -5189,7 +5195,7 @@ local Locale=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.
 k()local Overlay=__DARKLUA_BUNDLE_MODULES.l()local shared=Env.Shared()local
 previousVersion=nil if shared.Library and shared.Library.Unload then
 previousVersion=shared.Library.Version pcall(shared.Library.Unload,shared.
-Library,true)end local Library={Version='1.2.2',VersionUrl=
+Library,true)end local Library={Version='1.2.3',VersionUrl=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/VERSION]]
 ,ToggleStyle='Switch',DensityName='Normal',Flags={},Elements={},AllElements={},
 Windows={},Debug=false,Unloaded=false,Anonymous=false,_classes={},_custom={},
