@@ -34,7 +34,7 @@ if shared.Library and shared.Library.Unload then
 end
 
 local Library = {
-	Version = "1.2.0",
+	Version = "1.2.1",
 	VersionUrl = "https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/VERSION",
 	ToggleStyle = "Switch",
 	DensityName = "Normal",

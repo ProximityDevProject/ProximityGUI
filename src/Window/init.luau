@@ -56,7 +56,7 @@ function Window.new(Lib, options)
 	self.BaseSize = size or (touch and MOBILE_SIZE or DEFAULT_SIZE)
 	self.MinSize = options.MinSize or Vector2.new(560, 360)
 	self.Loading = type(options.Loading) == "table" and options.Loading or { Enabled = options.Loading ~= false }
-	self.Loading.Enabled = self.Loading.Enabled ~= false
+	self.Loading.Enabled = self.Loading.Enabled ~= false and Lib:GetSetting("LoadingStyle", "Planet") ~= "None"
 	self.Loading.MinTime = self.Loading.MinTime or 0.6
 	self.AutoReady = options.AutoReady ~= false
 	self.Tabs = {}
@@ -77,7 +77,7 @@ function Window.new(Lib, options)
 	self._commands = {}
 	self.Touch = touch
 	self:_build()
-	self.LoadingStyle = self.Loading.Style or "Planet"
+	self.LoadingStyle = self.Loading.Style or Lib:GetSetting("LoadingStyle", "Planet")
 	self:SetScale(options.Scale or Lib:GetSetting("Scale", "Auto"))
 	self:_setupToggleButton()
 	if self.Loading.Enabled and self.LoadingStyle == "Planet" then
@@ -1506,8 +1506,21 @@ function Window:_reveal(force)
 	local function rise()
 		local page = self.CurrentPage
 		if page and page.Frame and Tween.Speed > 0 then
-			page.Frame.Position = UDim2.fromOffset(0, 6)
-			Tween.Play(page.Frame, { Position = UDim2.fromOffset(0, 0) }, 0.45)
+			page.Frame.Position = UDim2.fromOffset(0, 10)
+			Tween.Play(page.Frame, { Position = UDim2.fromOffset(0, 0) }, 0.6, Enum.EasingStyle.Quint)
+			-- sections arrive one after another
+			for i, section in page.Sections do
+				local frame = section.Frame
+				if frame then
+					local stroke = section.Stroke
+					if stroke then
+						stroke.Transparency = 1
+						task.delay(0.05 * i, function()
+							Tween.Play(stroke, { Transparency = 0 }, 0.5)
+						end)
+					end
+				end
+			end
 		end
 	end
 	if self.Loader then

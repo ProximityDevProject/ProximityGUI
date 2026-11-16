@@ -37,6 +37,7 @@ local function ghost(parent, size, position, radius)
 		NumberSequenceKeypoint.new(1, 0),
 	}))
 	shine.Offset = Vector2.new(-1, 0)
+	shine.Rotation = 18
 	return frame, shine
 end
 
@@ -75,11 +76,24 @@ function Skeleton.new(window)
 
 	-- main ghost
 	local main = Util.New("Frame", { Name = "Main", BackgroundTransparency = 1, Size = UDim2.new(1, -window.SidebarWidth, 1, 0), Position = UDim2.fromOffset(window.SidebarWidth, 0), Parent = root })
-	local percent = Util.Label({ Text = "0%", FontFace = Theme.Fonts.MonoBold, TextSize = 30, Size = UDim2.new(0, 140, 0, 34), Position = UDim2.fromOffset(20, 16), Parent = main })
+	-- a tiny orbit: planet in the middle, a moon circling it while we load
+	local orbit = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(20, 18), Parent = main })
+	local orbitRing = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(30, 12), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Rotation = -16, Parent = orbit })
+	Util.Round(orbitRing)
+	Theme.Paint(Util.Stroke(orbitRing), { Color = "StrokeHi" })
+	local core = Util.New("Frame", { Size = UDim2.fromOffset(12, 12), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Parent = orbit })
+	Util.Round(core)
+	Theme.Paint(core, { BackgroundColor3 = "Bg" })
+	Theme.Paint(Util.Stroke(core, nil, 1.4), { Color = "Accent" })
+	local moon = Util.New("Frame", { Size = UDim2.fromOffset(5, 5), AnchorPoint = Vector2.new(0.5, 0.5), Parent = orbit })
+	Util.Round(moon)
+	Theme.Paint(moon, { BackgroundColor3 = "Accent" })
+	self.Moon = moon
+	local percent = Util.Label({ Text = "0%", FontFace = Theme.Fonts.MonoBold, TextSize = 30, Size = UDim2.new(0, 110, 0, 34), Position = UDim2.fromOffset(60, 16), Parent = main })
 	Theme.Paint(percent, { TextColor3 = "Text" })
-	local stage = Util.Label({ Text = Locale.T("Preparing"), FontFace = Theme.Fonts.Medium, TextSize = 12, Size = UDim2.new(1, -180, 0, 16), Position = UDim2.fromOffset(150, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = main })
+	local stage = Util.Label({ Text = Locale.T("Preparing"), FontFace = Theme.Fonts.Medium, TextSize = 12, Size = UDim2.new(1, -310, 0, 16), Position = UDim2.fromOffset(180, 20), TextTruncate = Enum.TextTruncate.AtEnd, Parent = main })
 	Theme.Paint(stage, { TextColor3 = "TextDim" })
-	local elapsed = Util.Label({ Text = "0.00s", FontFace = Theme.Fonts.Mono, TextSize = 11, Size = UDim2.new(1, -180, 0, 14), Position = UDim2.fromOffset(150, 37), Parent = main })
+	local elapsed = Util.Label({ Text = "0.00s", FontFace = Theme.Fonts.Mono, TextSize = 11, Size = UDim2.new(1, -310, 0, 14), Position = UDim2.fromOffset(180, 37), Parent = main })
 	Theme.Paint(elapsed, { TextColor3 = "TextMute" })
 	local bar = Util.New("Frame", { Size = UDim2.new(1, -40, 0, 3), Position = UDim2.fromOffset(20, 60), BorderSizePixel = 0, Parent = main })
 	Util.Round(bar)
@@ -130,12 +144,28 @@ function Skeleton.new(window)
 		for _, s in self.Shines do
 			s.Offset = Vector2.new(offset, 0)
 		end
+		if self.Moon then
+			local a = t * 2.6
+			local x, y = math.cos(a) * 15, math.sin(a) * 6
+			local r = math.rad(-16)
+			self.Moon.Position = UDim2.new(0.5, x * math.cos(r) - y * math.sin(r), 0.5, x * math.sin(r) + y * math.cos(r))
+			self.Moon.ZIndex = math.sin(a) > 0 and 3 or 1
+		end
 		for _, row in self.Rows do
 			if row.Spinner.Visible then
 				row.Spinner.Rotation = (t * 360) % 360
 			end
 		end
-		self.Elapsed.Text = string.format("%.2fs", t)
+		local p = self.Display
+		self._samples = self._samples or {}
+		table.insert(self._samples, { t, p })
+		while #self._samples > 2 and self._samples[1][1] < t - 1.5 do
+			table.remove(self._samples, 1)
+		end
+		local first = self._samples[1]
+		local rate = (p - first[2]) / math.max(t - first[1], 0.05)
+		local eta = (rate > 0.002 and p < 0.98) and ("  ·  ~" .. math.max(1, math.ceil((1 - p) / rate)) .. " s left") or ""
+		self.Elapsed.Text = string.format("%.1f s", t) .. eta
 		if t > 2.5 and not skip.Visible and window.Loading.Skip ~= false then
 			skip.Visible = true
 		end
@@ -154,7 +184,7 @@ function Skeleton:AddTab(tab)
 	Theme.Paint(name, { TextColor3 = "TextMute" })
 	local pct = Util.Label({ Text = "", FontFace = Theme.Fonts.Mono, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, -8, 0, 14), Position = UDim2.fromOffset(0, 4), Parent = row })
 	Theme.Paint(pct, { TextColor3 = "TextMute" })
-	local track = Util.New("Frame", { Size = UDim2.new(1, -38, 0, 2), Position = UDim2.fromOffset(30, 22), BorderSizePixel = 0, Parent = row })
+	local track = Util.New("Frame", { Size = UDim2.new(1, -38, 0, 1), Position = UDim2.fromOffset(30, 23), BorderSizePixel = 0, Parent = row })
 	Util.Round(track)
 	Theme.Paint(track, { BackgroundColor3 = "Surface3" })
 	local fill = Util.New("Frame", { Size = UDim2.fromScale(0, 1), BorderSizePixel = 0, Parent = track })
@@ -204,12 +234,28 @@ function Skeleton:Finish(callback)
 	self.Percent.Text = "100%"
 	self.Stage.Text = Locale.T("Ready")
 	Tween.Play(self.Fill, { Size = UDim2.fromScale(1, 1) }, 0.15)
-	task.delay(Tween.Speed > 0 and 0.18 or 0, function()
-		Tween.Play(self.Root, { GroupTransparency = 1 }, 0.35, Enum.EasingStyle.Sine)
+	task.delay(Tween.Speed > 0 and 0.22 or 0, function()
+		if not self.Root then
+			return
+		end
+		-- a soft diagonal edge sweeps across: the finished menu is revealed
+		-- behind it from left to right, sections rising as it passes
+		local wipe = Util.New("UIGradient", {
+			Rotation = 20,
+			Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.42, 1),
+				NumberSequenceKeypoint.new(0.58, 0),
+				NumberSequenceKeypoint.new(1, 0),
+			}),
+			Offset = Vector2.new(-0.6, 0),
+			Parent = self.Root,
+		})
+		Tween.Play(wipe, { Offset = Vector2.new(1.1, 0) }, Tween.Speed > 0 and 0.75 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut)
 		if callback then
 			callback()
 		end
-		task.delay(0.4, function()
+		task.delay(0.8, function()
 			self:Destroy()
 		end)
 	end)

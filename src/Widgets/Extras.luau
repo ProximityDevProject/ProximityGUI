@@ -294,18 +294,80 @@ return function(Lib)
 		local logo = window:_drawLogo(button, 26)
 		logo.AnchorPoint = Vector2.new(0.5, 0.5)
 		logo.Position = UDim2.fromScale(0.5, 0.5)
+		-- Games and other scripts put their own buttons into the topbar too
+		-- (TopbarPlus icons, "options" buttons...). Find the rightmost visible
+		-- button inside the topbar strip and sit after it, rechecking now and
+		-- then because those buttons appear late.
+		local function occupiedUntil(left, top, bottom)
+			local edge = left
+			local guiInset = 0
+			pcall(function()
+				guiInset = GuiService:GetGuiInset().Y
+			end)
+			local roots = {}
+			local player = Players.LocalPlayer
+			local pg = player and player:FindFirstChildOfClass("PlayerGui")
+			if pg then
+				table.insert(roots, pg)
+			end
+			pcall(function()
+				table.insert(roots, game:GetService("CoreGui"))
+			end)
+			for _, root in roots do
+				for _, gui in root:GetChildren() do
+					if gui:IsA("ScreenGui") and gui.Enabled and gui ~= Shared.Gui.Root and gui.Name ~= "RobloxGui" and gui.Name ~= "TopBarApp" then
+						local shift = gui.IgnoreGuiInset and 0 or guiInset
+						for _, obj in gui:GetDescendants() do
+							if obj:IsA("GuiButton") and obj.Visible and obj ~= button then
+								local pos, size = obj.AbsolutePosition, obj.AbsoluteSize
+								local y = pos.Y + shift
+								if size.X > 8 and size.X < 260 and size.Y > 8 and size.Y < 80 and y >= top - 4 and y + size.Y <= bottom + 6 and pos.X + size.X > left and pos.X < left + 600 then
+									local visible = true
+									local p = obj.Parent
+									while p and p ~= gui do
+										if p:IsA("GuiObject") and not p.Visible then
+											visible = false
+											break
+										end
+										p = p.Parent
+									end
+									if visible then
+										edge = math.max(edge, pos.X + size.X)
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+			return edge
+		end
 		local function place()
 			local inset = GuiService.TopbarInset
 			local x, y = 164, 4
+			local left, top, bottom = 160, 0, 52
 			if inset and inset.Width > 0 then
-				x = inset.Min.X + 8
+				left, top, bottom = inset.Min.X, inset.Min.Y, inset.Max.Y
 				y = inset.Min.Y + math.max(0, (inset.Height - 44) / 2)
 			end
-			button.Position = UDim2.fromOffset(x, y)
+			local ok, edge = pcall(occupiedUntil, left, top, bottom)
+			x = (ok and edge or left) + 8
+			local origin = Shared.Gui.Root.AbsolutePosition
+			button.Position = UDim2.fromOffset(x - origin.X, y - origin.Y)
 		end
 		place()
 		pcall(function()
 			Shared.Maid:Connect(GuiService:GetPropertyChangedSignal("TopbarInset"), place)
+		end)
+		task.spawn(function()
+			-- late joiners: a few quick checks, then a slow one
+			for i = 1, 40 do
+				task.wait(i < 6 and 1 or 5)
+				if not button.Parent then
+					return
+				end
+				place()
+			end
 		end)
 		button.Activated:Connect(function()
 			window:Toggle()

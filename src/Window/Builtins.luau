@@ -210,6 +210,22 @@ return function(Window)
 		})
 
 		look:Dropdown({
+			Name = T("LoadingStyle"),
+			Icon = "loader",
+			Values = { "Planet", "Skeleton", "None" },
+			Display = function(v)
+				return T("Loading" .. v)
+			end,
+			Default = Lib:GetSetting("LoadingStyle", "Planet"),
+			Description = T("LoadingStyleHint"),
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetSetting("LoadingStyle", v)
+				end
+			end,
+		})
+		look:Dropdown({
 			Name = T("Navigation"),
 			Icon = "sidebar",
 			Values = { "Sidebar", "Rail" },

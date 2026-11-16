@@ -1,17 +1,22 @@
 --!nocheck
 --[[
 	Proximity · Widgets/Loader
-	The intro: the screen dims, a planet assembles itself from hundreds of
-	white, grey and black points, spins while the script loads, and bursts
-	apart when everything is ready; the window then grows out of the burst.
+	The planet intro.
 
-	The planet is a real 3D point cloud (a Fibonacci sphere plus a tilted
-	ring) projected with perspective every frame and lit from the top right,
-	so it reads like the Proximity artwork: a dark body, a bright rim on the
-	lit side, a ring passing behind and in front of it, and a flare.
-
-	Progress under the planet is real: built elements + developer tasks,
-	with a time-left estimate from the measured rate.
+	1. The screen dims. Hundreds of white, grey and black points fly in and
+	   assemble into a planet with a tilted ring.
+	2. The points condense into a real 3D model rendered in a ViewportFrame:
+	   a near-black world lit from the top right with a few surface details,
+	   and a ring made of dusty segments that passes behind the planet (the
+	   depth buffer hides it) and in front of it. The points use exactly the
+	   same geometry, camera and rotation, so they turn into the model in
+	   place instead of being swapped for a different picture.
+	3. Over the model sit the touches from the artwork: a thin bright crescent
+	   on the lit limb, a pulsing flare with a long streak, a soft halo.
+	4. The planet spins while the bar under it shows real progress and the
+	   time left. When everything is ready the model breaks back into points
+	   that burst outward with a flash and a shock wave, and the window grows
+	   out of the burst.
 ]]
 
 local Util = require("../Core/Util")
@@ -20,20 +25,22 @@ local Env = require("../Core/Env")
 local Theme = require("../Theme")
 local Locale = require("../Locale")
 local Shared = require("../Shared")
-local Icons = require("../Icons")
 
 local RunService = Env.Service("RunService")
 
 local Loader = {}
 Loader.__index = Loader
 
-local SPHERE, RING = 560, 240
-local RADIUS, RING_IN, RING_OUT = 92, 128, 168
-local FOCAL = 700
-local TILT_Z, TILT_X = math.rad(18), math.rad(75)
+-- geometry shared by the point cloud and the 3D model (studs = pixels / RADIUS)
+local SPHERE, RING = 520, 300
+local RADIUS = 92                           -- planet radius on screen, px
+local RING_IN, RING_OUT = 1.36, 2.02        -- ring radii in planet radii
+local STAGE = 420                           -- stage and viewport size, px
+local FOV = 30
+local DIST = (STAGE / 2) / (RADIUS * math.tan(math.rad(FOV / 2)))  -- camera distance for that radius
+local TILT_Z, TILT_X = math.rad(17), math.rad(15)   -- ring seen almost edge on, rising to the right
 local LIGHT = Vector3.new(0.72, 0.55, 0.42).Unit
 
--- 12 grey levels reused every frame instead of allocating colors.
 local SHADES = {}
 for i = 0, 11 do
 	local v = i / 11
@@ -53,6 +60,82 @@ local function rotZ(v, a)
 	return Vector3.new(v.X * c - v.Y * s, v.X * s + v.Y * c, v.Z)
 end
 
+local function smooth(x)
+	x = math.clamp(x, 0, 1)
+	return x * x * (3 - 2 * x)
+end
+
+-- ─── the 3D model ─────────────────────────────────────────────────────────
+local function part(props)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CastShadow = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	for k, v in props do
+		p[k] = v
+	end
+	return p
+end
+
+local function buildModel(viewport)
+	local rng = Random.new(7)
+	local camera = Instance.new("Camera")
+	camera.FieldOfView = FOV
+	camera.CFrame = CFrame.new(0, 0, DIST)
+	camera.Parent = viewport
+	viewport.CurrentCamera = camera
+
+	local planet = Instance.new("Model")
+	planet.Name = "Planet"
+	local body = part({ Name = "Body", Shape = Enum.PartType.Ball, Size = Vector3.one * 2, Color = Color3.fromRGB(11, 11, 13), Reflectance = 0.02 })
+	body.Parent = planet
+	-- surface detail so the rotation reads: soft darker and lighter patches
+	for i = 1, 45 do
+		local dir = Vector3.new(rng:NextNumber(-1, 1), rng:NextNumber(-1, 1), rng:NextNumber(-1, 1))
+		if dir.Magnitude > 0.05 then
+			dir = dir.Unit
+			local size = rng:NextNumber(0.1, 0.3)
+			local shade = rng:NextNumber() < 0.5 and rng:NextInteger(6, 9) or rng:NextInteger(13, 17)
+			local patch = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.012, size, size), Color = Color3.fromRGB(shade, shade, shade + 2) })
+			patch.CFrame = CFrame.lookAt(dir * 0.998, dir * 2) * CFrame.Angles(0, math.rad(90), 0)
+			patch.Parent = planet
+		end
+	end
+	planet.PrimaryPart = body
+	planet.Parent = viewport
+
+	local ring = Instance.new("Model")
+	ring.Name = "Ring"
+	local hub = part({ Name = "Hub", Size = Vector3.one * 0.01, Transparency = 1 })
+	hub.Parent = ring
+	ring.PrimaryPart = hub
+	local bands = { { 1.40, 0.16, 0.55 }, { 1.60, 0.20, 0.35 }, { 1.80, 0.12, 0.6 }, { 1.95, 0.08, 0.75 } }
+	local segments = 72
+	for _, band in bands do
+		local r, width, base = band[1], band[2], band[3]
+		local length = (2 * math.pi * r) / segments * 1.08
+		for i = 0, segments - 1 do
+			local a = (i / segments) * math.pi * 2
+			-- dusty: transparency follows a few layered waves plus noise
+			local dust = 0.5 + 0.25 * math.sin(a * 3 + r * 4) + 0.15 * math.sin(a * 7 + r) + rng:NextNumber(-0.12, 0.12)
+			local seg = part({
+				Size = Vector3.new(width, 0.004, length),
+				Color = Color3.fromRGB(235, 235, 240),
+				Material = Enum.Material.Neon,
+				Transparency = math.clamp(base + (1 - dust) * 0.4, 0.25, 0.97),
+			})
+			seg.CFrame = CFrame.new(math.cos(a) * r, 0, math.sin(a) * r) * CFrame.Angles(0, -a, 0)
+			seg.Parent = ring
+		end
+	end
+	ring.Parent = viewport
+	return planet, ring
+end
+
+-- ─── loader ───────────────────────────────────────────────────────────────
 function Loader.new(window, options)
 	options = options or {}
 	local self = setmetatable({}, Loader)
@@ -62,170 +145,164 @@ function Loader.new(window, options)
 	self.Angle = 0
 	self.Display = 0
 	self.Samples = {}
+	self.Solid = 0
 
 	local root = Util.New("Frame", { Name = "ProximityLoader", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 300, Parent = Shared.Gui.Root })
 	self.Root = root
 	local dim = Util.New("Frame", { BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 300, Parent = root })
-	Util.Gradient(dim, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.15) }), 90)
-	Tween.Play(dim, { BackgroundTransparency = options.Dim or 0.25 }, 0.6, Enum.EasingStyle.Sine)
+	Util.Gradient(dim, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.2) }), 90)
+	Tween.Play(dim, { BackgroundTransparency = options.Dim or 0.22 }, 0.7, Enum.EasingStyle.Sine)
 	self.Dim = dim
 
-	local stage = Util.New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.47), Size = UDim2.fromOffset(420, 420), ZIndex = 301, Parent = root })
+	local stage = Util.New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.46), Size = UDim2.fromOffset(STAGE, STAGE), ZIndex = 301, Parent = root })
 	local view = workspace.CurrentCamera.ViewportSize
-	Util.New("UIScale", { Scale = math.clamp(math.min(view.X, view.Y) / 820, 0.55, 1.15), Parent = stage })
-	self.Stage = stage
-	self.Center = Vector2.new(210, 210)
+	local scale = Util.New("UIScale", { Scale = math.clamp(math.min(view.X, view.Y) / 820, 0.55, 1.2), Parent = stage })
+	self.Stage, self.Scale = stage, scale
+	self.Center = Vector2.new(STAGE / 2, STAGE / 2)
+	local c = self.Center
 
-	-- soft halo behind the planet
-	local halo = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(250, 250), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 301, Parent = stage })
+	-- halo behind everything
+	local halo = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(c.X, c.Y), Size = UDim2.fromOffset(RADIUS * 3.6, RADIUS * 3.6), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 301, Parent = stage })
 	Util.Round(halo)
-	Util.Gradient(halo, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.97), NumberSequenceKeypoint.new(0.5, 0.99), NumberSequenceKeypoint.new(1, 1) }), 45)
-	Tween.Play(halo, { BackgroundTransparency = 0 }, 1.2)
+	Util.Gradient(halo, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.6, 0.995), NumberSequenceKeypoint.new(0.85, 0.975), NumberSequenceKeypoint.new(1, 0.96) }), -45)
 	self.Halo = halo
 
-	-- points
+	-- the bright crescent: a white disc just behind the model, nudged towards
+	-- the light, so only a thin lit limb peeks out around the planet
+	local crescent = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(c.X + 1.6, c.Y - 1.4), Size = UDim2.fromOffset(RADIUS * 2 + 3, RADIUS * 2 + 3), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 302, Parent = stage })
+	Util.Round(crescent)
+	local crescentGradient = Util.Gradient(crescent, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.6, 1), NumberSequenceKeypoint.new(0.85, 0.3), NumberSequenceKeypoint.new(1, 0) }), -40)
+	self.Crescent, self.CrescentGradient = crescent, crescentGradient
+
+	-- the model
+	local viewport = Util.New("ViewportFrame", {
+		Name = "Model",
+		BackgroundTransparency = 1,
+		ImageTransparency = 1,
+		Size = UDim2.fromOffset(STAGE, STAGE),
+		Ambient = Color3.fromRGB(14, 14, 18),
+		LightColor = Color3.fromRGB(165, 165, 175),
+		LightDirection = -LIGHT,
+		ZIndex = 303,
+		Parent = stage,
+	})
+	self.Viewport = viewport
+	local ok, planet, ring = pcall(buildModel, viewport)
+	if ok then
+		self.Planet, self.Ring = planet, ring
+	end
+
+	-- soft rim light over the model
+	local rim = Util.New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(c.X, c.Y), Size = UDim2.fromOffset(RADIUS * 2 + 2, RADIUS * 2 + 2), ZIndex = 304, Parent = stage })
+	Util.Round(rim)
+	local rimStroke = Util.Stroke(rim, Color3.new(1, 1, 1), 1.6, 1)
+	Util.Gradient(rimStroke, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.6, 1), NumberSequenceKeypoint.new(0.82, 0.35), NumberSequenceKeypoint.new(0.93, 0), NumberSequenceKeypoint.new(1, 0.3) }), -40)
+	self.RimStroke = rimStroke
+
+	-- points (same geometry as the model)
 	local rng = Random.new(42)
 	local golden = math.pi * (3 - math.sqrt(5))
 	for i = 0, SPHERE - 1 do
 		local y = 1 - (i / (SPHERE - 1)) * 2
 		local r = math.sqrt(1 - y * y)
 		local theta = golden * i
-		local base = Vector3.new(math.cos(theta) * r, y, math.sin(theta) * r) * RADIUS
-		table.insert(self.Points, { Base = base, Kind = "Sphere" })
+		table.insert(self.Points, { Base = Vector3.new(math.cos(theta) * r, y, math.sin(theta) * r), Kind = "Sphere" })
 	end
 	for _ = 1, RING do
 		local t = rng:NextNumber() * math.pi * 2
-		local rr = RING_IN + (RING_OUT - RING_IN) * (rng:NextNumber() ^ 1.6)
-		local base = Vector3.new(math.cos(t) * rr, (rng:NextNumber() - 0.5) * 3, math.sin(t) * rr)
-		table.insert(self.Points, { Base = base, Kind = "Ring", Glint = rng:NextNumber() < 0.08 })
+		local rr = RING_IN + (RING_OUT - RING_IN) * (rng:NextNumber() ^ 1.5)
+		table.insert(self.Points, { Base = Vector3.new(math.cos(t) * rr, 0, math.sin(t) * rr), Kind = "Ring", Glint = rng:NextNumber() < 0.08 })
 	end
 	for _, p in self.Points do
 		local size = p.Kind == "Ring" and (p.Glint and 3 or 2) or 3
-		p.Frame = Util.New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(size, size), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 302, Parent = stage })
-		-- start scattered around the screen
+		p.Frame = Util.New("Frame", { BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(size, size), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 305, Parent = stage })
 		local a = rng:NextNumber() * math.pi * 2
-		local d = 260 + rng:NextNumber() * 420
-		p.From = self.Center + Vector2.new(math.cos(a) * d, math.sin(a) * d)
+		local d = 260 + rng:NextNumber() * 460
+		p.From = c + Vector2.new(math.cos(a) * d, math.sin(a) * d)
 		p.Delay = rng:NextNumber() * 0.7
 		p.Seed = rng:NextNumber() * 10
 	end
 
-	-- flare where light hits the rim, and its streak
-	local flare = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(9, 9), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 305, Parent = stage })
+	-- flare + streaks
+	local flare = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(10, 10), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 307, Parent = stage })
 	Util.Round(flare)
-	local streak = Util.New("Frame", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(150, 1), BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 305, Parent = stage })
+	local flareGlow = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(24, 24), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.85, ZIndex = 306, Parent = flare })
+	Util.Round(flareGlow)
+	local streak = Util.New("Frame", { AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(190, 1), BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, ZIndex = 307, Parent = stage })
 	Util.Gradient(streak, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }))
 	local streak2 = streak:Clone()
 	streak2.AnchorPoint = Vector2.new(1, 0.5)
-	streak2.Size = UDim2.fromOffset(60, 1)
+	streak2.Size = UDim2.fromOffset(70, 1)
 	streak2.Parent = stage
 	streak2:FindFirstChildOfClass("UIGradient").Rotation = 180
-	self.Flare, self.Streak, self.Streak2 = flare, streak, streak2
+	self.Flare, self.FlareGlow, self.Streak, self.Streak2 = flare, flareGlow, streak, streak2
 
-	-- The points settle into the real Proximity artwork: a solid planet with
-	-- its glowing rim and ring. On top of it a highlight travels around the
-	-- rim, the halo breathes and the flare pulses, so it never looks static.
-	-- planet in the artwork: centre at 47.5 % / 50 %, radius 37.5 % of the image
-	local artSize = RADIUS * 2 / 0.75
-	local art = Util.New("ImageLabel", {
-		Name = "Planet",
-		BackgroundTransparency = 1,
-		ImageTransparency = 1,
-		Size = UDim2.fromOffset(artSize, artSize),
-		AnchorPoint = Vector2.new(0.475, 0.5),
-		Position = UDim2.fromOffset(self.Center.X, self.Center.Y),
-		ScaleType = Enum.ScaleType.Fit,
-		ZIndex = 303,
-		Parent = stage,
-	})
-	Util.New("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = art })
-	-- soft round edge so the square artwork melts into the dimmed screen
-	Util.Gradient(art, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.08, 0), NumberSequenceKeypoint.new(0.92, 0), NumberSequenceKeypoint.new(1, 1) }), 0)
-	local rim = Util.New("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(RADIUS * 2 + 4, RADIUS * 2 + 4), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(self.Center.X, self.Center.Y), ZIndex = 304, Parent = stage })
-	Util.Round(rim)
-	local rimStroke = Util.Stroke(rim, Color3.new(1, 1, 1), 1.6, 1)
-	local rimGradient = Util.Gradient(rimStroke, nil, NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1), NumberSequenceKeypoint.new(0.5, 0.1), NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1) }))
-	self.Art, self.Rim, self.RimStroke, self.RimGradient = art, rim, rimStroke, rimGradient
-	self.Solid = 0
-	task.spawn(function()
-		local image
-		for attempt = 1, 3 do
-			local ok, id = pcall(Icons.Get, "https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-512.png")
-			if ok and id then
-				image = id
-				break
-			end
-			task.wait(attempt)
-		end
-		if image and self.Root then
-			art.Image = image
-			pcall(function()
-				game:GetService("ContentProvider"):PreloadAsync({ art })
-			end)
-			self.ArtReady = true
-		end
-	end)
-
-	-- progress block
-	local info = Util.New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.47, 0), Size = UDim2.fromOffset(280, 60), ZIndex = 301, Parent = root })
-	info.Position = UDim2.new(0.5, 0, 0.47, 210 * (stage:FindFirstChildOfClass("UIScale").Scale) + 6)
-	local title = Util.Label({ Text = window.Title, FontFace = Theme.Fonts.SemiBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, -60, 0, 18), TextTransparency = 1, ZIndex = 301, Parent = info })
-	title.TextColor3 = Color3.new(1, 1, 1)
-	local pct = Util.Label({ Text = "0%", FontFace = Theme.Fonts.MonoBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, 0, 0, 18), TextTransparency = 1, ZIndex = 301, Parent = info })
-	pct.TextColor3 = Color3.new(1, 1, 1)
-	local track = Util.New("Frame", { Size = UDim2.new(1, 0, 0, 3), Position = UDim2.fromOffset(0, 24), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 301, Parent = info })
-	Util.Round(track)
-	local fill = Util.New("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 302, Parent = track })
-	Util.Round(fill)
-	local glow = Util.New("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromOffset(16, 7), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.6, BorderSizePixel = 0, ZIndex = 302, Parent = fill })
-	Util.Round(glow)
-	local status = Util.Label({ Text = Locale.T("Preparing"), FontFace = Theme.Fonts.Regular, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -70, 0, 16), Position = UDim2.fromOffset(0, 34), TextTransparency = 1, ZIndex = 301, Parent = info })
-	status.TextColor3 = Color3.fromRGB(170, 170, 178)
-	local eta = Util.Label({ Text = "", FontFace = Theme.Fonts.Mono, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 34), TextTransparency = 1, ZIndex = 301, Parent = info })
-	eta.TextColor3 = Color3.fromRGB(120, 120, 128)
-	self.Info, self.Pct, self.Fill, self.Track, self.Status, self.Eta, self.TitleLabel = info, pct, fill, track, status, eta, title
-	task.delay(0.5, function()
-		if self.Root then
-			for _, l in { title, pct, status, eta } do
-				Tween.Play(l, { TextTransparency = 0 }, 0.5)
-			end
-			Tween.Play(track, { BackgroundTransparency = 0.85 }, 0.5)
-		end
-	end)
-
+	self:_buildProgress(root, scale.Scale)
 	self.Conn = RunService.RenderStepped:Connect(function(dt)
 		self:_step(dt)
 	end)
 	return self
 end
 
-function Loader:_project(v)
-	local scale = FOCAL / (FOCAL - v.Z)
-	return self.Center + Vector2.new(v.X * scale, -v.Y * scale), scale
+function Loader:_buildProgress(root, s)
+	local info = Util.New("Frame", { BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.46, (STAGE / 2) * s * 0.88), Size = UDim2.fromOffset(300, 64), ZIndex = 301, Parent = root })
+	local function label(props)
+		local l = Util.Label(props)
+		l.TextTransparency = 1
+		l.ZIndex = 301
+		l.Parent = info
+		return l
+	end
+	local title = label({ Text = self.Window.Title, FontFace = Theme.Fonts.SemiBold, TextSize = 14, Size = UDim2.new(1, -60, 0, 18) })
+	title.TextColor3 = Color3.new(1, 1, 1)
+	local pct = label({ Text = "0%", FontFace = Theme.Fonts.MonoBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, 0, 0, 18) })
+	pct.TextColor3 = Color3.new(1, 1, 1)
+	local track = Util.New("Frame", { Size = UDim2.new(1, 0, 0, 3), Position = UDim2.fromOffset(0, 25), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 301, Parent = info })
+	Util.Round(track)
+	local fill = Util.New("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 302, Parent = track })
+	Util.Round(fill)
+	local glow = Util.New("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(1, 0.5), Size = UDim2.fromOffset(18, 8), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 302, Parent = fill })
+	Util.Round(glow)
+	local status = label({ Text = Locale.T("Preparing"), FontFace = Theme.Fonts.Regular, TextSize = 12, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -70, 0, 16), Position = UDim2.fromOffset(0, 36) })
+	status.TextColor3 = Color3.fromRGB(170, 170, 178)
+	local eta = label({ Text = "", FontFace = Theme.Fonts.Mono, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 36) })
+	eta.TextColor3 = Color3.fromRGB(120, 120, 128)
+	self.Info, self.Pct, self.Fill, self.Track, self.Status, self.Eta, self.TitleLabel = info, pct, fill, track, status, eta, title
+	task.delay(0.5, function()
+		if self.Root then
+			for _, l in { title, pct, status, eta } do
+				Tween.Play(l, { TextTransparency = 0 }, 0.6)
+			end
+			Tween.Play(track, { BackgroundTransparency = 0.86 }, 0.6)
+		end
+	end)
 end
 
 function Loader:_step(dt)
 	local t = os.clock() - self.Started
-	-- once assembled (and the artwork is loaded) the cloud becomes solid
-	if self.ArtReady and not self.Exploding and t > 1.5 then
-		self.Solid = math.min(1, self.Solid + dt / 0.9)
-	elseif self.Exploding then
-		self.Solid = math.max(0, self.Solid - dt / 0.12)
+	-- assembled -> solid model (and back to points for the burst)
+	if self.Exploding then
+		self.Solid = math.max(0, self.Solid - dt / 0.1)
+	elseif t > 1.35 and self.Planet then
+		self.Solid = math.min(1, self.Solid + dt / 1.0)
 	end
-	local solid = self.Solid
-	local eased = solid * solid * (3 - 2 * solid)
-	if self.Art then
-		self.Art.ImageTransparency = 1 - eased
-		-- a slow sway gives the flat artwork some depth
-		self.Art.Rotation = math.sin(t * 0.35) * 2.5
-		self.Art.Size = UDim2.fromOffset(RADIUS * 2 / 0.75 * (1 + math.sin(t * 0.8) * 0.012), RADIUS * 2 / 0.75 * (1 + math.sin(t * 0.8) * 0.012))
-		self.RimStroke.Transparency = 1 - eased * 0.85
-		self.RimGradient.Rotation = (t * 40) % 360
-		self.Halo.Size = UDim2.fromOffset(250 + math.sin(t * 1.2) * 14, 250 + math.sin(t * 1.2) * 14)
-	end
-	self.Angle += dt * (self.Exploding and 0.2 or 0.42)
+	local solid = smooth(self.Solid)
+	self.Angle += dt * (self.Exploding and 0.15 or 0.38)
 	local spin = self.Angle
-	local fx, fyMax = nil, -math.huge
+	local c = self.Center
+
+	-- model
+	if self.Planet then
+		self.Planet:PivotTo(CFrame.Angles(0, 0, TILT_Z) * CFrame.Angles(0, spin, 0))
+		self.Ring:PivotTo(CFrame.Angles(0, 0, TILT_Z) * CFrame.Angles(TILT_X, 0, 0) * CFrame.Angles(0, spin * 0.6, 0))
+		self.Viewport.ImageTransparency = 1 - solid
+		self.Crescent.BackgroundTransparency = 1 - solid * 0.95
+		self.RimStroke.Transparency = 1 - solid * 0.9
+		self.Halo.BackgroundTransparency = 1 - solid * (0.5 + 0.08 * math.sin(t * 1.3))
+	end
+
+	-- points
+	local flarePos, best = nil, -math.huge
 	for _, p in self.Points do
 		local v
 		if p.Kind == "Sphere" then
@@ -233,35 +310,29 @@ function Loader:_step(dt)
 		else
 			v = rotZ(rotX(rotY(p.Base, spin * 0.6), TILT_X), TILT_Z)
 		end
-		local screen, scale = self:_project(v)
+		local s = DIST / (DIST - v.Z)
+		local screen = c + Vector2.new(v.X, -v.Y) * RADIUS * s
 		local alpha, shade = 1, 11
 		if p.Kind == "Sphere" then
-			local n = v / RADIUS
-			if n.Z < -0.05 then
-				alpha = 1 -- back side
-			else
-				local diffuse = math.max(0, n:Dot(LIGHT))
-				local rim = (1 - math.abs(n.Z)) ^ 2.2
+			if v.Z > -0.05 then
+				local diffuse = math.max(0, v:Dot(LIGHT))
+				local rim = (1 - math.abs(v.Z)) ^ 2.2
 				local light = math.clamp(diffuse ^ 1.6 * 0.35 + rim * diffuse * 1.6, 0, 1)
 				shade = math.floor(math.clamp(0.08 + light, 0, 1) * 11)
-				alpha = math.clamp(0.55 - light * 0.6 - n.Z * 0.15, 0, 0.9)
-				if light > 0.6 and v.Y > fyMax then
-					fyMax = v.Y
-					fx = screen
+				alpha = math.clamp(0.55 - light * 0.6 - v.Z * 0.15, 0, 0.9)
+				if light > 0.6 and v.Y > best then
+					best = v.Y
+					flarePos = screen
 				end
 			end
 		else
-			-- ring: hidden where it passes behind the planet
-			local behind = v.Z < 0 and (v.X * v.X + v.Y * v.Y) < (RADIUS * 1.02) ^ 2
-			if behind then
-				alpha = 1
-			else
+			local behind = v.Z < 0 and (v.X * v.X + v.Y * v.Y) < 1.04
+			if not behind then
 				local lit = math.clamp(0.35 + (v.X / RING_OUT) * 0.45 + (v.Z / RING_OUT) * 0.2, 0, 1)
 				shade = math.floor(math.clamp(0.25 + lit * 0.75 + (p.Glint and 0.3 or 0), 0, 1) * 11)
 				alpha = math.clamp(0.75 - lit * 0.6 - (p.Glint and 0.3 or 0), 0, 0.95)
 			end
 		end
-		-- assembly
 		local k = math.clamp((t - p.Delay) / 1.1, 0, 1)
 		local e = 1 - (1 - k) ^ 3
 		local pos = p.From:Lerp(screen, e)
@@ -269,32 +340,31 @@ function Loader:_step(dt)
 		if self.Exploding then
 			local et = os.clock() - self.ExplodeAt
 			if not p.Dir then
-				local away = (screen - self.Center)
-				p.Dir = (away.Magnitude > 1 and away.Unit or Vector2.new(1, 0)) * (180 + p.Seed * 70) + Vector2.new((p.Seed - 5) * 8, (p.Seed % 3 - 1.5) * 12)
+				local away = screen - c
+				p.Dir = (away.Magnitude > 1 and away.Unit or Vector2.new(1, 0)) * (190 + p.Seed * 75) + Vector2.new((p.Seed - 5) * 9, (p.Seed % 3 - 1.5) * 12)
 			end
-			pos = screen + p.Dir * (1 - (1 - math.min(et / 0.9, 1)) ^ 3) * 1.6
-			fade = math.clamp(alpha + et / 0.85, 0, 1)
+			pos = screen + p.Dir * (1 - (1 - math.min(et / 0.95, 1)) ^ 3) * 1.6
+			fade = math.clamp(math.min(alpha, 0.35) + et / 0.9, 0, 1)
+		else
+			-- condense into the model: points thin out as it becomes solid
+			fade = fade + (1 - fade) * solid * (p.Glint and 0.6 or 1)
 		end
 		local f = p.Frame
 		f.Position = UDim2.fromOffset(pos.X, pos.Y)
-		if not self.Exploding and eased > 0 then
-			-- points dissolve into the solid planet; a few ring glints stay
-			fade = fade + (1 - fade) * eased * (p.Glint and 0.55 or 1)
-		end
 		f.BackgroundTransparency = fade
 		f.BackgroundColor3 = SHADES[shade]
-		f.ZIndex = p.Kind == "Ring" and (v.Z >= 0 and 304 or 302) or 303
 	end
-	-- flare follows the brightest point of the rim
-	local ready = t > 1.2 and not self.Exploding
-	if fx and ready then
-		self.Flare.Position = UDim2.fromOffset(fx.X, fx.Y)
-		self.Streak.Position = UDim2.fromOffset(fx.X, fx.Y)
-		self.Streak2.Position = UDim2.fromOffset(fx.X, fx.Y)
-		local pulse = 0.25 + 0.15 * math.sin(t * 2.4) + eased * 0.15
+
+	-- flare on the brightest point of the lit limb
+	if flarePos and t > 1.2 and not self.Exploding then
+		self.Flare.Position = UDim2.fromOffset(flarePos.X, flarePos.Y)
+		self.Streak.Position = UDim2.fromOffset(flarePos.X, flarePos.Y)
+		self.Streak2.Position = UDim2.fromOffset(flarePos.X, flarePos.Y)
+		local pulse = 0.2 + 0.15 * math.sin(t * 2.3)
 		self.Flare.BackgroundTransparency = pulse
-		self.Streak.BackgroundTransparency = 0.2 + pulse
-		self.Streak2.BackgroundTransparency = 0.45 + pulse
+		self.FlareGlow.BackgroundTransparency = 0.8 + pulse * 0.3
+		self.Streak.BackgroundTransparency = 0.15 + pulse
+		self.Streak2.BackgroundTransparency = 0.4 + pulse
 	end
 	self:_progress(t)
 end
@@ -309,13 +379,11 @@ function Loader:_progress(t)
 		actual = math.max(actual, 0.98)
 	end
 	self.Display = math.max(self.Display, math.min(actual, 0.99))
-	-- smooth the bar towards the real value
 	local shown = self._shown or 0
-	shown += (self.Display - shown) * 0.15
+	shown += (self.Display - shown) * 0.12
 	self._shown = shown
 	self.Fill.Size = UDim2.fromScale(shown, 1)
 	self.Pct.Text = math.floor(shown * 100 + 0.5) .. "%"
-	-- time left from the measured rate over the last second
 	table.insert(self.Samples, { t, self.Display })
 	while #self.Samples > 2 and self.Samples[1][1] < t - 1.5 do
 		table.remove(self.Samples, 1)
@@ -336,8 +404,8 @@ function Loader:SetStage(text)
 	end
 end
 
--- Burst the planet, call `onOpen` while the burst is still flying so the
--- window grows out of it, then clean up.
+-- Breaks the model back into points, bursts them, and calls onOpen while
+-- the burst is still flying so the window grows out of it.
 function Loader:Finish(onOpen)
 	if self.Exploding then
 		return
@@ -350,40 +418,36 @@ function Loader:Finish(onOpen)
 		self.Status.Text = Locale.T("Ready")
 		self.Eta.Text = ""
 		local stage = self.Stage
-		-- flash
-		local flash = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(180, 180), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.1, ZIndex = 306, Parent = stage })
+		local flash = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(self.Center.X, self.Center.Y), Size = UDim2.fromOffset(RADIUS * 2.2, RADIUS * 2.2), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.05, ZIndex = 308, Parent = stage })
 		Util.Round(flash)
-		Tween.Play(flash, { Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1 }, 0.45)
-		-- shock wave
-		local wave = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(190, 190), BackgroundTransparency = 1, ZIndex = 306, Parent = stage })
-		Util.Round(wave)
-		local ws = Util.Stroke(wave, Color3.new(1, 1, 1), 2, 0)
-		Tween.Play(wave, { Size = UDim2.fromOffset(1100, 1100) }, 0.9, Enum.EasingStyle.Quart)
-		Tween.Play(ws, { Transparency = 1, Thickness = 0.5 }, 0.9)
+		Tween.Play(flash, { Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1 }, 0.5)
+		for i, size in { 1300, 900 } do
+			local wave = Util.New("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(self.Center.X, self.Center.Y), Size = UDim2.fromOffset(RADIUS * 2, RADIUS * 2), BackgroundTransparency = 1, ZIndex = 308, Parent = stage })
+			Util.Round(wave)
+			local ws = Util.Stroke(wave, Color3.new(1, 1, 1), i == 1 and 2 or 1, i == 1 and 0 or 0.4)
+			Tween.Play(wave, { Size = UDim2.fromOffset(size, size) }, 0.9 + i * 0.15, Enum.EasingStyle.Quart)
+			Tween.Play(ws, { Transparency = 1, Thickness = 0.5 }, 0.9 + i * 0.15)
+		end
+		for _, o in { self.Flare, self.FlareGlow, self.Streak, self.Streak2, self.Crescent } do
+			Tween.Play(o, { BackgroundTransparency = 1 }, 0.2)
+		end
 		Tween.Play(self.Halo, { BackgroundTransparency = 1 }, 0.4)
-		if self.Art then
-			Tween.Play(self.Art, { ImageTransparency = 1, Size = UDim2.fromOffset(RADIUS * 3.4, RADIUS * 3.4) }, 0.18)
-			Tween.Play(self.RimStroke, { Transparency = 1 }, 0.15)
-		end
-		for _, o in { self.Flare, self.Streak, self.Streak2 } do
-			Tween.Play(o, { BackgroundTransparency = 1 }, 0.25)
-		end
+		Tween.Play(self.RimStroke, { Transparency = 1 }, 0.15)
 		for _, l in { self.TitleLabel, self.Pct, self.Status, self.Eta } do
 			Tween.Play(l, { TextTransparency = 1 }, 0.35)
 		end
 		Tween.Play(self.Track, { BackgroundTransparency = 1 }, 0.35)
 		Tween.Play(self.Fill, { BackgroundTransparency = 1 }, 0.35)
-		Tween.Play(self.Dim, { BackgroundTransparency = 1 }, 0.9, Enum.EasingStyle.Sine)
-		task.delay(0.22, function()
+		Tween.Play(self.Dim, { BackgroundTransparency = 1 }, 0.95, Enum.EasingStyle.Sine)
+		task.delay(0.24, function()
 			if onOpen then
 				onOpen(stage.AbsolutePosition + stage.AbsoluteSize / 2 - Shared.Gui.Root.AbsolutePosition)
 			end
 		end)
-		task.delay(1.1, function()
+		task.delay(1.2, function()
 			self:Destroy()
 		end)
 	end
-	-- let the bar visibly reach 100 first
 	task.spawn(function()
 		local start = os.clock()
 		while (self._shown or 0) < 0.97 and os.clock() - start < 0.6 do

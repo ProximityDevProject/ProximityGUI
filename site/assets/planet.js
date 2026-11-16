@@ -3,6 +3,66 @@
 // that passes behind the planet, is shadowed by it and lights up in front,
 // a flare with a streak and soft rays, drifting nebula wisps and stars.
 // Points from app.js assemble the shape first, then dissolve into it.
+// Shared planet geometry for the shader and the points that build it.
+const PLANET = { flat: 0.26, roll: 17 * Math.PI / 180, ringIn: 1.36, ringOut: 1.9, light: [0.72, 0.58, 0.38] };
+
+// Points that fly in and assemble into exactly the planet the shader draws:
+// same centre, radius, ring plane and light, so the hand-off is a morph.
+window.proximityPlanetPoints = function (canvas, opts) {
+  opts = opts || {};
+  const ctx = canvas.getContext("2d");
+  const L = PLANET.light.slice(); const ll = Math.hypot(...L); L[0] /= ll; L[1] /= ll; L[2] /= ll;
+  const ny = Math.sqrt(1 - PLANET.flat * PLANET.flat);
+  const N = [-Math.sin(PLANET.roll) * ny, Math.cos(PLANET.roll) * ny, PLANET.flat];
+  const e1 = [Math.cos(PLANET.roll), Math.sin(PLANET.roll), 0];
+  const e2 = [N[1] * e1[2] - N[2] * e1[1], N[2] * e1[0] - N[0] * e1[2], N[0] * e1[1] - N[1] * e1[0]];
+  const pts = [], golden = Math.PI * (3 - Math.sqrt(5)), NS = 1500;
+  for (let i = 0; i < NS; i++) { const y = 1 - (i / (NS - 1)) * 2, r = Math.sqrt(1 - y * y), t = golden * i; pts.push({ k: 0, x: Math.cos(t) * r, y, z: Math.sin(t) * r, s: Math.random() }); }
+  for (let i = 0; i < 900; i++) { pts.push({ k: 1, t: Math.random() * Math.PI * 2, r: PLANET.ringIn + Math.pow(Math.random(), 1.4) * (PLANET.ringOut - PLANET.ringIn), g: Math.random() < 0.06, s: Math.random() }); }
+  let w, h, dpr;
+  const resize = () => { dpr = Math.min(devicePixelRatio || 1, 2); w = canvas.clientWidth; h = canvas.clientHeight; canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  resize(); addEventListener("resize", resize);
+  const t0 = performance.now(), hand = opts.handoff ?? 1.3, morph = opts.morph ?? 1.0;
+  function frame(now) {
+    const t = (now - t0) / 1000;
+    ctx.clearRect(0, 0, w, h);
+    const dissolve = opts.solid ? 1 - Math.min(1, Math.max(0, (t - hand) / morph)) : 1;
+    if (dissolve <= 0) return;           // the 3D planet has taken over
+    const R = (opts.radius ?? 0.27) * h, cx = w * (opts.cx ?? 0.5), cy = h * (opts.cy ?? 0.44);
+    const spin = t * 0.12;
+    for (const p of pts) {
+      let x, y, z, v, a;
+      if (!p.k) {
+        const c = Math.cos(spin), s = Math.sin(spin);
+        x = p.x * c + p.z * s; y = p.y; z = -p.x * s + p.z * c;
+        if (z < -0.02) continue;
+        const d = Math.max(0, x * L[0] + y * L[1] + z * L[2]), fres = Math.pow(1 - z, 3.2);
+        v = Math.min(1, 0.06 + Math.pow(d, 3) * 0.05 + Math.pow(fres, 1.6) * Math.pow(d, 0.9) * 1.1 + (Math.hypot(x, y) > 0.955 ? d * 1.2 : 0));
+        a = 0.25 + v * 0.9;
+      } else {
+        const ang = p.t + t * 0.05, cs = Math.cos(ang) * p.r, sn = Math.sin(ang) * p.r;
+        x = cs * e1[0] + sn * e2[0]; y = cs * e1[1] + sn * e2[1]; z = cs * e1[2] + sn * e2[2];
+        const dd = x * x + y * y;
+        if (dd < 1 && z < Math.sqrt(1 - dd)) continue;   // behind the planet
+        const side = 0.45 + 0.55 * Math.min(1, Math.max(0, ((x * L[0] + y * L[1] + z * L[2]) / p.r * 1.4 + 1) / 2));
+        v = side * (p.g ? 1 : 0.7); a = 0.2 + v * 0.6;
+      }
+      const appear = Math.min(1, Math.max(0, (t - p.s * 0.6) / 1.0)), e = 1 - Math.pow(1 - appear, 3);
+      const sx = cx + x * R, sy = cy - y * R;
+      const fx = cx + Math.cos(p.s * 40) * (300 + p.s * 500), fy = cy + Math.sin(p.s * 53) * (300 + p.s * 400);
+      const px = fx + (sx - fx) * e, py = fy + (sy - fy) * e;
+      const g = Math.round(50 + v * 205);
+      ctx.globalAlpha = a * e * dissolve;
+      ctx.fillStyle = `rgb(${g},${g},${g})`;
+      const size = p.k ? (p.g ? 2 : 1.4) : (v > 0.5 ? 2.2 : 1.6);
+      ctx.fillRect(px - size / 2, py - size / 2, size, size);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+};
+
 window.proximityPlanet3D = function (canvas, opts) {
   opts = opts || {};
   const gl = canvas.getContext("webgl", { premultipliedAlpha: false, antialias: true, alpha: true });
@@ -40,13 +100,13 @@ void main(){
 
   // ring plane (tilted) - ray along -z through every pixel
   // ring plane: seen almost edge on (ellipse ratio 0.26), rising to the right
-  float flat_ = 0.26, roll = radians(17.0) + sin(time * 0.15) * 0.01;
+  float flat_ = 0.26, roll = radians(17.0);
   float ny = sqrt(1.0 - flat_ * flat_);
   vec3 N = vec3(-sin(roll) * ny, cos(roll) * ny, flat_);
   float zr = -(N.x*q.x + N.y*q.y) / N.z;            // depth of the ring plane at this pixel
   vec3 rp = vec3(q, zr);
   float rr = length(rp) / R;
-  float ringMask = smoothstep(1.3, 1.42, rr) * smoothstep(2.0, 1.7, rr);
+  float ringMask = smoothstep(1.3, 1.4, rr) * smoothstep(1.98, 1.82, rr);
   float bands = pow(noise(vec2(rr * 34.0, 0.0)), 1.6) * 0.8 + pow(noise(vec2(rr * 110.0, 1.0)), 2.0) * 0.5;
   // wispy, not a solid band: fade with angle noise like dust lanes
   bands *= 0.45 + 0.55 * noise(vec2(atan(rp.y, rp.x) * 3.0 + time * 0.05, rr * 4.0));
@@ -65,7 +125,7 @@ void main(){
   if (d < R) {
     vec3 n = normalize(vec3(q, zs));
     // slow rotation of the surface detail
-    float a = time * 0.05;
+    float a = time * 0.12;
     vec3 rn = vec3(n.x*cos(a) + n.z*sin(a), n.y, -n.x*sin(a) + n.z*cos(a));
     float surf = noise3(rn * 6.0) * 0.6 + noise3(rn * 18.0) * 0.4;
     float diff = max(dot(n, L), 0.0);

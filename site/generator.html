@@ -3,225 +3,426 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Generator - Proximity UI</title>
+<title>Builder - Proximity UI</title>
 <link rel="icon" href="assets/logo.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="assets/style.css">
 <style>
-.gen { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; padding-block: 36px 80px }
-@media (max-width: 980px) { .gen { grid-template-columns: 1fr } }
-.panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px }
-.panel h3 { margin: 0 0 12px; font: 600 13px var(--body); text-transform: uppercase; letter-spacing: .1em; color: var(--mute) }
-.tree { display: flex; flex-direction: column; gap: 4px; font-size: 14px }
-.node { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; cursor: pointer; border: 1px solid transparent }
+.b { display: grid; grid-template-columns: 280px minmax(0, 1fr) 320px; gap: 16px; padding-block: 28px 60px }
+@media (max-width: 1180px) { .b { grid-template-columns: 260px minmax(0, 1fr) } .insp { grid-column: 1 / -1 } }
+@media (max-width: 760px) { .b { grid-template-columns: 1fr } }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0 }
+.ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px }
+.ph h3 { margin: 0; font: 600 12px var(--body); text-transform: uppercase; letter-spacing: .12em; color: var(--mute) }
+.tree { display: flex; flex-direction: column; gap: 2px; font-size: 14px; max-height: 62vh; overflow: auto }
+.node { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; min-width: 0 }
 .node:hover { background: var(--card2) }
 .node.sel { border-color: var(--fg); background: var(--card2) }
-.node .k { font: 11px var(--mono); color: var(--mute); width: 62px; flex: none }
-.node .x { margin-left: auto; opacity: 0; color: var(--mute); border: 0; background: none; cursor: pointer; font-size: 15px }
-.node:hover .x { opacity: 1 }
-.lvl1 { margin-left: 14px } .lvl2 { margin-left: 28px }
-.adds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px }
-.adds button, .mini { border: 1px solid var(--line2); background: var(--card2); color: var(--fg); border-radius: 8px; padding: 6px 10px; font: 600 12.5px var(--body); cursor: pointer }
-.adds button:hover, .mini:hover { border-color: var(--fg) }
-.form { display: grid; gap: 10px; margin-top: 14px }
-.form label { display: grid; gap: 4px; font-size: 12.5px; color: var(--dim) }
-.form input, .form select { background: var(--bg2); border: 1px solid var(--line2); color: var(--fg); border-radius: 8px; padding: 8px 10px; font: 14px var(--body) }
-.right { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; min-width: 0 }
-.right > * { min-width: 0 }
-/* the preview imitates the in-game window */
-.pv { display: grid; grid-template-columns: 170px 1fr; height: 420px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line2); background: #060607; font-size: 13px }
-.pv .side { background: #09090a; border-right: 1px solid var(--line); padding: 14px 10px; display: flex; flex-direction: column; gap: 4px }
-.pv .bt { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 2px 4px 14px }
-.pv .bt img { width: 22px; height: 22px; border-radius: 50% }
-.pv .tb { padding: 7px 10px; border-radius: 7px; color: var(--dim); cursor: pointer; position: relative }
-.pv .tb.on { background: #111113; color: #fff }
-.pv .tb.on::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 2px; background: #fff; border-radius: 2px }
+.node .k { font: 10.5px var(--mono); color: var(--mute); width: 78px; flex: none; text-transform: lowercase; overflow: hidden; text-overflow: ellipsis }
+.node .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.node .ops { display: none; gap: 2px }
+.node:hover .ops, .node.sel .ops { display: flex }
+.node .ops button { border: 0; background: none; color: var(--mute); cursor: pointer; font-size: 13px; padding: 0 3px }
+.node .ops button:hover { color: var(--fg) }
+.l1 { margin-left: 12px } .l2 { margin-left: 24px }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px }
+.mini { border: 1px solid var(--line2); background: var(--card2); color: var(--fg); border-radius: 8px; padding: 7px 11px; font: 600 12.5px var(--body); cursor: pointer }
+.mini:hover { border-color: var(--fg) }
+.mini.pri { background: #fff; color: #000; border-color: #fff }
+.insp { display: flex; flex-direction: column; gap: 12px }
+.grp { border-top: 1px solid var(--line); padding-top: 10px }
+.grp > b { display: block; font: 600 11px var(--body); text-transform: uppercase; letter-spacing: .12em; color: var(--mute); margin-bottom: 8px }
+.f { display: grid; grid-template-columns: 110px minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 7px; font-size: 13px; color: var(--dim) }
+.f input, .f select, .f textarea { width: 100%; background: var(--bg2); border: 1px solid var(--line2); color: var(--fg); border-radius: 8px; padding: 7px 9px; font: 13px var(--body) }
+.f textarea { min-height: 54px; resize: vertical; font-family: var(--mono); font-size: 12px }
+.f input[type=checkbox] { width: 18px; height: 18px; accent-color: #fff }
+.f input[type=color] { padding: 2px; height: 32px }
+.hint { color: var(--mute); font-size: 12.5px }
+/* modal */
+.mdl { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.62); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; padding: 16px }
+.mdl.open { display: flex }
+.mdl .box { width: min(760px, 100%); max-height: 86vh; overflow: auto; background: var(--bg2); border: 1px solid var(--line2); border-radius: 16px; padding: 20px }
+.mdl h3 { margin: 0 0 4px; font: 600 20px var(--display) }
+.types { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; margin-top: 14px }
+.type { text-align: left; border: 1px solid var(--line2); background: var(--card); color: var(--fg); border-radius: 12px; padding: 12px; cursor: pointer }
+.type:hover { border-color: #fff; transform: translateY(-1px) }
+.type b { display: block; font-size: 14px } .type span { color: var(--mute); font-size: 12px }
+/* preview */
+.pv { display: grid; grid-template-columns: 170px 1fr; height: 470px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line2); background: #060607; font-size: 13px; position: relative }
+.pv .side { background: #09090a; border-right: 1px solid #1d1d22; padding: 14px 10px; display: flex; flex-direction: column; gap: 3px; overflow: auto }
+.pv .bt { display: flex; gap: 8px; align-items: center; font-weight: 700; margin: 2px 4px 2px } .pv .bt img { width: 22px; height: 22px; border-radius: 50% }
+.pv .st { color: #66666e; font-size: 11px; margin: 0 4px 12px 34px }
+.pv .tb { padding: 7px 10px; border-radius: 7px; color: #98989f; cursor: pointer; position: relative }
+.pv .tb.on { background: #111113; color: #fff } .pv .tb.on::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 2px; background: #fff; border-radius: 2px }
 .pv .main { padding: 14px; overflow: auto }
-.pv .head { font: 600 15px var(--body); margin: 0 4px 12px }
-.pv .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
-.pv .sec { background: #0c0c0d; border: 1px solid #1e1e22; border-radius: 8px; padding: 10px; align-self: start }
-.pv .sec.full { grid-column: 1 / -1 }
-.pv .sec b { display: block; font-size: 10.5px; letter-spacing: .1em; color: #98989f; margin-bottom: 6px }
-.pv .row { display: flex; align-items: center; justify-content: space-between; padding: 7px 2px; color: #d6d6da }
-.pv .sw { width: 30px; height: 16px; border-radius: 99px; background: #17171a; border: 1px solid #303036; position: relative }
-.pv .sw.on { background: #fff }
-.pv .sw::after { content: ""; position: absolute; top: 2px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: #98989f }
-.pv .sw.on::after { left: 15px; background: #08080a }
-.pv .sl { height: 4px; border-radius: 4px; background: #17171a; margin: 2px 2px 6px; position: relative }
-.pv .sl i { position: absolute; left: 0; top: 0; bottom: 0; background: #fff; border-radius: 4px }
-.pv .dd { border: 1px solid #1e1e22; background: #17171a; border-radius: 5px; padding: 2px 9px; font-size: 12px; color: #fff }
-.pv .bn { border: 1px solid #1e1e22; background: #17171a; border-radius: 6px; text-align: center; padding: 6px; margin: 4px 0 }
-.pv .kb { font: 11px var(--mono); border: 1px solid #1e1e22; background: #17171a; border-radius: 5px; padding: 1px 7px }
-.pv .cp { width: 26px; height: 14px; border-radius: 4px; border: 1px solid #303036 }
+.pv .head { font: 600 15px var(--body); margin: 0 4px 12px; display: flex; justify-content: space-between }
+.pv .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start }
+.pv .sec { background: #0c0c0d; border: 1px solid #1e1e22; border-radius: 8px; padding: 10px; position: relative }
+.pv .sec.full { grid-column: 1 / -1 } .pv .sec.risk::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px; background: #e84c54; border-radius: 2px }
+.pv .sec > b { display: flex; justify-content: space-between; font-size: 10.5px; letter-spacing: .1em; color: #98989f; margin-bottom: 6px }
+.pv .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 2px; color: #d6d6da; border-radius: 6px; cursor: pointer }
+.pv .row:hover { background: #111113 } .pv .row.sel { outline: 1px solid #fff }
+.pv .row.lock { color: #5c5c64 } .pv .row.risky > span:first-child { color: #e84c54 }
+.pv .sw { width: 30px; height: 16px; border-radius: 99px; background: #17171a; border: 1px solid #303036; position: relative; flex: none }
+.pv .sw.on { background: #fff } .pv .sw::after { content: ""; position: absolute; top: 2px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: #98989f } .pv .sw.on::after { left: 15px; background: #08080a }
+.pv .sl { height: 4px; border-radius: 4px; background: #17171a; margin: 0 2px 8px; position: relative } .pv .sl i { position: absolute; top: 0; bottom: 0; background: #fff; border-radius: 4px }
+.pv .dd { border: 1px solid #1e1e22; background: #17171a; border-radius: 5px; padding: 2px 9px; font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px }
+.pv .bn { border: 1px solid #1e1e22; background: #17171a; border-radius: 6px; text-align: center; padding: 6px; margin: 3px 0; cursor: pointer }
+.pv .kb { font: 11px var(--mono); border: 1px solid #1e1e22; background: #17171a; border-radius: 5px; padding: 1px 7px; white-space: nowrap }
+.pv .cp { width: 26px; height: 14px; border-radius: 4px; border: 1px solid #303036; flex: none }
+.pv .muted { color: #6a6a72; font-size: 12px }
+.pv .box2 { border: 1px solid #1e1e22; border-radius: 6px; padding: 8px; color: #6a6a72; font-size: 12px; margin: 3px 0; cursor: pointer }
+.pv .badge { font: 700 9px var(--body); background: #fff; color: #000; border-radius: 4px; padding: 1px 5px; margin-left: 6px }
 @media (max-width: 560px) { .pv { grid-template-columns: 1fr } .pv .side { display: none } .pv .cols { grid-template-columns: 1fr } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div style="padding-top:44px">
+  <div style="padding-top:40px">
     <span class="eyebrow">Tool</span>
-    <h1 style="font:600 clamp(30px,5vw,46px)/1.1 var(--display);margin:10px 0 8px">Code generator</h1>
-    <p style="color:var(--dim);max-width:62ch;margin:0">Click a menu together on the left, see it on the right and copy a ready Lua script. Your work is kept in this browser.</p>
+    <h1 style="font:600 clamp(30px,5vw,46px)/1.1 var(--display);margin:10px 0 8px">Builder</h1>
+    <p style="color:var(--dim);max-width:70ch;margin:0">Build a menu with the mouse: add tabs and sections, press <b style="color:#fff">New element</b>, set every option in the inspector and copy a ready script. Click anything in the preview to edit it. Your work stays in this browser.</p>
   </div>
-  <div class="gen">
+  <div class="b">
     <div class="panel">
-      <h3>Structure</h3>
+      <div class="ph"><h3>Structure</h3><button class="mini" id="undoBtn" title="Undo">Undo</button></div>
       <div class="tree" id="tree"></div>
-      <div class="adds" id="adds"></div>
-      <div class="form" id="form"></div>
-    </div>
-    <div class="right">
-      <div class="pv" id="preview"></div>
-      <div>
-        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-          <h3 style="margin:0;font:600 13px var(--body);text-transform:uppercase;letter-spacing:.1em;color:var(--mute)">Lua</h3>
-          <span style="display:flex;gap:8px"><button class="mini" id="reset">Start over</button><button class="btn primary" id="copy" style="padding:9px 16px">Copy script</button></span>
-        </div>
-        <pre><code class="lua" id="code"></code></pre>
+      <div class="btns">
+        <button class="mini" id="addTab">+ Tab</button>
+        <button class="mini" id="addSec">+ Section</button>
+        <button class="mini pri" id="addEl">+ New element</button>
       </div>
     </div>
+    <div style="display:grid;gap:16px;min-width:0">
+      <div class="pv" id="preview"></div>
+      <div class="panel">
+        <div class="ph"><h3>Lua</h3><span style="display:flex;gap:6px"><button class="mini" id="reset">Start over</button><button class="mini" id="download">Download .lua</button><button class="mini pri" id="copy">Copy script</button></span></div>
+        <pre style="margin:0;max-height:420px"><code class="lua" id="code"></code></pre>
+      </div>
+    </div>
+    <div class="panel insp" id="insp"></div>
   </div>
 </div>
+
+<div class="mdl" id="mdl"><div class="box">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+    <div><h3>New element</h3><p class="hint" style="margin:0" id="mdlFor"></p></div>
+    <button class="mini" id="mdlClose">Close</button>
+  </div>
+  <div class="types" id="types"></div>
+</div></div>
+
 <script src="assets/app.js"></script>
 <script>
-const KINDS = {
-  Toggle: { f: ["Name", "Flag", "Icon", "Default:bool", "Keybind"] },
-  Slider: { f: ["Name", "Flag", "Icon", "Min:num", "Max:num", "Default:num", "Suffix"] },
-  Dropdown: { f: ["Name", "Flag", "Values", "Default", "Multi:bool"] },
-  Button: { f: ["Name", "Icon", "Style:Secondary|Primary|Ghost|Danger"] },
-  Keybind: { f: ["Name", "Flag", "Default", "Mode:Toggle|Hold|Always|Release|Press"] },
-  ColorPicker: { f: ["Name", "Flag", "Default"] },
-  Input: { f: ["Name", "Flag", "Placeholder"] },
-  Label: { f: ["Text"] },
-  PlayerList: { f: ["Height:num"] },
+// ── schema ──────────────────────────────────────────────────────────────
+const COMMON = [
+  ["Name", "text", "General"], ["Flag", "text", "General", "saved in configs"], ["Icon", "text", "General", "aimbot, esp, fly..."],
+  ["Description", "text", "General"], ["Tooltip", "text", "General"], ["Badge", "text", "General", "NEW, BETA"],
+  ["Risky", "bool", "State"], ["Locked", "text", "State", "reason, empty = unlocked"], ["DependsOn", "text", "State", "flag that must be on"],
+];
+const STYLES = ["Switch", "Compact", "Checkbox", "Chip", "Radio", "Square", "Pill", "Dot", "Orbit"];
+const MODES = ["Toggle", "Hold", "Always", "Release", "Press"];
+const TYPES = {
+  Toggle: { d: "On / off switch", f: [["Default", "bool"], ["Style", STYLES.concat(["(menu style)"])], ["Confirm", "text", null, "ask before turning on"], ["Key", "text", "Extras", "attach a keybind, e.g. Ctrl+X"], ["KeyMode", MODES, "Extras"], ["LinkColor", "color", "Extras", "attach a color swatch"], ["UseColor", "bool", "Extras"]] },
+  Slider: { d: "Number with a track", f: [["Min", "num"], ["Max", "num"], ["Default", "num"], ["Step", "num"], ["Prefix", "text"], ["Suffix", "text"]] },
+  RangeSlider: { d: "From - to range", f: [["Min", "num"], ["Max", "num"], ["From", "num"], ["To", "num"], ["Suffix", "text"]] },
+  TextSlider: { d: "Steps with words", f: [["Labels", "text", null, "comma separated"], ["Default", "text"]] },
+  Dropdown: { d: "Pick one value", f: [["Values", "text", null, "comma separated"], ["Default", "text"], ["Search", "bool"]] },
+  MultiDropdown: { d: "Pick several, shown as chips", f: [["Values", "text"], ["Default", "text", null, "comma separated"], ["Max", "num"]] },
+  PlayerDropdown: { d: "Players on the server", f: [["Multi", "bool"]] },
+  Input: { d: "Text or number field", f: [["Placeholder", "text"], ["Default", "text"], ["Numeric", "bool"], ["Finished", "bool", null, "fire on Enter only"]] },
+  Keybind: { d: "Key with a mode", f: [["Default", "text", null, "E, MB2, Ctrl+Shift+P"], ["Mode", MODES]] },
+  ColorPicker: { d: "Color with alpha", f: [["Default", "color"], ["Alpha", "num", null, "0 - 1, empty = none"]] },
+  Button: { d: "Runs your code", f: [["Style", ["Secondary", "Primary", "Ghost", "Danger"]], ["Confirm", "text"], ["Hint", "text"]] },
+  ButtonGroup: { d: "Buttons in a row", f: [["Buttons", "text", null, "comma separated names"]] },
+  Label: { d: "A line of text", f: [["Text", "text"]] },
+  Paragraph: { d: "Title and text", f: [["Title", "text"], ["Content", "textarea"]] },
+  Divider: { d: "Separator with text", f: [["Text", "text"]] },
+  Navigate: { d: "Row with an arrow", f: [["Value", "text"]] },
+  Progress: { d: "Progress bar", f: [["Value", "num"], ["Max", "num"]] },
+  Stat: { d: "Name and live value", f: [["Value", ["FPS", "Ping", "Session", "Players", "ServerUptime", "Memory"]]] },
+  Graph: { d: "Live line chart", f: [["Source", ["FPS", "Ping"]], ["Height", "num"]] },
+  Table: { d: "Rows with sort and filters", f: [["Columns", "text", null, "comma separated"], ["Filters", "bool", null, "range filter on numbers"], ["Height", "num"]] },
+  PlayerList: { d: "Avatars, distance, actions", f: [["Height", "num"]] },
+  Console: { d: "Log lines", f: [["Height", "num"]] },
+  Code: { d: "Code with a copy button", f: [["Code", "textarea"]] },
 };
-const fresh = () => ({ title: "My Hub", key: "RightShift", keySystem: false, settings: true, home: true, tabs: [
-  { name: "Combat", icon: "aimbot", sections: [
-    { name: "Aim", side: "Left", toggle: true, items: [
-      { kind: "Toggle", Name: "Silent aim", Flag: "aim.silent", Icon: "silent", Default: false, Keybind: "Ctrl+X" },
-      { kind: "Slider", Name: "FOV", Flag: "aim.fov", Icon: "fov", Min: 10, Max: 500, Default: 135, Suffix: " px" },
-      { kind: "Dropdown", Name: "Part", Flag: "aim.part", Values: "Head, Torso", Default: "Head", Multi: false } ] },
-    { name: "Weapon", side: "Right", items: [
-      { kind: "Toggle", Name: "Auto reload", Flag: "weapon.reload", Default: true },
-      { kind: "Button", Name: "Rejoin", Icon: "rejoin", Style: "Primary" } ] } ] },
-  { name: "Visuals", icon: "esp", sections: [
-    { name: "ESP", side: "Left", items: [
-      { kind: "Toggle", Name: "Boxes", Flag: "esp.box", Default: true },
-      { kind: "ColorPicker", Name: "Box color", Flag: "esp.box.color", Default: "#FFFFFF" } ] } ] } ] });
-let st; try { st = JSON.parse(localStorage.getItem("proximity-gen")) } catch (e) {} st = st || fresh();
-let sel = { t: 0, s: 0, i: -1 }, tabView = 0;
-const save = () => { try { localStorage.setItem("proximity-gen", JSON.stringify(st)) } catch (e) {} };
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const lua = s => '"' + String(s ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+const NO_COMMON = ["Label", "Paragraph", "Divider", "ButtonGroup", "Code", "Console", "Table", "PlayerList", "Graph"];
+const DEFAULTS = {
+  Toggle: { Default: false, KeyMode: "Toggle", LinkColor: "#ffffff" }, Slider: { Min: 0, Max: 100, Default: 50, Step: 1 }, RangeSlider: { Min: 0, Max: 1000, From: 10, To: 250 },
+  TextSlider: { Labels: "Slow, Medium, Fast", Default: "Medium" }, Dropdown: { Values: "One, Two, Three", Default: "One" }, MultiDropdown: { Values: "Head, Torso, Arms", Default: "Head" },
+  Input: { Placeholder: "Type here" }, Keybind: { Default: "E", Mode: "Toggle" }, ColorPicker: { Default: "#ffffff" }, Button: { Style: "Secondary" },
+  ButtonGroup: { Buttons: "Save, Load" }, Label: { Text: "Some text" }, Paragraph: { Title: "How it works", Content: "Explain something here." }, Divider: { Text: "Advanced" },
+  Progress: { Value: 40, Max: 100 }, Stat: { Value: "FPS" }, Graph: { Source: "FPS", Height: 64 }, Table: { Columns: "Name, Players, Ping", Height: 200, Filters: true },
+  PlayerList: { Height: 220 }, Console: { Height: 140 }, Code: { Code: "print('hello')" }, Navigate: { Value: "" },
+};
+const WINDOW_FIELDS = [
+  ["Title", "text", "Window"], ["Subtitle", "text", "Window"], ["Keybind", "text", "Window"],
+  ["Theme", ["Eclipse", "OLED", "Graphite", "Moon", "Ash", "Steel"], "Look"], ["Accent", "color", "Look"], ["Font", "text", "Look", "Builder Sans, Minecraft (Monocraft)..."],
+  ["Density", ["Normal", "Compact", "Comfortable", "Touch"], "Look"], ["ToggleStyle", STYLES, "Look"], ["Navigation", ["Sidebar", "Rail"], "Look"],
+  ["Loading", ["Planet", "Skeleton", "None"], "Loading"], ["MinTime", "num", "Loading"],
+  ["KeySystem", "bool", "Key system"], ["Keys", "text", "Key system", "comma separated"], ["GetKey", "text", "Key system", "link copied by the button"],
+  ["Home", "bool", "Built-in tabs"], ["Favorites", "bool", "Built-in tabs"], ["Settings", "bool", "Built-in tabs"],
+  ["Watermark", "bool", "Widgets"], ["KeybindList", "bool", "Widgets"], ["ChangelogVersion", "text", "What's new"], ["ChangelogNotes", "textarea", "What's new", "one per line"],
+];
 
+// ── state ───────────────────────────────────────────────────────────────
+const sample = () => ({
+  win: { Title: "My Hub", Subtitle: "v1.0", Keybind: "RightShift", Theme: "Eclipse", Accent: "#ffffff", Font: "", Density: "Normal", ToggleStyle: "Switch", Navigation: "Sidebar", Loading: "Planet", MinTime: 0.8, KeySystem: false, Keys: "", GetKey: "", Home: true, Favorites: false, Settings: true, Watermark: true, KeybindList: true, ChangelogVersion: "", ChangelogNotes: "" },
+  tabs: [
+    { Name: "Combat", Icon: "aimbot", Description: "Aim and weapons", sections: [
+      { Name: "Aim", Icon: "target", Side: "Left", Toggle: true, Flag: "aim", items: [
+        { type: "Toggle", Name: "Silent aim", Flag: "aim.silent", Icon: "silent", Default: false, Key: "Ctrl+X", KeyMode: "Hold" },
+        { type: "Slider", Name: "FOV", Flag: "aim.fov", Icon: "fov", Min: 10, Max: 500, Default: 135, Step: 5, Suffix: " px" },
+        { type: "MultiDropdown", Name: "Parts", Flag: "aim.parts", Values: "Head, Torso, Arms", Default: "Head, Torso" } ] },
+      { Name: "Weapon", Icon: "weapon", Side: "Right", items: [
+        { type: "Toggle", Name: "Auto reload", Flag: "weapon.reload", Default: true, Style: "Orbit" },
+        { type: "Toggle", Name: "Spin bot", Flag: "weapon.spin", Risky: true, Badge: "RISKY" },
+        { type: "Button", Name: "Rejoin", Icon: "rejoin", Style: "Primary" } ] } ] },
+    { Name: "Visuals", Icon: "esp", sections: [
+      { Name: "ESP", Side: "Left", items: [
+        { type: "Toggle", Name: "Boxes", Flag: "esp.box", Default: true, UseColor: true, LinkColor: "#ffffff" },
+        { type: "ColorPicker", Name: "Chams", Flag: "esp.chams", Default: "#e6e6f0", Alpha: 0.3 } ] } ] },
+  ],
+});
+let st; try { st = JSON.parse(localStorage.getItem("proximity-builder")) } catch (e) {} st = st || sample();
+let sel = { kind: "window" }, view = 0, history = [];
+const snapshot = () => { history.push(JSON.stringify(st)); if (history.length > 60) history.shift(); };
+const save = () => { try { localStorage.setItem("proximity-builder", JSON.stringify(st)) } catch (e) {} };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const lua = s => '"' + String(s ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n") + '"';
+const list = s => String(s || "").split(",").map(x => x.trim()).filter(Boolean);
+const cur = () => {
+  const t = st.tabs[sel.t], s = t && t.sections[sel.s], it = s && s.items[sel.i];
+  return { t, s, it };
+};
+
+// ── tree ────────────────────────────────────────────────────────────────
+function move(arr, i, d) { const j = i + d; if (j < 0 || j >= arr.length) return; snapshot(); [arr[i], arr[j]] = [arr[j], arr[i]]; return j; }
 function tree() {
   const el = document.getElementById("tree"); el.innerHTML = "";
-  const node = (cls, k, label, pick, del) => {
-    const d = document.createElement("div"); d.className = "node " + cls; d.innerHTML = `<span class="k">${k}</span><span>${esc(label)}</span>${del ? '<button class="x" aria-label="Remove">×</button>' : ""}`;
-    d.onclick = e => { if (e.target.classList.contains("x")) { del(); } else pick(); render(); }; return d;
+  const node = (cls, kind, label, isSel, pick, ops) => {
+    const d = document.createElement("div"); d.className = "node " + cls + (isSel ? " sel" : "");
+    d.innerHTML = `<span class="k">${kind}</span><span class="n">${esc(label)}</span>`;
+    if (ops) { const o = document.createElement("span"); o.className = "ops"; ops.forEach(([sym, title, fn]) => { const b = document.createElement("button"); b.textContent = sym; b.title = title; b.onclick = e => { e.stopPropagation(); fn(); render(); }; o.appendChild(b); }); d.appendChild(o); }
+    d.onclick = () => { pick(); render(); }; el.appendChild(d);
   };
-  el.appendChild(node(sel.t === -1 ? "sel" : "", "window", st.title, () => (sel = { t: -1, s: -1, i: -1 })));
+  node("", "window", st.win.Title, sel.kind === "window", () => (sel = { kind: "window" }));
   st.tabs.forEach((t, ti) => {
-    el.appendChild(node(sel.t === ti && sel.s === -1 ? "sel" : "", "tab", t.name, () => { sel = { t: ti, s: -1, i: -1 }; tabView = ti; }, () => { st.tabs.splice(ti, 1); sel = { t: -1, s: -1, i: -1 }; tabView = 0; }));
+    node("", "tab", t.Name, sel.kind === "tab" && sel.t === ti, () => { sel = { kind: "tab", t: ti }; view = ti; }, [
+      ["↑", "Move up", () => { const j = move(st.tabs, ti, -1); if (j != null) sel = { kind: "tab", t: j }; }],
+      ["↓", "Move down", () => { const j = move(st.tabs, ti, 1); if (j != null) sel = { kind: "tab", t: j }; }],
+      ["⧉", "Duplicate", () => { snapshot(); st.tabs.splice(ti + 1, 0, JSON.parse(JSON.stringify(t))); }],
+      ["×", "Delete", () => { snapshot(); st.tabs.splice(ti, 1); sel = { kind: "window" }; view = 0; }]]);
     t.sections.forEach((s, si) => {
-      el.appendChild(node("lvl1 " + (sel.t === ti && sel.s === si && sel.i === -1 ? "sel" : ""), "section", s.name, () => { sel = { t: ti, s: si, i: -1 }; tabView = ti; }, () => { t.sections.splice(si, 1); sel = { t: ti, s: -1, i: -1 }; }));
-      s.items.forEach((it, ii) => el.appendChild(node("lvl2 " + (sel.t === ti && sel.s === si && sel.i === ii ? "sel" : ""), it.kind.toLowerCase(), it.Name || it.Text || it.kind, () => { sel = { t: ti, s: si, i: ii }; tabView = ti; }, () => { s.items.splice(ii, 1); sel.i = -1; })));
+      node("l1", "section", s.Name, sel.kind === "section" && sel.t === ti && sel.s === si, () => { sel = { kind: "section", t: ti, s: si }; view = ti; }, [
+        ["↑", "Move up", () => { const j = move(t.sections, si, -1); if (j != null) sel = { kind: "section", t: ti, s: j }; }],
+        ["↓", "Move down", () => { const j = move(t.sections, si, 1); if (j != null) sel = { kind: "section", t: ti, s: j }; }],
+        ["⧉", "Duplicate", () => { snapshot(); t.sections.splice(si + 1, 0, JSON.parse(JSON.stringify(s))); }],
+        ["×", "Delete", () => { snapshot(); t.sections.splice(si, 1); sel = { kind: "tab", t: ti }; }]]);
+      s.items.forEach((it, ii) => node("l2", it.type, it.Name || it.Text || it.Title || it.type, sel.kind === "item" && sel.t === ti && sel.s === si && sel.i === ii, () => { sel = { kind: "item", t: ti, s: si, i: ii }; view = ti; }, [
+        ["↑", "Move up", () => { const j = move(s.items, ii, -1); if (j != null) sel.i = j; }],
+        ["↓", "Move down", () => { const j = move(s.items, ii, 1); if (j != null) sel.i = j; }],
+        ["⧉", "Duplicate", () => { snapshot(); s.items.splice(ii + 1, 0, JSON.parse(JSON.stringify(it))); }],
+        ["×", "Delete", () => { snapshot(); s.items.splice(ii, 1); sel = { kind: "section", t: ti, s: si }; }]]));
     });
   });
 }
-function adds() {
-  const el = document.getElementById("adds"); el.innerHTML = "";
-  const btn = (label, fn) => { const b = document.createElement("button"); b.textContent = label; b.onclick = () => { fn(); render(); }; el.appendChild(b); };
-  btn("+ Tab", () => { st.tabs.push({ name: "Tab " + (st.tabs.length + 1), icon: "layers", sections: [] }); sel = { t: st.tabs.length - 1, s: -1, i: -1 }; tabView = sel.t; });
-  if (sel.t >= 0) btn("+ Section", () => { const t = st.tabs[sel.t]; t.sections.push({ name: "Section", side: t.sections.length % 2 ? "Right" : "Left", items: [] }); sel = { t: sel.t, s: t.sections.length - 1, i: -1 }; });
-  if (sel.t >= 0 && sel.s >= 0) Object.keys(KINDS).forEach(k => btn("+ " + k, () => { const s = st.tabs[sel.t].sections[sel.s]; const it = { kind: k, Name: k }; if (k === "Label") it.Text = "Text"; if (k === "Slider") Object.assign(it, { Min: 0, Max: 100, Default: 50 }); if (k === "Dropdown") Object.assign(it, { Values: "One, Two" }); s.items.push(it); sel.i = s.items.length - 1; }));
+
+// ── inspector ───────────────────────────────────────────────────────────
+function field(parent, obj, [key, type, , hint]) {
+  const row = document.createElement("label"); row.className = "f";
+  row.innerHTML = `<span title="${esc(hint || "")}">${key}</span>`;
+  let input;
+  if (Array.isArray(type)) { input = document.createElement("select"); type.forEach(o => input.add(new Option(o, o))); input.value = obj[key] ?? type[0]; }
+  else if (type === "bool") { input = document.createElement("input"); input.type = "checkbox"; input.checked = !!obj[key]; }
+  else if (type === "textarea") { input = document.createElement("textarea"); input.value = obj[key] ?? ""; }
+  else { input = document.createElement("input"); input.type = type === "num" ? "number" : type === "color" ? "color" : "text"; input.value = obj[key] ?? (type === "color" ? "#ffffff" : ""); if (hint && type === "text") input.placeholder = hint; if (type === "num") input.step = "any"; }
+  let snapped = false;
+  const apply = () => { if (!snapped) { snapshot(); snapped = true; } obj[key] = type === "bool" ? input.checked : type === "num" ? (input.value === "" ? "" : Number(input.value)) : input.value; save(); tree(); preview(); code(); };
+  input.addEventListener("input", apply); input.addEventListener("change", apply);
+  row.appendChild(input); parent.appendChild(row);
 }
-function form() {
-  const el = document.getElementById("form"); el.innerHTML = "";
-  const field = (label, value, set, type) => {
-    const l = document.createElement("label"); l.textContent = label;
-    let input;
-    if (type && type.includes("|")) { input = document.createElement("select"); type.split("|").forEach(o => input.add(new Option(o, o))); input.value = value || type.split("|")[0]; }
-    else if (type === "bool") { input = document.createElement("select"); input.add(new Option("false", "false")); input.add(new Option("true", "true")); input.value = String(!!value); }
-    else { input = document.createElement("input"); input.value = value ?? ""; if (type === "num") input.type = "number"; }
-    input.oninput = input.onchange = () => { set(type === "bool" ? input.value === "true" : type === "num" ? Number(input.value) : input.value); save(); tree(); preview(); code(); };
-    l.appendChild(input); el.appendChild(l);
-  };
-  if (sel.t === -1) {
-    field("Title", st.title, v => (st.title = v)); field("Menu key", st.key, v => (st.key = v));
-    field("Key system", st.keySystem, v => (st.keySystem = v), "bool"); field("Home tab", st.home, v => (st.home = v), "bool"); field("Settings tab", st.settings, v => (st.settings = v), "bool");
-  } else if (sel.s === -1) {
-    const t = st.tabs[sel.t]; field("Name", t.name, v => (t.name = v)); field("Icon", t.icon, v => (t.icon = v));
-  } else if (sel.i === -1) {
-    const s = st.tabs[sel.t].sections[sel.s]; field("Name", s.name, v => (s.name = v)); field("Side", s.side, v => (s.side = v), "Left|Right|Full"); field("Toggle in header", s.toggle, v => (s.toggle = v), "bool");
-  } else {
-    const it = st.tabs[sel.t].sections[sel.s].items[sel.i];
-    KINDS[it.kind].f.forEach(spec => { const [k, t] = spec.split(":"); field(k, it[k], v => (it[k] = v), t); });
+function groups(parent, obj, fields) {
+  const by = {};
+  fields.forEach(f => { const g = f[2] || "Options"; (by[g] = by[g] || []).push(f); });
+  Object.entries(by).forEach(([g, fs]) => { const d = document.createElement("div"); d.className = "grp"; d.innerHTML = `<b>${g}</b>`; fs.forEach(f => field(d, obj, f)); parent.appendChild(d); });
+}
+function insp() {
+  const el = document.getElementById("insp"); el.innerHTML = "";
+  const head = document.createElement("div"); head.className = "ph"; el.appendChild(head);
+  if (sel.kind === "window") { head.innerHTML = "<h3>Window</h3>"; groups(el, st.win, WINDOW_FIELDS); return; }
+  const { t, s, it } = cur();
+  if (sel.kind === "tab") { head.innerHTML = "<h3>Tab</h3>"; groups(el, t, [["Name", "text", "Tab"], ["Icon", "text", "Tab"], ["Description", "text", "Tab"], ["Badge", "text", "Tab"]]); return; }
+  if (sel.kind === "section") {
+    head.innerHTML = `<h3>Section</h3><button class="mini pri" id="inspAdd">+ New element</button>`;
+    groups(el, s, [["Name", "text", "Section"], ["Icon", "text", "Section"], ["Side", ["Left", "Right", "Full"], "Section"], ["Toggle", "bool", "Header switch", "checkbox in the header turns the section on or off"], ["Flag", "text", "Header switch"], ["Collapsible", "bool", "Behaviour"], ["Risky", "bool", "Behaviour", "red stripe"]]);
+    el.querySelector("#inspAdd").onclick = openPicker; return;
   }
+  head.innerHTML = `<h3>${it.type}</h3><span class="hint">${TYPES[it.type].d}</span>`;
+  const fields = TYPES[it.type].f.map(f => [f[0], f[1], f[2] || "Options", f[3]]);
+  const common = NO_COMMON.includes(it.type) ? [["Name", "text", "General"]].filter(() => !["Label", "Paragraph", "Divider", "Code"].includes(it.type)) : COMMON;
+  groups(el, it, common.concat(fields));
 }
+
+// ── picker ──────────────────────────────────────────────────────────────
+function openPicker() {
+  if (!st.tabs.length) { snapshot(); st.tabs.push({ Name: "Main", Icon: "home", sections: [] }); }
+  let { t } = cur(); if (!t) { sel = { kind: "tab", t: 0 }; t = st.tabs[0]; }
+  if (!t.sections.length) { snapshot(); t.sections.push({ Name: "Section", Side: "Left", items: [] }); }
+  const si = sel.s ?? 0, ti = sel.t ?? 0;
+  document.getElementById("mdlFor").textContent = `Goes into ${st.tabs[ti].Name} › ${st.tabs[ti].sections[si].Name}`;
+  const box = document.getElementById("types"); box.innerHTML = "";
+  Object.entries(TYPES).forEach(([name, def]) => {
+    const b = document.createElement("button"); b.className = "type"; b.innerHTML = `<b>${name}</b><span>${def.d}</span>`;
+    b.onclick = () => {
+      snapshot();
+      const it = Object.assign({ type: name, Name: name.replace(/([a-z])([A-Z])/g, "$1 $2") }, DEFAULTS[name] || {});
+      const items = st.tabs[ti].sections[si].items; items.push(it);
+      sel = { kind: "item", t: ti, s: si, i: items.length - 1 }; view = ti;
+      document.getElementById("mdl").classList.remove("open"); render();
+    };
+    box.appendChild(b);
+  });
+  document.getElementById("mdl").classList.add("open");
+}
+
+// ── preview ─────────────────────────────────────────────────────────────
 function preview() {
-  const t = st.tabs[tabView] || st.tabs[0];
+  const t = st.tabs[view] || st.tabs[0];
   const pv = document.getElementById("preview");
-  const tabs = st.tabs.map((x, i) => `<div class="tb ${x === t ? "on" : ""}" data-i="${i}">${esc(x.name)}</div>`).join("");
-  const item = it => {
-    if (it.kind === "Toggle") return `<div class="row"><span>${esc(it.Name)}</span><span style="display:flex;gap:6px;align-items:center">${it.Keybind ? `<span class="kb">${esc(it.Keybind)}</span>` : ""}<span class="sw ${it.Default ? "on" : ""}"></span></span></div>`;
-    if (it.kind === "Slider") { const p = Math.max(0, Math.min(1, ((it.Default ?? 0) - (it.Min ?? 0)) / (((it.Max ?? 100) - (it.Min ?? 0)) || 1))); return `<div class="row"><span>${esc(it.Name)}</span><span class="kb" style="border:0;background:none">${esc(it.Default)}${esc(it.Suffix || "")}</span></div><div class="sl"><i style="width:${p * 100}%"></i></div>`; }
-    if (it.kind === "Dropdown") return `<div class="row"><span>${esc(it.Name)}</span><span class="dd">${esc(it.Default || "None")} ▾</span></div>`;
-    if (it.kind === "Button") return `<div class="bn" style="${it.Style === "Primary" ? "background:#fff;color:#000" : it.Style === "Danger" ? "color:#e84c54;border-color:#e84c54" : ""}">${esc(it.Name)}</div>`;
-    if (it.kind === "Keybind") return `<div class="row"><span>${esc(it.Name)}</span><span class="kb">${esc(it.Default || "None")}</span></div>`;
-    if (it.kind === "ColorPicker") return `<div class="row"><span>${esc(it.Name)}</span><span class="cp" style="background:${esc(it.Default || "#fff")}"></span></div>`;
-    if (it.kind === "Input") return `<div class="row"><span>${esc(it.Name)}</span><span class="dd" style="color:#666">${esc(it.Placeholder || "...")}</span></div>`;
-    if (it.kind === "Label") return `<div class="row" style="color:#98989f">${esc(it.Text)}</div>`;
-    if (it.kind === "PlayerList") return `<div class="row" style="color:#98989f">Player list · avatars, distance, actions</div>`;
-    return "";
+  const row = (it, ti, si, ii) => {
+    const isSel = sel.kind === "item" && sel.t === ti && sel.s === si && sel.i === ii;
+    const attrs = `data-p="${ti}.${si}.${ii}"`;
+    const cls = "row" + (isSel ? " sel" : "") + (it.Locked ? " lock" : "") + (it.Risky ? " risky" : "");
+    const name = `<span>${esc(it.Name || it.type)}${it.Badge ? `<span class="badge">${esc(it.Badge)}</span>` : ""}</span>`;
+    switch (it.type) {
+      case "Toggle": return `<div class="${cls}" ${attrs}>${name}<span style="display:flex;gap:6px;align-items:center">${it.UseColor ? `<span class="cp" style="background:${esc(it.LinkColor)}"></span>` : ""}${it.Key ? `<span class="kb">${esc(it.Key)}</span>` : ""}<span class="sw ${it.Default ? "on" : ""}"></span></span></div>`;
+      case "Slider": { const p = Math.max(0, Math.min(1, ((+it.Default || 0) - (+it.Min || 0)) / ((+it.Max - +it.Min) || 1))); return `<div class="${cls}" ${attrs}>${name}<span class="kb" style="border:0;background:none">${esc(it.Prefix || "")}${esc(it.Default)}${esc(it.Suffix || "")}</span></div><div class="sl"><i style="left:0;width:${p * 100}%"></i></div>`; }
+      case "RangeSlider": { const span = (+it.Max - +it.Min) || 1, a = ((+it.From) - +it.Min) / span, b = ((+it.To) - +it.Min) / span; return `<div class="${cls}" ${attrs}>${name}<span class="kb" style="border:0;background:none">${esc(it.From)} - ${esc(it.To)}${esc(it.Suffix || "")}</span></div><div class="sl"><i style="left:${a * 100}%;width:${(b - a) * 100}%"></i></div>`; }
+      case "TextSlider": return `<div class="${cls}" ${attrs}>${name}<span class="kb" style="border:0;background:none">${esc(it.Default)}</span></div><div class="sl"><i style="left:0;width:50%"></i></div>`;
+      case "Dropdown": return `<div class="${cls}" ${attrs}>${name}<span class="dd">${esc(it.Default || "None")} ▾</span></div>`;
+      case "MultiDropdown": return `<div class="${cls}" ${attrs}>${name}<span class="dd">${list(it.Default).map(esc).join(" · ") || "None"} ▾</span></div>`;
+      case "PlayerDropdown": return `<div class="${cls}" ${attrs}>${name}<span class="dd">Player ▾</span></div>`;
+      case "Input": return `<div class="${cls}" ${attrs}>${name}<span class="dd" style="color:#666">${esc(it.Default || it.Placeholder || "...")}</span></div>`;
+      case "Keybind": return `<div class="${cls}" ${attrs}>${name}<span class="kb">${esc(it.Default || "None")}</span></div>`;
+      case "ColorPicker": return `<div class="${cls}" ${attrs}>${name}<span class="cp" style="background:${esc(it.Default)};opacity:${1 - (+it.Alpha || 0) * 0.85}"></span></div>`;
+      case "Button": return `<div class="bn ${isSel ? "sel" : ""}" ${attrs} style="${it.Style === "Primary" ? "background:#fff;color:#000" : it.Style === "Danger" ? "color:#e84c54;border-color:#e84c54" : it.Style === "Ghost" ? "background:none" : ""}">${esc(it.Name)}</div>`;
+      case "ButtonGroup": return `<div ${attrs} style="display:flex;gap:6px">${list(it.Buttons).map(b => `<div class="bn" style="flex:1">${esc(b)}</div>`).join("")}</div>`;
+      case "Label": return `<div class="${cls} muted" ${attrs}>${esc(it.Text)}</div>`;
+      case "Paragraph": return `<div class="box2" ${attrs} style="border:0"><b style="color:#fff">${esc(it.Title)}</b><br>${esc(it.Content)}</div>`;
+      case "Divider": return `<div class="muted" ${attrs} style="font-size:10px;letter-spacing:.1em;padding:8px 2px;border-bottom:1px solid #1e1e22">${esc(String(it.Text || "").toUpperCase())}</div>`;
+      case "Navigate": return `<div class="${cls}" ${attrs}>${name}<span class="muted">${esc(it.Value || "")} ›</span></div>`;
+      case "Progress": return `<div class="${cls}" ${attrs}>${name}<span class="kb" style="border:0;background:none">${Math.round((+it.Value || 0) / (+it.Max || 100) * 100)}%</span></div><div class="sl"><i style="left:0;width:${(+it.Value || 0) / (+it.Max || 100) * 100}%"></i></div>`;
+      case "Stat": return `<div class="${cls}" ${attrs}>${name}<span class="kb" style="border:0;background:none">${it.Value === "Ping" ? "64 ms" : it.Value === "FPS" ? "60" : "..."}</span></div>`;
+      default: return `<div class="box2" ${attrs}>${it.type} · ${esc(it.Name || "")}</div>`;
+    }
   };
-  pv.innerHTML = `<div class="side"><div class="bt"><img src="assets/logo.png" alt="">${esc(st.title)}</div>${tabs}</div>
-    <div class="main"><div class="head">${esc(t ? t.name : "")}</div><div class="cols">${t ? t.sections.map(s => `<div class="sec ${s.side === "Full" ? "full" : ""}"><b>${esc(s.name.toUpperCase())}${s.toggle ? " ☑" : ""}</b>${s.items.map(item).join("")}</div>`).join("") : ""}</div></div>`;
-  pv.querySelectorAll(".tb").forEach(b => (b.onclick = () => { tabView = +b.dataset.i; preview(); }));
+  const w = st.win;
+  pv.innerHTML = `<div class="side"><div class="bt"><img src="assets/logo.png" alt="">${esc(w.Title)}</div><div class="st">${esc(w.Subtitle)}</div>
+    ${st.tabs.map((x, i) => `<div class="tb ${x === t ? "on" : ""}" data-tab="${i}">${esc(x.Name)}${x.Badge ? `<span class="badge">${esc(x.Badge)}</span>` : ""}</div>`).join("")}
+    ${w.Settings ? `<div class="tb" style="margin-top:auto">Settings</div>` : ""}</div>
+    <div class="main"><div class="head"><span>${esc(t ? t.Name : "Add a tab")}</span><span class="muted">${esc(t && t.Description || "")}</span></div>
+    <div class="cols">${t ? t.sections.map((s, si) => { const ti = st.tabs.indexOf(t); const toggles = s.items.filter(i => i.type === "Toggle"); return `<div class="sec ${s.Side === "Full" ? "full" : ""} ${s.Risky || s.items.some(i => i.Risky) ? "risk" : ""}" data-sec="${ti}.${si}"><b><span>${esc(String(s.Name || "").toUpperCase())}</span><span>${toggles.length > 1 ? toggles.filter(i => i.Default).length + "/" + toggles.length : ""} ${s.Toggle ? "☑" : ""}</span></b>${s.items.map((it, ii) => row(it, ti, si, ii)).join("")}</div>`; }).join("") : ""}</div></div>`;
+  pv.querySelectorAll("[data-tab]").forEach(b => (b.onclick = () => { view = +b.dataset.tab; sel = { kind: "tab", t: view }; render(); }));
+  pv.querySelectorAll("[data-p]").forEach(b => (b.onclick = e => { e.stopPropagation(); const [ti, si, ii] = b.dataset.p.split(".").map(Number); sel = { kind: "item", t: ti, s: si, i: ii }; render(); }));
+  pv.querySelectorAll("[data-sec]").forEach(b => (b.onclick = () => { const [ti, si] = b.dataset.sec.split(".").map(Number); sel = { kind: "section", t: ti, s: si }; render(); }));
 }
+
+// ── Lua ─────────────────────────────────────────────────────────────────
 function code() {
-  const L = [];
-  L.push(`local Proximity = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau"))()`, "");
-  L.push(`local Window = Proximity:Window({`, `    Title = ${lua(st.title)},`, `    Keybind = ${lua(st.key)},`);
-  if (st.keySystem) L.push(`    KeySystem = { Keys = { "change-me" }, GetKey = "https://your.site/key" },`);
-  L.push(`})`, "");
-  if (st.home) L.push(`Window:Home()`, "");
+  const w = st.win, L = [];
+  const opt = (o) => o.filter(Boolean).join(", ");
+  L.push(`local Proximity = loadstring(game:HttpGet("https://proximitydevproject.github.io/ProximityGUI/Proximity.lua"))()`, "");
+  const wo = [`    Title = ${lua(w.Title)},`];
+  if (w.Subtitle) wo.push(`    Subtitle = ${lua(w.Subtitle)},`);
+  wo.push(`    Keybind = ${lua(w.Keybind || "RightShift")},`);
+  if (w.Theme && w.Theme !== "Eclipse") wo.push(`    Theme = ${lua(w.Theme)},`);
+  if (w.Accent && w.Accent.toLowerCase() !== "#ffffff") wo.push(`    Accent = Color3.fromHex(${lua(w.Accent)}),`);
+  if (w.Font) wo.push(`    Font = ${lua(w.Font)},`);
+  if (w.Density && w.Density !== "Normal") wo.push(`    Density = ${lua(w.Density)},`);
+  if (w.ToggleStyle && w.ToggleStyle !== "Switch") wo.push(`    ToggleStyle = ${lua(w.ToggleStyle)},`);
+  if (w.Navigation === "Rail") wo.push(`    Navigation = "Rail",`);
+  if (w.Loading === "None") wo.push(`    Loading = false,`); else wo.push(`    Loading = { Style = ${lua(w.Loading)}${w.MinTime !== "" && w.MinTime != null ? `, MinTime = ${+w.MinTime}` : ""} },`);
+  if (w.KeySystem) wo.push(`    KeySystem = { Keys = { ${list(w.Keys).map(lua).join(", ") || '"change-me"'} }${w.GetKey ? `, GetKey = ${lua(w.GetKey)}` : ""} },`);
+  if (!w.Watermark) wo.push(`    Watermark = false,`);
+  if (!w.KeybindList) wo.push(`    KeybindList = false,`);
+  if (w.ChangelogVersion) wo.push(`    Changelog = { Version = ${lua(w.ChangelogVersion)}, Notes = { ${String(w.ChangelogNotes || "").split("\n").map(x => x.trim()).filter(Boolean).map(lua).join(", ")} } },`);
+  L.push(`local Window = Proximity:Window({`, ...wo, `})`, "");
+  if (w.Home) L.push(`Window:Home()`, "");
   st.tabs.forEach((t, ti) => {
     const tv = "Tab" + (ti + 1);
-    L.push(`local ${tv} = Window:Tab({ Name = ${lua(t.name)}, Icon = ${lua(t.icon || "layers")} })`);
+    L.push(`local ${tv} = Window:Tab({ ${opt([`Name = ${lua(t.Name)}`, t.Icon && `Icon = ${lua(t.Icon)}`, t.Description && `Description = ${lua(t.Description)}`, t.Badge && `Badge = ${lua(t.Badge)}`])} })`);
     t.sections.forEach((s, si) => {
-      const sv = tv + "Section" + (si + 1);
-      const extra = (s.side && s.side !== "Left" ? `, Side = ${lua(s.side)}` : "") + (s.toggle ? `, Toggle = true, Flag = ${lua((t.name + "." + s.name).toLowerCase().replace(/\s+/g, ""))}` : "");
-      L.push(`local ${sv} = ${tv}:Section({ Name = ${lua(s.name)}${extra} })`);
+      const sv = "Section" + (ti + 1) + "_" + (si + 1);
+      L.push(`local ${sv} = ${tv}:Section({ ${opt([`Name = ${lua(s.Name)}`, s.Icon && `Icon = ${lua(s.Icon)}`, s.Side && s.Side !== "Left" && `Side = ${lua(s.Side)}`, s.Toggle && "Toggle = true", s.Toggle && s.Flag && `Flag = ${lua(s.Flag)}`, s.Collapsible && "Collapsible = true", s.Risky && "Risky = true"])} })`);
       s.items.forEach(it => {
         const o = [];
-        for (const spec of KINDS[it.kind].f) {
-          const [k, type] = spec.split(":"); const v = it[k];
-          if (v === undefined || v === "" || k === "Keybind") continue;
-          if (k === "Values") o.push(`Values = { ${String(v).split(",").map(x => lua(x.trim())).filter(x => x !== '""').join(", ")} }`);
-          else if (k === "Default" && it.kind === "ColorPicker") o.push(`Default = ${lua(v)}`);
-          else if (type === "num") o.push(`${k} = ${Number(v)}`);
-          else if (type === "bool") { if (v) o.push(`${k} = true`); }
-          else o.push(`${k} = ${lua(v)}`);
+        const put = (k, v) => o.push(`${k} = ${v}`);
+        if (!["Label", "Paragraph", "Divider", "ButtonGroup", "Code"].includes(it.type) && it.Name) put("Name", lua(it.Name));
+        if (!NO_COMMON.includes(it.type)) {
+          if (it.Flag) put("Flag", lua(it.Flag)); if (it.Icon) put("Icon", lua(it.Icon)); if (it.Description) put("Description", lua(it.Description));
+          if (it.Tooltip) put("Tooltip", lua(it.Tooltip)); if (it.Badge) put("Badge", lua(it.Badge)); if (it.Risky) put("Risky", "true"); if (it.Locked) put("Locked", lua(it.Locked));
         }
-        if (it.kind === "Button") o.push(`Callback = function() end`);
-        else if (["Toggle", "Slider", "Dropdown", "Input", "ColorPicker"].includes(it.kind)) o.push(`Callback = function(value) end`);
-        let line = `${sv}:${it.kind}({ ${o.join(", ")} })`;
-        if (it.kind === "Toggle" && it.Keybind) line += `\n    :Keybind({ Default = ${lua(it.Keybind)}, Mode = "Toggle" })`;
-        L.push(line);
+        let method = it.type, tail = "";
+        switch (it.type) {
+          case "Toggle": if (it.Default) put("Default", "true"); if (it.Style && it.Style !== "(menu style)") put("Style", lua(it.Style)); if (it.Confirm) put("Confirm", lua(it.Confirm)); put("Callback", "function(on) end");
+            break;
+          case "Slider": put("Min", +it.Min || 0); put("Max", it.Max === "" ? 100 : +it.Max); put("Default", +it.Default || 0); if (it.Step) put("Step", +it.Step); if (it.Prefix) put("Prefix", lua(it.Prefix)); if (it.Suffix) put("Suffix", lua(it.Suffix)); put("Callback", "function(value) end"); break;
+          case "RangeSlider": put("Min", +it.Min || 0); put("Max", +it.Max || 100); put("Default", `{ ${+it.From || 0}, ${+it.To || 0} }`); if (it.Suffix) put("Suffix", lua(it.Suffix)); put("Callback", "function(range) end"); break;
+          case "TextSlider": put("Labels", `{ ${list(it.Labels).map(lua).join(", ")} }`); if (it.Default) put("Default", lua(it.Default)); put("Callback", "function(label) end"); break;
+          case "Dropdown": put("Values", `{ ${list(it.Values).map(lua).join(", ")} }`); if (it.Default) put("Default", lua(it.Default)); if (it.Search) put("Search", "true"); put("Callback", "function(value) end"); break;
+          case "MultiDropdown": put("Values", `{ ${list(it.Values).map(lua).join(", ")} }`); put("Default", `{ ${list(it.Default).map(lua).join(", ")} }`); if (it.Max) put("Max", +it.Max); put("Callback", "function(values) end"); break;
+          case "PlayerDropdown": if (it.Multi) put("Multi", "true"); put("Callback", "function(name) end"); break;
+          case "Input": if (it.Placeholder) put("Placeholder", lua(it.Placeholder)); if (it.Default) put("Default", lua(it.Default)); if (it.Numeric) put("Numeric", "true"); if (it.Finished) put("Finished", "true"); put("Callback", "function(text) end"); break;
+          case "Keybind": put("Default", lua(it.Default || "None")); put("Mode", lua(it.Mode || "Toggle")); break;
+          case "ColorPicker": put("Default", lua(it.Default || "#ffffff")); if (it.Alpha !== "" && it.Alpha != null) put("Alpha", +it.Alpha); put("Callback", "function(color, alpha) end"); break;
+          case "Button": if (it.Style && it.Style !== "Secondary") put("Style", lua(it.Style)); if (it.Confirm) put("Confirm", lua(it.Confirm)); if (it.Hint) put("Hint", lua(it.Hint)); put("Callback", "function() end"); break;
+          case "ButtonGroup": L.push(`${sv}:ButtonGroup({ ${list(it.Buttons).map(b => `{ Name = ${lua(b)}, Callback = function() end }`).join(", ")} })`); return;
+          case "Label": put("Text", lua(it.Text)); break;
+          case "Paragraph": put("Title", lua(it.Title)); put("Content", lua(it.Content)); break;
+          case "Divider": L.push(`${sv}:Divider(${lua(it.Text || "")})`); return;
+          case "Navigate": if (it.Value) put("Value", lua(it.Value)); put("Callback", "function() end"); break;
+          case "Progress": put("Value", +it.Value || 0); put("Max", +it.Max || 100); break;
+          case "Stat": put("Value", `Proximity.Providers.${it.Value || "FPS"}`); put("Interval", 1); break;
+          case "Graph": put("Source", `Proximity.Providers.${it.Source || "FPS"}`); if (it.Height) put("Height", +it.Height); break;
+          case "Table": { const cols = list(it.Columns); put("Columns", `{ ${cols.map(c => `{ Key = ${lua(c.toLowerCase())}, Name = ${lua(c)} }`).join(", ")} }`); put("Rows", "{}"); if (it.Filters) put("Filters", `{ ${cols.slice(1).map(c => `{ Key = ${lua(c.toLowerCase())}, Name = ${lua(c)}, Type = "Range" }`).join(", ")} }`); if (it.Height) put("Height", +it.Height); break; }
+          case "PlayerList": if (it.Height) put("Height", +it.Height); break;
+          case "Console": if (it.Height) put("Height", +it.Height); break;
+          case "Code": put("Code", lua(it.Code)); break;
+        }
+        const call = `${sv}:${method}({ ${o.join(", ")} })`;
+        const extra = [];
+        if (it.type === "Toggle" && it.Key) extra.push(`:Keybind({ Default = ${lua(it.Key)}, Mode = ${lua(it.KeyMode || "Toggle")} })`);
+        if (it.type === "Toggle" && it.UseColor) extra.push(`:ColorPicker({ Default = ${lua(it.LinkColor || "#ffffff")} })`);
+        if (!NO_COMMON.includes(it.type) && it.DependsOn) extra.push(`:DependsOn(${lua(it.DependsOn)})`);
+        if (!extra.length) { L.push(call); return; }
+        // links return the linked element, so keep the row in a local and attach each one to it
+        const v = (it.Flag || it.Name || it.type).replace(/[^A-Za-z0-9]+(.)?/g, (_, c) => (c ? c.toUpperCase() : "")).replace(/^[^A-Za-z_]/, "_$&");
+        L.push(`local ${v} = ${call}`, ...extra.map(x => v + x));
       });
       L.push("");
     });
   });
-  if (st.settings) L.push(`Window:SettingsTab()`);
-  const text = L.join("\n");
-  const c = document.getElementById("code"); c.textContent = text; c.innerHTML = proximityHighlight(text);
+  if (w.Favorites) L.push(`Window:Favorites()`);
+  if (w.Settings) L.push(`Window:SettingsTab()`);
+  const text = L.join("\n").replace(/\n{3,}/g, "\n\n");
+  const c = document.getElementById("code"); c.innerHTML = proximityHighlight(text);
   return text;
 }
-function render() { tree(); adds(); form(); preview(); code(); save(); }
+
+function render() { tree(); insp(); preview(); code(); save(); }
+document.getElementById("addTab").onclick = () => { snapshot(); st.tabs.push({ Name: "Tab " + (st.tabs.length + 1), Icon: "layers", sections: [] }); sel = { kind: "tab", t: st.tabs.length - 1 }; view = sel.t; render(); };
+document.getElementById("addSec").onclick = () => { if (!st.tabs.length) return; const ti = sel.t ?? view; const t = st.tabs[ti] || st.tabs[0]; snapshot(); t.sections.push({ Name: "Section", Side: t.sections.length % 2 ? "Right" : "Left", items: [] }); sel = { kind: "section", t: st.tabs.indexOf(t), s: t.sections.length - 1 }; view = sel.t; render(); };
+document.getElementById("addEl").onclick = openPicker;
+document.getElementById("mdlClose").onclick = () => document.getElementById("mdl").classList.remove("open");
+document.getElementById("mdl").addEventListener("click", e => { if (e.target.id === "mdl") e.currentTarget.classList.remove("open"); });
+document.getElementById("undoBtn").onclick = () => { const prev = history.pop(); if (prev) { st = JSON.parse(prev); sel = { kind: "window" }; render(); } };
 document.getElementById("copy").onclick = e => proximityCopy(code(), e.target);
+document.getElementById("download").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([code()], { type: "text/plain" })); a.download = (st.win.Title || "menu").replace(/[^A-Za-z0-9]+/g, "-") + ".lua"; a.click(); };
 let armed = false;
-document.getElementById("reset").onclick = e => { if (!armed) { armed = true; e.target.textContent = "Sure?"; setTimeout(() => { armed = false; e.target.textContent = "Start over"; }, 2500); return; } st = fresh(); sel = { t: 0, s: 0, i: -1 }; tabView = 0; render(); };
+document.getElementById("reset").onclick = e => { if (!armed) { armed = true; e.target.textContent = "Sure?"; setTimeout(() => { armed = false; e.target.textContent = "Start over"; }, 2500); return; } snapshot(); st = sample(); sel = { kind: "window" }; view = 0; render(); };
+addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); document.getElementById("undoBtn").click(); } });
 render();
 </script>
 </body>

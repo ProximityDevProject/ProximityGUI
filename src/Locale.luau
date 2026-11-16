@@ -168,6 +168,11 @@ local packs = {
 		SaveBeforeUnload = "Save changes to %s before unloading?",
 		DontSave = "Don't save",
 		Replaced = "Replaced the old copy v%s with v%s",
+		LoadingStyle = "Loading screen",
+		LoadingStyleHint = "Applies the next time the script starts",
+		LoadingPlanet = "Planet",
+		LoadingSkeleton = "Menu skeleton",
+		LoadingNone = "None",
 	},
 	ru = {
 		Search = "Поиск",
@@ -323,6 +328,11 @@ local packs = {
 		SaveBeforeUnload = "Сохранить изменения в %s перед выгрузкой?",
 		DontSave = "Не сохранять",
 		Replaced = "Старая копия v%s заменена на v%s",
+		LoadingStyle = "Экран загрузки",
+		LoadingStyleHint = "Применится при следующем запуске",
+		LoadingPlanet = "Планета",
+		LoadingSkeleton = "Скелет меню",
+		LoadingNone = "Без загрузки",
 	},
 }
 

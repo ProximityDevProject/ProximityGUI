@@ -7,7 +7,7 @@
 **A black & white interface library for Roblox scripts.**
 Calm surfaces, one white accent, and a planet that builds your menu while the script loads.
 
-[![version](https://img.shields.io/badge/version-1.2.0-ffffff?style=flat-square&labelColor=0b0b0c)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.2.1-ffffff?style=flat-square&labelColor=0b0b0c)](CHANGELOG.md)
 [![license](https://img.shields.io/badge/license-MIT-ffffff?style=flat-square&labelColor=0b0b0c)](LICENSE)
 [![luau](https://img.shields.io/badge/luau-strict%20friendly-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md)
 [![icons](https://img.shields.io/badge/icons-818%20lucide-ffffff?style=flat-square&labelColor=0b0b0c)](docs/API.md#icons)
@@ -19,7 +19,7 @@ local Proximity = loadstring(game:HttpGet("https://proximitydevproject.github.io
 ```
 
 **Docs, a code generator and live executor status: https://proximitydevproject.github.io/ProximityGUI/**
-Fixed version: `https://proximitydevproject.github.io/ProximityGUI/v/1.2.0.lua` · straight from the repo: `https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau`
+Fixed version: `https://proximitydevproject.github.io/ProximityGUI/v/1.2.1.lua` · straight from the repo: `https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/dist/Proximity.luau`
 
 <table>
 <tr>

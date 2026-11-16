@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1 - a real planet
+
+- The planet loader is now a drawn 3D model: points gather into a dark sphere with a lit crescent edge and a tilted glowing ring, then it spins while the menu builds
+- Pick the loading screen in Settings: Planet, Menu skeleton or None (`Loading = { Style = "Skeleton" }` in code)
+- Menu skeleton: diagonal shimmer, a small orbit spinner, time left, and a soft wipe that reveals the finished menu with sections fading in one by one
+- The topbar planet button moves past buttons that games and other scripts put into the topbar
+- Website: the hero planet is a live 3D render that the points condense into, and the Builder is a real editor - New element, an inspector for every option, reorder, duplicate, undo, download
+
 ## 1.2.0 - the planet intro
 
 - Loading screen: dimmed screen, a 3D planet assembled from points that turns into the Proximity artwork, real progress with time left, a burst, and the window grows out of it
