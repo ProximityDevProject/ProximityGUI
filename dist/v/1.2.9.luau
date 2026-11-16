@@ -67,8 +67,8 @@ utf8.len(s)>max then return string.sub(s,1,utf8.offset(s,max)-1)..'\u{2026}'end
 return s end function Util.Escape(s)return(string.gsub(s,'[<>&"\']',{['<']=
 '&lt;',['>']='&gt;',['&']='&amp;',['"']='&quot;',["'"]='&apos;'}))end function
 Util.SafeName(s)s=Util.Trim(tostring(s))s=string.gsub(s,'%.%.','_')s=string.
-gsub(s,'[^%w%s%-%_%.]','_')return string.sub(s,1,64)end function Util.Fuzzy(
-query,text)query=string.lower(query)text=string.lower(text)if query==''then
+gsub(s,'[^%w%s%-%_%.]','_')return string.sub(s,1,64)end local function fuzzyCore
+(query,text)query=string.lower(query)text=string.lower(text)if query==''then
 return 0 end local direct=string.find(text,query,1,true)if direct then return
 1000-direct*2-#text*0.1 end local score,ti,streak,skipped=0,1,0,0 for qi=1,#
 query do local ch=string.sub(query,qi,qi)local found=string.find(text,ch,ti,true
@@ -76,8 +76,43 @@ query do local ch=string.sub(query,qi,qi)local found=string.find(text,ch,ti,true
 ti then streak+=1 score+=5*streak else streak=0 end local prev=string.sub(text,
 found-1,found-1)if found==1 or prev==' 'or prev=='-'or prev=='_'or prev=='.'then
 score+=8 end ti=found+1 end if skipped>#query*3 then return nil end return score
--skipped*2-#text*0.1 end function Util.Uid()return string.sub(string.gsub(
-HttpService:GenerateGUID(false),'-',''),1,12)end local B64=
+-skipped*2-#text*0.1 end local EN="qwertyuiop[]asdfghjkl;'zxcvbnm,."local RU={
+'\u{439}','\u{446}','\u{443}','\u{43a}','\u{435}','\u{43d}','\u{433}','\u{448}',
+'\u{449}','\u{437}','\u{445}','\u{44a}','\u{444}','\u{44b}','\u{432}','\u{430}',
+'\u{43f}','\u{440}','\u{43e}','\u{43b}','\u{434}','\u{436}','\u{44d}','\u{44f}',
+'\u{447}','\u{441}','\u{43c}','\u{438}','\u{442}','\u{44c}','\u{431}','\u{44e}'}
+local enToRu,ruToEn={},{}for i=1,#EN do enToRu[string.sub(EN,i,i)]=RU[i]ruToEn[
+RU[i] ]=string.sub(EN,i,i)end local upperRu={['\u{419}']='\u{439}',['\u{426}']=
+'\u{446}',['\u{423}']='\u{443}',['\u{41a}']='\u{43a}',['\u{415}']='\u{435}',[
+'\u{41d}']='\u{43d}',['\u{413}']='\u{433}',['\u{428}']='\u{448}',['\u{429}']=
+'\u{449}',['\u{417}']='\u{437}',['\u{425}']='\u{445}',['\u{42a}']='\u{44a}',[
+'\u{424}']='\u{444}',['\u{42b}']='\u{44b}',['\u{412}']='\u{432}',['\u{410}']=
+'\u{430}',['\u{41f}']='\u{43f}',['\u{420}']='\u{440}',['\u{41e}']='\u{43e}',[
+'\u{41b}']='\u{43b}',['\u{414}']='\u{434}',['\u{416}']='\u{436}',['\u{42d}']=
+'\u{44d}',['\u{42f}']='\u{44f}',['\u{427}']='\u{447}',['\u{421}']='\u{441}',[
+'\u{41c}']='\u{43c}',['\u{418}']='\u{438}',['\u{422}']='\u{442}',['\u{42c}']=
+'\u{44c}',['\u{411}']='\u{431}',['\u{42e}']='\u{44e}',['\u{401}']='\u{435}',[
+'\u{451}']='\u{435}'}function Util.Lower(text)text=string.lower(text)return(
+string.gsub(text,utf8.charpattern,function(ch)return upperRu[ch]or ch end))end
+function Util.SwapLayout(text)local out,changed={},false for _,code in utf8.
+codes(text)do local ch=utf8.char(code)local swapped=enToRu[ch]or ruToEn[ch]if
+swapped then changed=true end table.insert(out,swapped or ch)end return changed
+and table.concat(out)or text end local function chars(text)local list={}for _,
+code in utf8.codes(text)do table.insert(list,code)end return list end local 
+function distance(a,b,limit)local n,m=#a,#b if math.abs(n-m)>limit then return
+limit+1 end local prev={}for j=0,m do prev[j]=j end for i=1,n do local cur,best=
+{[0]=i},i for j=1,m do cur[j]=math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i]==b[j
+]and 0 or 1))best=math.min(best,cur[j])end if best>limit then return limit+1 end
+prev=cur end return prev[m]end function Util.Fuzzy(query,text)query,text=Util.
+Lower(query),Util.Lower(text)local score=fuzzyCore(query,text)if score then
+return score end local swapped=Util.SwapLayout(query)if swapped~=query then
+score=fuzzyCore(swapped,text)if score then return score-5 end end if utf8.len(
+query)and utf8.len(query)>=4 then local limit=utf8.len(query)>=7 and 2 or 1
+local q=chars(query)for word in string.gmatch(text,'[^%s%-_%.]+')do local w=
+chars(word)local head={table.unpack(w,1,math.min(#w,#q))}local d=math.min(
+distance(q,w,limit),distance(q,head,limit))if d<=limit then return 40-d*15-#text
+*0.1 end end end return nil end function Util.Uid()return string.sub(string.
+gsub(HttpService:GenerateGUID(false),'-',''),1,12)end local B64=
 [[ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/]]function
 Util.Base64Encode(data)return((string.gsub(data,'.',function(x)local r,b='',
 string.byte(x)for i=8,1,-1 do r..=(b%2^i-b%2^(i-1)>0 and'1'or'0')end return r
@@ -844,11 +879,12 @@ SaveBeforeUnload='Save changes to %s before unloading?',DontSave="Don't save",
 Replaced='Replaced the old copy v%s with v%s',Options='Options',AddBind=
 'Add a key',ChangeBind='Change key',RemoveBind='Remove key',SetValue='Set value'
 ,PressKey='Press a key',PressKeyHint='Esc - cancel, Backspace - remove the key',
-BindSet='Key set',Screen='Screen',MenuBlur='Blur behind the menu',MenuBlurHint=
-'Softly blurs the game while the menu is open',FpsCap='FPS cap',Unlimited=
-'Unlimited',NoFpsCap='Your executor can not cap FPS',Cursor='Cursor',CursorHint=
-'Shown over the menu while it is open',CursorDefault='Roblox',CursorProximity=
-'Proximity',CursorDot='Dot',CursorCrosshair='Crosshair',Snap=
+BindSet='Key set',HoldToConfirm='Hold to confirm...',Equipped='EQUIPPED',
+TextSize='Text size',Screen='Screen',MenuBlur='Blur behind the menu',
+MenuBlurHint='Softly blurs the game while the menu is open',FpsCap='FPS cap',
+Unlimited='Unlimited',NoFpsCap='Your executor can not cap FPS',Cursor='Cursor',
+CursorHint='Shown over the menu while it is open',CursorDefault='Roblox',
+CursorProximity='Proximity',CursorDot='Dot',CursorCrosshair='Crosshair',Snap=
 'Snap to screen edges',SnapHint='Drag the window against an edge to dock it',
 AnimationSpeed='Animation speed',Server='Server',CopyJoinScript=
 'Copy join script',Rejoin='Rejoin',ServerHop='Server hop',Searching=
@@ -1087,6 +1123,10 @@ AddBind=
 'Esc - \u{43e}\u{442}\u{43c}\u{435}\u{43d}\u{430}, Backspace - \u{443}\u{431}\u{440}\u{430}\u{442}\u{44c} \u{43a}\u{43b}\u{430}\u{432}\u{438}\u{448}\u{443}'
 ,BindSet=
 '\u{41a}\u{43b}\u{430}\u{432}\u{438}\u{448}\u{430} \u{43d}\u{430}\u{437}\u{43d}\u{430}\u{447}\u{435}\u{43d}\u{430}'
+,HoldToConfirm=
+'\u{414}\u{435}\u{440}\u{436}\u{438}, \u{447}\u{442}\u{43e}\u{431}\u{44b} \u{43f}\u{43e}\u{434}\u{442}\u{432}\u{435}\u{440}\u{434}\u{438}\u{442}\u{44c}...'
+,Equipped='\u{412}\u{42b}\u{411}\u{420}\u{410}\u{41d}\u{41e}',TextSize=
+'\u{420}\u{430}\u{437}\u{43c}\u{435}\u{440} \u{442}\u{435}\u{43a}\u{441}\u{442}\u{430}'
 ,Screen='\u{42d}\u{43a}\u{440}\u{430}\u{43d}',MenuBlur=
 '\u{420}\u{430}\u{437}\u{43c}\u{44b}\u{442}\u{438}\u{435} \u{437}\u{430} \u{43c}\u{435}\u{43d}\u{44e}'
 ,MenuBlurHint=
@@ -1483,18 +1523,19 @@ options,'Description','Desc')self.TooltipText=Util.Opt(options,'Tooltip','Info')
 self.Flag=options.Flag self.Save=options.Save self.Risky=options.Risky==true
 self.Visible=options.Visible~=false self.Locked=options.Locked~=nil and options.
 Locked~=false self.LockReason=type(options.Locked)=='string'and options.Locked
-or options.LockReason self.BadgeText=options.Badge self.Icon=options.Icon self.
-Changed=Signal.new()self.Destroyed=Signal.new()self.Maid=Maid.new()self.Links={}
-self._callbacks={}self._depsOk=true self._mounted=false self.Parent=options.
-__parent local callback=Util.Opt(options,'Callback','OnChanged')if type(callback
-)=='function'then table.insert(self._callbacks,callback)end return self end
-function Base:_register()local Lib=self.Library if self.Flag then if Lib.
-Elements[self.Flag]and Lib.Debug then warn("[Proximity] duplicate flag '"..self.
-Flag.."' - the newest element wins")end Lib.Elements[self.Flag]=self Lib.Flags[
-self.Flag]=self.Value end table.insert(Lib.AllElements,self)if self.Section and
-not self.Parent then self.Section:_add(self)end return self end function Base:
-Get()return self.Value end Base.GetValue=Base.Get function Base:_normalize(value
-)return value end function Base:_callbackArgs()return self.Value end function
+or options.LockReason self.BadgeText=options.Badge self._newDays=options.New==
+true and 7 or tonumber(options.New)self.Icon=options.Icon self.Changed=Signal.
+new()self.Destroyed=Signal.new()self.Maid=Maid.new()self.Links={}self._callbacks
+={}self._depsOk=true self._mounted=false self.Parent=options.__parent local
+callback=Util.Opt(options,'Callback','OnChanged')if type(callback)=='function'
+then table.insert(self._callbacks,callback)end return self end function Base:
+_register()local Lib=self.Library if self.Flag then if Lib.Elements[self.Flag]
+and Lib.Debug then warn("[Proximity] duplicate flag '"..self.Flag..
+"' - the newest element wins")end Lib.Elements[self.Flag]=self Lib.Flags[self.
+Flag]=self.Value end table.insert(Lib.AllElements,self)if self.Section and not
+self.Parent then self.Section:_add(self)end return self end function Base:Get()
+return self.Value end Base.GetValue=Base.Get function Base:_normalize(value)
+return value end function Base:_callbackArgs()return self.Value end function
 Base:Set(value,silent)if self._destroyed then return self end local normalized=
 self:_normalize(value)if normalized==nil and value~=nil then return self end
 local old=self.Value if Util.Equal(old,normalized)then return self end self.
@@ -1531,51 +1572,67 @@ return self:SetLocked(true,reason)end function Base:Unlock()return self:
 SetLocked(false)end function Base:IsLocked()return self.Locked or self.
 _depsLocked==true or(self.Section~=nil and self.Section:IsDisabled())or(self.
 Parent~=nil and self.Parent:IsLocked())end function Base:SetRisky(risky)self.
-Risky=risky and true or false self:_applyState()return self end function Base:
-SetBadge(text)self.BadgeText=text if self._badge then self._badge.Visible=text~=
-nil and text~=''self._badgeLabel.Text=text or''end return self end function Base
-:DependsOn(target,predicate,mode)local Lib=self.Library mode=mode or'Hide'
-predicate=predicate or function(v)if type(v)=='table'then return next(v)~=nil
-end return v~=nil and v~=false and v~=0 and v~=''and v~='None'end local function 
-resolve()if type(target)=='string'then return Lib.Elements[target]end return
-target end local function update()local el=resolve()local ok=el==nil or
-predicate(el:Get())and true or false if el and el.IsVisible and not el:
-IsVisible()then ok=false end if mode=='Lock'then self._depsLocked=not ok else
-self._depsOk=ok end self:_applyState()end if type(target)=='table'and target.
-Changed then self.Maid:Give(target.Changed:Connect(update))else self.Maid:Give(
-Lib.FlagChanged:Connect(function(flag)if flag==target then update()end end))end
-task.defer(update)update()return self end function Base:_build()end function
-Base:_render(animate)end function Base:_mount(parent,order)if self._mounted or
-self._destroyed then return end self._mounted=true self:_build(parent,order)if
-self.Frame then self.Frame.LayoutOrder=order or self.Frame.LayoutOrder self:
-_wireRow()if self.GetQuickBind and self:GetQuickBind()then task.defer(function()
-self:_renderQuickChip()end)end end for _,link in self.Links do self:_mountLink(
-link)end self:_render(false)self:_applyState()end function Base:IsMounted()
-return self._mounted end function Base:_row(parent,height)local baseHeight=
-height or 34 height=math.floor(baseHeight*(Shared.Density or 1)+0.5)local row=
-Util.New('Frame',{Name=self.Type..'_'..self.Name,BackgroundTransparency=1,Size=
-UDim2.new(1,0,0,height),Parent=parent})Theme.Paint(row,{BackgroundColor3=
-'Surface2'})Util.Corner(6,row)row:SetAttribute('BaseH',baseHeight)self.Frame=row
-local textBox=Util.New('Frame',{Name='Text',BackgroundTransparency=1,Size=UDim2.
-new(1,-110,1,0),Position=UDim2.fromOffset(8,0),Parent=row})self._textBox=textBox
-local title=Util.Label({Name='Title',Text=self.Name,FontFace=Theme.Fonts.Medium,
-TextSize=Theme.Size.Body,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,0
-,0,16),Position=UDim2.new(0,0,0.5,-8),Parent=textBox})Theme.Paint(title,{
-TextColor3='Text'})self._title=title local iconId=self.Icon and Icons.Get(self.
-Icon)if iconId then Util.New('UIPadding',{PaddingLeft=UDim.new(0,22),Parent=
-textBox})local icon=Util.New('ImageLabel',{Name='Icon',BackgroundTransparency=1,
-Image=iconId,Size=UDim2.fromOffset(15,15),Parent=textBox})Theme.Paint(icon,{
-ImageColor3='TextDim'})local function follow()icon.Position=UDim2.new(0,-22,
-title.Position.Y.Scale,title.Position.Y.Offset+1)end title:
-GetPropertyChangedSignal('Position'):Connect(follow)follow()self._icon=icon end
-if self.Description and self.Description~=''then title.Position=UDim2.new(0,0,
-0.5,-15)local desc=Util.Label({Name='Description',Text=self.Description,FontFace
-=Theme.Fonts.Regular,TextSize=Theme.Size.Small,TextTruncate=Enum.TextTruncate.
-AtEnd,Size=UDim2.new(1,0,0,13),Position=UDim2.new(0,0,0.5,2),Parent=textBox})
-Theme.Paint(desc,{TextColor3='TextMute'})self._desc=desc row.Size=UDim2.new(1,0,
-0,math.max(height,42))end local badge=Util.New('Frame',{Name='Badge',
-AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,14),AnchorPoint=
-Vector2.new(0,0.5),Visible=false,Parent=textBox})Theme.Paint(badge,{
+Risky=risky and true or false self:_applyState()return self end local badgeKinds
+={risky={'RISKY','DANGER','UNSAFE','DETECTED','BAN'},beta={'BETA','TEST','WIP',
+'ALPHA','EXPERIMENTAL'},vip={'VIP','PREMIUM','PRO','PAID','DONATOR'}}local 
+function badgeKind(text)local upper=string.upper(text or'')for kind,words in
+badgeKinds do for _,w in words do if upper==w then return kind end end end
+return'new'end function Base:SetBadge(text)self.BadgeText=text if self._badge
+then self._badge.Visible=text~=nil and text~=''self._badgeLabel.Text=text and
+string.upper(text)or''local kind=badgeKind(text)local bg,ink,outline='Accent',
+'AccentInk',false if kind=='risky'then bg,ink='Risky','AccentInk'elseif kind==
+'beta'then bg,ink,outline='Surface2','Accent',true elseif kind=='vip'then bg,ink
+='Warning','Bg'end Theme.Paint(self._badge,{BackgroundColor3=bg})Theme.Paint(
+self._badgeLabel,{TextColor3=ink})if outline and not self._badgeStroke then self
+._badgeStroke=Util.Stroke(self._badge,nil,1,0)Theme.Paint(self._badgeStroke,{
+Color='Accent'})elseif self._badgeStroke then self._badgeStroke.Enabled=outline
+end end return self end function Base:_newBadge()local days=self._newDays if not
+days or(self.BadgeText and self.BadgeText~='')then return end local Lib=self.
+Library local seen=Lib:GetSetting('NewSeen',nil)seen=type(seen)=='table'and
+table.clone(seen)or{}local id=self:_quickId()if not seen[id]then seen[id]=os.
+time()Lib:SetSetting('NewSeen',seen)end if os.time()-seen[id]<days*86400 then
+self.BadgeText='NEW'end end function Base:DependsOn(target,predicate,mode)local
+Lib=self.Library mode=mode or'Hide'predicate=predicate or function(v)if type(v)
+=='table'then return next(v)~=nil end return v~=nil and v~=false and v~=0 and v
+~=''and v~='None'end local function resolve()if type(target)=='string'then
+return Lib.Elements[target]end return target end local function update()local el
+=resolve()local ok=el==nil or predicate(el:Get())and true or false if el and el.
+IsVisible and not el:IsVisible()then ok=false end if mode=='Lock'then self.
+_depsLocked=not ok else self._depsOk=ok end self:_applyState()end if type(target
+)=='table'and target.Changed then self.Maid:Give(target.Changed:Connect(update))
+else self.Maid:Give(Lib.FlagChanged:Connect(function(flag)if flag==target then
+update()end end))end task.defer(update)update()return self end function Base:
+_build()end function Base:_render(animate)end function Base:_mount(parent,order)
+if self._mounted or self._destroyed then return end self._mounted=true self:
+_build(parent,order)if self.Frame then self.Frame.LayoutOrder=order or self.
+Frame.LayoutOrder self:_wireRow()if self.GetQuickBind and self:GetQuickBind()
+then task.defer(function()self:_renderQuickChip()end)end end for _,link in self.
+Links do self:_mountLink(link)end self:_render(false)self:_applyState()end
+function Base:IsMounted()return self._mounted end function Base:_row(parent,
+height)local baseHeight=height or 34 height=math.floor(baseHeight*(Shared.
+Density or 1)+0.5)local row=Util.New('Frame',{Name=self.Type..'_'..self.Name,
+BackgroundTransparency=1,Size=UDim2.new(1,0,0,height),Parent=parent})Theme.
+Paint(row,{BackgroundColor3='Surface2'})Util.Corner(6,row)row:SetAttribute(
+'BaseH',baseHeight)self.Frame=row local textBox=Util.New('Frame',{Name='Text',
+BackgroundTransparency=1,Size=UDim2.new(1,-110,1,0),Position=UDim2.fromOffset(8,
+0),Parent=row})self._textBox=textBox local title=Util.Label({Name='Title',Text=
+self.Name,FontFace=Theme.Fonts.Medium,TextSize=Theme.Size.Body,TextTruncate=Enum
+.TextTruncate.AtEnd,Size=UDim2.new(1,0,0,16),Position=UDim2.new(0,0,0.5,-8),
+Parent=textBox})Theme.Paint(title,{TextColor3='Text'})self._title=title local
+iconId=self.Icon and Icons.Get(self.Icon)if iconId then Util.New('UIPadding',{
+PaddingLeft=UDim.new(0,22),Parent=textBox})local icon=Util.New('ImageLabel',{
+Name='Icon',BackgroundTransparency=1,Image=iconId,Size=UDim2.fromOffset(15,15),
+Parent=textBox})Theme.Paint(icon,{ImageColor3='TextDim'})local function follow()
+icon.Position=UDim2.new(0,-22,title.Position.Y.Scale,title.Position.Y.Offset+1)
+end title:GetPropertyChangedSignal('Position'):Connect(follow)follow()self._icon
+=icon end if self.Description and self.Description~=''then title.Position=UDim2.
+new(0,0,0.5,-15)local desc=Util.Label({Name='Description',Text=self.Description,
+FontFace=Theme.Fonts.Regular,TextSize=Theme.Size.Small,TextTruncate=Enum.
+TextTruncate.AtEnd,Size=UDim2.new(1,0,0,13),Position=UDim2.new(0,0,0.5,2),Parent
+=textBox})Theme.Paint(desc,{TextColor3='TextMute'})self._desc=desc row.Size=
+UDim2.new(1,0,0,math.max(height,42))end local badge=Util.New('Frame',{Name=
+'Badge',AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,14),
+AnchorPoint=Vector2.new(0,0.5),Visible=false,Parent=textBox})Theme.Paint(badge,{
 BackgroundColor3='Accent'})Util.Corner(4,badge)Util.Padding(badge,0,5,0,5)local
 badgeLabel=Util.Label({AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromScale(0
 ,1),FontFace=Theme.Fonts.Bold,TextSize=9,Text='',Parent=badge})Theme.Paint(
@@ -1584,38 +1641,39 @@ badgeLabel local function placeBadge()badge.Position=UDim2.new(0,math.min(title.
 TextBounds.X,title.AbsoluteSize.X)+6,0,title.Position.Y.Offset+title.
 AbsoluteSize.Y/2+(title.Position.Y.Scale*textBox.AbsoluteSize.Y))end title:
 GetPropertyChangedSignal('TextBounds'):Connect(placeBadge)task.defer(placeBadge)
-self:SetBadge(self.BadgeText)local right=Util.New('Frame',{Name='Right',
-BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.new(0,0,1
-,0),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-8,0,0),Parent=row})Util.
-List(right,6,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.Right,Enum.
-VerticalAlignment.Center)self._right=right right:GetPropertyChangedSignal(
-'AbsoluteSize'):Connect(function()textBox.Size=UDim2.new(1,-(right.AbsoluteSize.
-X/math.max(Shared.Scale or 1,0.01))-26,1,0)end)local lock=Util.New('TextButton',
-{Name='Lock',Text='',AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.
-fromScale(1,1),ZIndex=20,Visible=false,Parent=row})local lockIcon=Util.New(
-'ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('lock')or'',Size=UDim2.
-fromOffset(12,12),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-8,0.5,0),
-ZIndex=21,Parent=lock})Theme.Paint(lockIcon,{ImageColor3='TextMute'})self._lock=
-lock return row end function Base:_wireRow()local row=self.Frame local Overlay=
-Shared.Overlay row.MouseEnter:Connect(function()if not self:IsLocked()then Tween
-.Play(row,{BackgroundTransparency=0.55},0.12)end end)row.MouseLeave:Connect(
-function()Tween.Play(row,{BackgroundTransparency=1},0.18)end)Overlay.Hover(row,
-function()if self:IsLocked()and self.LockReason then return'\u{1f512} '..self.
-LockReason end if self.Library.Debug then return(self.TooltipText and(self.
-TooltipText..'\n')or'')..'<font color="#8a8a92">'..self.Type..(self.Flag and(
-'  \u{b7}  '..self.Flag)or'')..'</font>'end return self.TooltipText end)row.
-InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.
-MouseButton2 then self:OpenContextMenu(Vector2.new(input.Position.X,input.
-Position.Y))end end)end function Base:_applyState()if not self._mounted or not
-self.Frame then return end local visible=self.Visible and self._depsOk~=false
-self.Frame.Visible=visible local locked=self:IsLocked()if self._lock then self.
-_lock.Visible=locked end if self._title then local token=self.Risky and'Risky'or
-(locked and'TextMute'or(self._titleToken or'Text'))Theme.Paint(self._title,{
-TextColor3=token},0.15)end if self._onState then self:_onState(locked)end end
-function Base:_contextItems()local T=Locale.T local items={}if self.Default~=nil
-then table.insert(items,{Text=T('Reset'),Icon='rotate-ccw',Callback=function()
-self:_userSet(Util.DeepCopy(self.Default))end})end if self.Value~=nil then table
-.insert(items,{Text=T('Copy'),Icon='copy',Callback=function()self:Copy()end})
+self:_newBadge()self:SetBadge(self.BadgeText)local right=Util.New('Frame',{Name=
+'Right',BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.
+new(0,0,1,0),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-8,0,0),Parent=
+row})Util.List(right,6,Enum.FillDirection.Horizontal,Enum.HorizontalAlignment.
+Right,Enum.VerticalAlignment.Center)self._right=right right:
+GetPropertyChangedSignal('AbsoluteSize'):Connect(function()textBox.Size=UDim2.
+new(1,-(right.AbsoluteSize.X/math.max(Shared.Scale or 1,0.01))-26,1,0)end)local
+lock=Util.New('TextButton',{Name='Lock',Text='',AutoButtonColor=false,
+BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=20,Visible=false,
+Parent=row})local lockIcon=Util.New('ImageLabel',{BackgroundTransparency=1,Image
+=Icons.Get('lock')or'',Size=UDim2.fromOffset(12,12),AnchorPoint=Vector2.new(1,
+0.5),Position=UDim2.new(1,-8,0.5,0),ZIndex=21,Parent=lock})Theme.Paint(lockIcon,
+{ImageColor3='TextMute'})self._lock=lock return row end function Base:_wireRow()
+local row=self.Frame local Overlay=Shared.Overlay row.MouseEnter:Connect(
+function()if not self:IsLocked()then Tween.Play(row,{BackgroundTransparency=0.55
+},0.12)end end)row.MouseLeave:Connect(function()Tween.Play(row,{
+BackgroundTransparency=1},0.18)end)Overlay.Hover(row,function()if self:IsLocked(
+)and self.LockReason then return'\u{1f512} '..self.LockReason end if self.
+Library.Debug then return(self.TooltipText and(self.TooltipText..'\n')or'')..
+'<font color="#8a8a92">'..self.Type..(self.Flag and('  \u{b7}  '..self.Flag)or''
+)..'</font>'end return self.TooltipText end)row.InputBegan:Connect(function(
+input)if input.UserInputType==Enum.UserInputType.MouseButton2 then self:
+OpenContextMenu(Vector2.new(input.Position.X,input.Position.Y))end end)end
+function Base:_applyState()if not self._mounted or not self.Frame then return
+end local visible=self.Visible and self._depsOk~=false self.Frame.Visible=
+visible local locked=self:IsLocked()if self._lock then self._lock.Visible=locked
+end if self._title then local token=self.Risky and'Risky'or(locked and'TextMute'
+or(self._titleToken or'Text'))Theme.Paint(self._title,{TextColor3=token},0.15)
+end if self._onState then self:_onState(locked)end end function Base:
+_contextItems()local T=Locale.T local items={}if self.Default~=nil then table.
+insert(items,{Text=T('Reset'),Icon='rotate-ccw',Callback=function()self:
+_userSet(Util.DeepCopy(self.Default))end})end if self.Value~=nil then table.
+insert(items,{Text=T('Copy'),Icon='copy',Callback=function()self:Copy()end})
 table.insert(items,{Text=T('Paste'),Icon='clipboard',Callback=function()self:
 Paste()end})end if self.Flag then table.insert(items,{Text=T('CopyFlag'),Icon=
 'hash',Hint=self.Flag,Callback=function()Env.Clipboard(self.Flag)end})end local
@@ -1864,21 +1922,22 @@ false)end return self end local Button=Base.extend('Button')classes.Button=
 Button function Button.new(section,options)local self=Base.new(Button,section,
 options)self.Style=options.Style or'Secondary'self.Icon=options.Icon self.Hint=
 options.Hint self.ConfirmText=options.Confirm self.DoubleClick=options.
-DoubleClick self.Cooldown=options.Cooldown or 0 self._last=0 return self:
-_register()end function Button:_callbackArgs()return nil end function Button:
-_navActivate()self:_activate()end function Button:Press()if self:IsLocked()then
-return self end local now=os.clock()if now-self._last<self.Cooldown then return
-self end self._last=now self:_fireCallbacks()return self end Button.Click=Button
-.Press function Button:_activate()if self:IsLocked()then return end if self.
-DoubleClick and not self._armed then self._armed=true self._label.Text=Locale.T(
-'Confirm')..'?'task.delay(2,function()self._armed=false if self._label then self
-._label.Text=self.Name end end)return end self._armed=false if self._label then
-self._label.Text=self.Name end if self.ConfirmText and self.Window then task.
-spawn(function()if self.Window:Confirm({Title=self.Name,Content=type(self.
-ConfirmText)=='string'and self.ConfirmText or nil,Danger=self.Style=='Danger'})
-then self:Press()end end)return end self:Press()end local buttonStyles={Primary=
-{Bg='Accent',Text='AccentInk',Stroke='Accent',BgT=0},Secondary={Bg='Surface3',
-Text='Text',Stroke='Stroke',BgT=0},Ghost={Bg='Surface3',Text='TextDim',Stroke=
+DoubleClick self.Cooldown=options.Cooldown or 0 self.Hold=options.Hold==true and
+1 or tonumber(options.Hold)self._last=0 return self:_register()end function
+Button:_callbackArgs()return nil end function Button:_navActivate()self:
+_activate()end function Button:Press()if self:IsLocked()then return self end
+local now=os.clock()if now-self._last<self.Cooldown then return self end self.
+_last=now self:_fireCallbacks()return self end Button.Click=Button.Press
+function Button:_activate()if self:IsLocked()then return end if self.DoubleClick
+and not self._armed then self._armed=true self._label.Text=Locale.T('Confirm')..
+'?'task.delay(2,function()self._armed=false if self._label then self._label.Text
+=self.Name end end)return end self._armed=false if self._label then self._label.
+Text=self.Name end if self.ConfirmText and self.Window then task.spawn(function(
+)if self.Window:Confirm({Title=self.Name,Content=type(self.ConfirmText)==
+'string'and self.ConfirmText or nil,Danger=self.Style=='Danger'})then self:
+Press()end end)return end self:Press()end local buttonStyles={Primary={Bg=
+'Accent',Text='AccentInk',Stroke='Accent',BgT=0},Secondary={Bg='Surface3',Text=
+'Text',Stroke='Stroke',BgT=0},Ghost={Bg='Surface3',Text='TextDim',Stroke=
 'Stroke',BgT=1},Danger={Bg='Surface3',Text='Risky',Stroke='Risky',BgT=0}}
 function Button:_build(parent)local row=Util.New('Frame',{Name='Button_'..self.
 Name,BackgroundTransparency=1,Size=UDim2.new(1,0,0,34),Parent=parent})self.Frame
@@ -1904,32 +1963,50 @@ Style=='Danger'and'Risky'or'StrokeHi'},0.1)end)button.MouseLeave:Connect(
 function()Theme.Paint(stroke,{Color=buttonStyles[self.Style].Stroke},0.15)Tween.
 Play(scaleObj,{Scale=1},0.15)end)button.MouseButton1Down:Connect(function()Tween
 .Play(scaleObj,{Scale=0.97},0.08)end)button.MouseButton1Up:Connect(function()
-Tween.Play(scaleObj,{Scale=1},0.2,Enum.EasingStyle.Back)end)button.
-MouseButton2Click:Connect(function()self:OpenContextMenu()end)button.Activated:
-Connect(function(input)self.Library:_click()self:_ripple(input)self:_activate()
-end)end function Button:_ripple(input)local button=self._button if not button or
-Tween.Speed==0 then return end local pos=input and input.Position and Vector2.
-new(input.Position.X,input.Position.Y)or(button.AbsolutePosition+button.
-AbsoluteSize/2)local rel=pos-button.AbsolutePosition local s=Shared.Scale or 1
-local circle=Util.New('Frame',{BackgroundTransparency=0.82,AnchorPoint=Vector2.
-new(0.5,0.5),Position=UDim2.fromOffset(rel.X/s,rel.Y/s),Size=UDim2.fromOffset(0,
-0),ZIndex=3,Parent=button})Theme.Paint(circle,{BackgroundColor3=self.Style==
-'Primary'and'AccentInk'or'Accent'})Util.Round(circle)local size=math.max(button.
-AbsoluteSize.X,button.AbsoluteSize.Y)*2/s Tween.Play(circle,{Size=UDim2.
-fromOffset(size,size),BackgroundTransparency=1},0.5)task.delay(0.5,function()
-circle:Destroy()end)end function Button:_render()local style=buttonStyles[self.
-Style]or buttonStyles.Secondary Theme.Paint(self._button,{BackgroundColor3=style
-.Bg})self._button.BackgroundTransparency=style.BgT Theme.Paint(self._stroke,{
-Color=style.Stroke})Theme.Paint(self._label,{TextColor3=style.Text})Theme.Paint(
-self._hintLabel,{TextColor3=self.Style=='Primary'and'AccentInk'or'TextMute'})
-local icon=Icons.Get(self.Icon)self._icon.Image=icon or''self._icon.Visible=icon
-~=nil Theme.Paint(self._icon,{ImageColor3=style.Text})self._hintLabel.Text=self.
-Hint or''self._label.Text=self.Name end function Button:_onState(locked)if self.
-_button then self._button.BackgroundTransparency=locked and 0.6 or(buttonStyles[
-self.Style]or buttonStyles.Secondary).BgT Theme.Paint(self._label,{TextColor3=
-locked and'TextMute'or(buttonStyles[self.Style]or buttonStyles.Secondary).Text})
-end end function Button:SetStyle(style)self.Style=buttonStyles[style]and style
-or'Secondary'if self._mounted then self:_render()end return self end function
+Tween.Play(scaleObj,{Scale=1},0.2,Enum.EasingStyle.Back)end)if self.Hold then
+local bar=Util.New('Frame',{Size=UDim2.fromScale(0,1),BorderSizePixel=0,
+BackgroundTransparency=0.75,ZIndex=0,Parent=button})Theme.Paint(bar,{
+BackgroundColor3=self.Style=='Danger'and'Risky'or'Accent'})local holding,token=
+false,0 local function stop()if not holding then return end holding=false token
++=1 Tween.Play(bar,{Size=UDim2.fromScale(0,1)},0.25,Enum.EasingStyle.Quint)if
+self._label then self._label.Text=self.Name end end button.InputBegan:Connect(
+function(input)if self:IsLocked()or(input.UserInputType~=Enum.UserInputType.
+MouseButton1 and input.UserInputType~=Enum.UserInputType.Touch)then return end
+holding=true token+=1 local mine=token self._label.Text=Locale.T('HoldToConfirm'
+)bar.Size=UDim2.fromScale(0,1)Tween.Play(bar,{Size=UDim2.fromScale(1,1)},self.
+Hold,Enum.EasingStyle.Linear)task.delay(self.Hold,function()if holding and token
+==mine then holding=false self._label.Text=self.Name bar.BackgroundTransparency=
+0.45 Tween.Play(bar,{BackgroundTransparency=1},0.4)task.delay(0.4,function()bar.
+Size=UDim2.fromScale(0,1)bar.BackgroundTransparency=0.75 end)self.Library:
+_click()self:Press()end end)end)button.InputEnded:Connect(function(input)if
+input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==
+Enum.UserInputType.Touch then stop()end end)button.MouseLeave:Connect(stop)end
+button.MouseButton2Click:Connect(function()self:OpenContextMenu()end)button.
+Activated:Connect(function(input)if self.Hold then return end self.Library:
+_click()self:_ripple(input)self:_activate()end)end function Button:_ripple(input
+)local button=self._button if not button or Tween.Speed==0 then return end local
+pos=input and input.Position and Vector2.new(input.Position.X,input.Position.Y)
+or(button.AbsolutePosition+button.AbsoluteSize/2)local rel=pos-button.
+AbsolutePosition local s=Shared.Scale or 1 local circle=Util.New('Frame',{
+BackgroundTransparency=0.82,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromOffset(rel.X/s,rel.Y/s),Size=UDim2.fromOffset(0,0),ZIndex=3,Parent=button})
+Theme.Paint(circle,{BackgroundColor3=self.Style=='Primary'and'AccentInk'or
+'Accent'})Util.Round(circle)local size=math.max(button.AbsoluteSize.X,button.
+AbsoluteSize.Y)*2/s Tween.Play(circle,{Size=UDim2.fromOffset(size,size),
+BackgroundTransparency=1},0.5)task.delay(0.5,function()circle:Destroy()end)end
+function Button:_render()local style=buttonStyles[self.Style]or buttonStyles.
+Secondary Theme.Paint(self._button,{BackgroundColor3=style.Bg})self._button.
+BackgroundTransparency=style.BgT Theme.Paint(self._stroke,{Color=style.Stroke})
+Theme.Paint(self._label,{TextColor3=style.Text})Theme.Paint(self._hintLabel,{
+TextColor3=self.Style=='Primary'and'AccentInk'or'TextMute'})local icon=Icons.
+Get(self.Icon)self._icon.Image=icon or''self._icon.Visible=icon~=nil Theme.
+Paint(self._icon,{ImageColor3=style.Text})self._hintLabel.Text=self.Hint or''
+self._label.Text=self.Name end function Button:_onState(locked)if self._button
+then self._button.BackgroundTransparency=locked and 0.6 or(buttonStyles[self.
+Style]or buttonStyles.Secondary).BgT Theme.Paint(self._label,{TextColor3=locked
+and'TextMute'or(buttonStyles[self.Style]or buttonStyles.Secondary).Text})end end
+function Button:SetStyle(style)self.Style=buttonStyles[style]and style or
+'Secondary'if self._mounted then self:_render()end return self end function
 Button:SetIcon(icon)self.Icon=icon if self._mounted then self:_render()end
 return self end function Button:SetHint(text)self.Hint=text if self._mounted
 then self:_render()end return self end function Button:SetCooldown(seconds)self.
@@ -2040,89 +2117,107 @@ new(section,options)local self=Base.new(Slider,section,options)self.Min=options.
 Min or 0 self.Max=options.Max or 100 if self.Min>self.Max then Shared.Lib:
 _optionWarning('Slider',self.Name,string.format(
 'Min (%s) is bigger than Max (%s), swapped them',tostring(self.Min),tostring(
-self.Max)))self.Min,self.Max=self.Max,self.Min end self.Labels=options.Labels or
-options.TextProps if self.Labels then self.Min,self.Max,self.Step=1,#self.Labels
-,1 else local decimals=options.Decimals or options.Rounding or options.Round
-self.Step=options.Step or options.Increment or(decimals and 10^-decimals)or 1
-end self.Range=options.Range==true self.Suffix=options.Suffix or''self.Prefix=
-options.Prefix or''self.Format=options.Format self.Presets=options.Presets local
-default=Util.Opt(options,'Default','Value')if self.Range then default=default or
-{self.Min,self.Max}elseif self.Labels and type(default)=='string'then default=
-table.find(self.Labels,default)or 1 end self.Default=self:_normalize(default~=
-nil and default or self.Min)self.Value=Util.DeepCopy(self.Default)return self:
-_register()end function Slider:_snap(v)v=tonumber(v)if not v then return nil end
-return Util.Clamp(Util.Snap(v,self.Step,self.Min),self.Min,self.Max)end function
-Slider:_normalize(v)if self.Range then if type(v)~='table'then return nil end
-local a=self:_snap(v.Min or v[1])local b=self:_snap(v.Max or v[2])if not a or
-not b then return nil end if a>b then a,b=b,a end return{Min=a,Max=b}end if self
-.Labels and type(v)=='string'then v=table.find(self.Labels,v)end return self:
-_snap(v)end function Slider:_callbackArgs()if self.Labels then return self.
-Labels[self.Value],self.Value end return self.Value end function Slider:GetText(
-)return self:_format(self.Value)end function Slider:_format(v)if self.Range and
-type(v)=='table'then return self:_format(v.Min)..' - '..self:_format(v.Max)end
-if self.Labels then return tostring(self.Labels[v]or v)end if self.Format then
-local ok,text=pcall(self.Format,v)if ok then return tostring(text)end end return
-self.Prefix..Util.FormatNumber(v,Util.Decimals(self.Step))..self.Suffix end
-function Slider:GetPercent()local v=self.Range and self.Value.Max or self.Value
-return(v-self.Min)/math.max(self.Max-self.Min,1e-9)end function Slider:SetMin(
-min)self.Min=min self:Set(self.Value,true)if self._mounted then self:_render(
-true)end return self end function Slider:SetMax(max)self.Max=max self:Set(self.
-Value,true)if self._mounted then self:_render(true)end return self end function
-Slider:SetLimits(min,max)self.Min,self.Max=min,max local v=self:_normalize(self.
-Value)if v~=nil then self.Value=v end if self._mounted then self:_render(true)
-end return self end Slider.SetRange=Slider.SetLimits function Slider:SetStep(
-step)self.Step=step return self end function Slider:Increment(n)if self.Range
-then return self end return self:Set(self.Value+(n or 1)*self.Step)end function
-Slider:Decrement(n)return self:Increment(-(n or 1))end function Slider:
-_navActivate()end function Slider:_navAdjust(dir)if not self.Range then self:
-_userSet(self.Value+dir*self.Step)end end function Slider:_serialize()if self.
-Range then return{self.Value.Min,self.Value.Max}end return self.Value end
-function Slider:_build(parent)local row=self:_row(parent,46)row.Size=UDim2.new(1
-,0,0,self.Description and 54 or 46)local textBox=self._textBox textBox.Size=
-UDim2.new(1,-16,0,22)textBox.Position=UDim2.fromOffset(8,2)self._title.Position=
-UDim2.new(0,0,0,4)if self._desc then self._desc.Position=UDim2.new(0,0,0,20)end
-self._right.Size=UDim2.new(0,0,0,26)local value=Util.New('TextBox',{Name='Value'
-,BackgroundTransparency=1,ClearTextOnFocus=false,TextEditable=false,Text='',
-FontFace=Theme.Fonts.Mono,TextSize=12,TextXAlignment=Enum.TextXAlignment.Right,
-AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,16),LayoutOrder=100,
-Parent=self._right})Theme.Paint(value,{TextColor3='Text'})self._valueBox=value
-local trackHolder=Util.New('TextButton',{Name='Track',Text='',AutoButtonColor=
-false,BackgroundTransparency=1,Size=UDim2.new(1,-16,0,16),Position=UDim2.new(0,8
-,1,-20),Parent=row})local track=Util.New('Frame',{Size=UDim2.new(1,0,0,4),
-AnchorPoint=Vector2.new(0,0.5),Position=UDim2.fromScale(0,0.5),Parent=
-trackHolder})Util.Round(track)Theme.Paint(track,{BackgroundColor3='Surface3'})
-local fill=Util.New('Frame',{Size=UDim2.fromScale(0,1),Parent=track})Util.Round(
-fill)Theme.Paint(fill,{BackgroundColor3='Accent'})local function knob()local k=
-Util.New('Frame',{Size=UDim2.fromOffset(10,10),AnchorPoint=Vector2.new(0.5,0.5),
-Position=UDim2.fromScale(0,0.5),ZIndex=3,Parent=track})Util.Round(k)Theme.Paint(
-k,{BackgroundColor3='Accent'})local ring=Util.Stroke(k,nil,2)Theme.Paint(ring,{
+self.Max)))self.Min,self.Max=self.Max,self.Min end self.Danger=options.Danger
+self.Marks=options.Marks self.Labels=options.Labels or options.TextProps if self
+.Labels then self.Min,self.Max,self.Step=1,#self.Labels,1 else local decimals=
+options.Decimals or options.Rounding or options.Round self.Step=options.Step or
+options.Increment or(decimals and 10^-decimals)or 1 end self.Range=options.Range
+==true self.Suffix=options.Suffix or''self.Prefix=options.Prefix or''self.Format
+=options.Format self.Presets=options.Presets local default=Util.Opt(options,
+'Default','Value')if self.Range then default=default or{self.Min,self.Max}elseif
+self.Labels and type(default)=='string'then default=table.find(self.Labels,
+default)or 1 end self.Default=self:_normalize(default~=nil and default or self.
+Min)self.Value=Util.DeepCopy(self.Default)return self:_register()end function
+Slider:_snap(v)v=tonumber(v)if not v then return nil end return Util.Clamp(Util.
+Snap(v,self.Step,self.Min),self.Min,self.Max)end function Slider:_normalize(v)if
+self.Range then if type(v)~='table'then return nil end local a=self:_snap(v.Min
+or v[1])local b=self:_snap(v.Max or v[2])if not a or not b then return nil end
+if a>b then a,b=b,a end return{Min=a,Max=b}end if self.Labels and type(v)==
+'string'then v=table.find(self.Labels,v)end return self:_snap(v)end function
+Slider:_callbackArgs()if self.Labels then return self.Labels[self.Value],self.
+Value end return self.Value end function Slider:GetText()return self:_format(
+self.Value)end function Slider:_format(v)if self.Range and type(v)=='table'then
+return self:_format(v.Min)..' - '..self:_format(v.Max)end if self.Labels then
+return tostring(self.Labels[v]or v)end if self.Format then local ok,text=pcall(
+self.Format,v)if ok then return tostring(text)end end return self.Prefix..Util.
+FormatNumber(v,Util.Decimals(self.Step))..self.Suffix end function Slider:
+GetPercent()local v=self.Range and self.Value.Max or self.Value return(v-self.
+Min)/math.max(self.Max-self.Min,1e-9)end function Slider:SetMin(min)self.Min=min
+self:Set(self.Value,true)if self._mounted then self:_render(true)end return self
+end function Slider:SetMax(max)self.Max=max self:Set(self.Value,true)if self.
+_mounted then self:_render(true)end return self end function Slider:SetLimits(
+min,max)self.Min,self.Max=min,max local v=self:_normalize(self.Value)if v~=nil
+then self.Value=v end if self._mounted then self:_render(true)end return self
+end Slider.SetRange=Slider.SetLimits function Slider:SetStep(step)self.Step=step
+return self end function Slider:Increment(n)if self.Range then return self end
+return self:Set(self.Value+(n or 1)*self.Step)end function Slider:Decrement(n)
+return self:Increment(-(n or 1))end function Slider:_navActivate()end function
+Slider:_navAdjust(dir)if not self.Range then self:_userSet(self.Value+dir*self.
+Step)end end function Slider:_serialize()if self.Range then return{self.Value.
+Min,self.Value.Max}end return self.Value end function Slider:_build(parent)local
+row=self:_row(parent,46)row.Size=UDim2.new(1,0,0,self.Description and 54 or 46)
+local textBox=self._textBox textBox.Size=UDim2.new(1,-16,0,22)textBox.Position=
+UDim2.fromOffset(8,2)self._title.Position=UDim2.new(0,0,0,4)if self._desc then
+self._desc.Position=UDim2.new(0,0,0,20)end self._right.Size=UDim2.new(0,0,0,26)
+local value=Util.New('TextBox',{Name='Value',BackgroundTransparency=1,
+ClearTextOnFocus=false,TextEditable=false,Text='',FontFace=Theme.Fonts.Mono,
+TextSize=12,TextXAlignment=Enum.TextXAlignment.Right,AutomaticSize=Enum.
+AutomaticSize.X,Size=UDim2.fromOffset(0,16),LayoutOrder=100,Parent=self._right})
+Theme.Paint(value,{TextColor3='Text'})self._valueBox=value local trackHolder=
+Util.New('TextButton',{Name='Track',Text='',AutoButtonColor=false,
+BackgroundTransparency=1,Size=UDim2.new(1,-16,0,16),Position=UDim2.new(0,8,1,-20
+),Parent=row})local track=Util.New('Frame',{Size=UDim2.new(1,0,0,4),AnchorPoint=
+Vector2.new(0,0.5),Position=UDim2.fromScale(0,0.5),Parent=trackHolder})Util.
+Round(track)Theme.Paint(track,{BackgroundColor3='Surface3'})local fill=Util.New(
+'Frame',{Size=UDim2.fromScale(0,1),Parent=track})Util.Round(fill)Theme.Paint(
+fill,{BackgroundColor3='Accent'})local function knob()local k=Util.New('Frame',{
+Size=UDim2.fromOffset(10,10),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromScale(0,0.5),ZIndex=3,Parent=track})Util.Round(k)Theme.Paint(k,{
+BackgroundColor3='Accent'})local ring=Util.Stroke(k,nil,2)Theme.Paint(ring,{
 Color='Bg'})return k end self._track,self._fill=track,fill self._knobA=knob()if
-self.Range then self._knobB=knob()end if self.Labels and#self.Labels<=12 then
-for i=1,#self.Labels do local tick=Util.New('Frame',{Size=UDim2.fromOffset(2,2),
-AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale((i-1)/math.max(#self.
-Labels-1,1),0.5),ZIndex=2,Parent=track})Util.Round(tick)Theme.Paint(tick,{
-BackgroundColor3='TextMute'})end end local dragging,which=false,nil local 
-function valueAt(x)local rel=math.clamp((x-track.AbsolutePosition.X)/math.max(
-track.AbsoluteSize.X,1),0,1)return self.Min+(self.Max-self.Min)*rel end local 
-function apply(x)local v=valueAt(x)if self.Range then local cur=self.Value if
-which=='A'then self:Set({Min=math.min(v,cur.Max),Max=cur.Max})else self:Set({Min
-=cur.Min,Max=math.max(v,cur.Min)})end else self:Set(v)end end trackHolder.
-InputBegan:Connect(function(input)if self:IsLocked()then return end if input.
-UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.
-UserInputType.Touch then dragging=true self._dragStart=Util.DeepCopy(self.Value)
-if self.Range then local v=valueAt(input.Position.X)which=math.abs(v-self.Value.
-Min)<=math.abs(v-self.Value.Max)and'A'or'B'end Tween.Play(self._knobA,{Size=
-UDim2.fromOffset(14,14)},0.12)if self._knobB then Tween.Play(self._knobB,{Size=
-UDim2.fromOffset(14,14)},0.12)end apply(input.Position.X)end end)self.Maid:
-Connect(UIS.InputChanged,function(input)if dragging and(input.UserInputType==
-Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.
-Touch)then apply(input.Position.X)end end)self.Maid:Connect(UIS.InputEnded,
-function(input)if dragging and(input.UserInputType==Enum.UserInputType.
-MouseButton1 or input.UserInputType==Enum.UserInputType.Touch)then dragging=
-false Tween.Play(self._knobA,{Size=UDim2.fromOffset(10,10)},0.15)if self._knobB
-then Tween.Play(self._knobB,{Size=UDim2.fromOffset(10,10)},0.15)end if not Util.
-Equal(self._dragStart,self.Value)then self.Library:_pushHistory(self,self.
-_dragStart,Util.DeepCopy(self.Value))end end end)local hovered=false row.
+self.Range then self._knobB=knob()end local function rel(v)return math.clamp((v-
+self.Min)/math.max(self.Max-self.Min,1e-9),0,1)end if self.Danger and not self.
+Labels then local from=type(self.Danger)=='table'and(self.Danger.From or self.
+Danger[1])or self.Danger local to=type(self.Danger)=='table'and(self.Danger.To
+or self.Danger[2])or self.Max self._dangerFrom,self._dangerTo=from,to local zone
+=Util.New('Frame',{Size=UDim2.fromScale(rel(to)-rel(from),1),Position=UDim2.
+fromScale(rel(from),0),BackgroundTransparency=0.6,ZIndex=1,Parent=track})Util.
+Round(zone)Theme.Paint(zone,{BackgroundColor3='Risky'})end if self.Marks and not
+self.Labels then local marks=self.Marks if type(marks)=='number'then local list=
+{}for i=0,marks-1 do table.insert(list,self.Min+(self.Max-self.Min)*i/math.max(
+marks-1,1))end marks=list end for _,m in marks do local tick=Util.New('Frame',{
+Size=UDim2.fromOffset(2,8),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
+fromScale(rel(m),0.5),BorderSizePixel=0,ZIndex=2,Parent=track})Util.Round(tick)
+Theme.Paint(tick,{BackgroundColor3='StrokeHi'})end end if self.Labels and#self.
+Labels<=12 then for i=1,#self.Labels do local tick=Util.New('Frame',{Size=UDim2.
+fromOffset(2,2),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale((i-1)/
+math.max(#self.Labels-1,1),0.5),ZIndex=2,Parent=track})Util.Round(tick)Theme.
+Paint(tick,{BackgroundColor3='TextMute'})end end local dragging,which=false,nil
+local function valueAt(x)local rel=math.clamp((x-track.AbsolutePosition.X)/math.
+max(track.AbsoluteSize.X,1),0,1)return self.Min+(self.Max-self.Min)*rel end
+local fineX,fineV=nil,nil local function apply(x)local v=valueAt(x)local shift=
+UIS:IsKeyDown(Enum.KeyCode.LeftShift)or UIS:IsKeyDown(Enum.KeyCode.RightShift)if
+shift and not self.Range and type(self.Value)=='number'then if not fineX then
+fineX,fineV=x,self.Value end v=fineV+(x-fineX)/math.max(track.AbsoluteSize.X,1)*
+(self.Max-self.Min)/10 else fineX,fineV=nil,nil end if self.Range then local cur
+=self.Value if which=='A'then self:Set({Min=math.min(v,cur.Max),Max=cur.Max})
+else self:Set({Min=cur.Min,Max=math.max(v,cur.Min)})end else self:Set(v)end end
+trackHolder.InputBegan:Connect(function(input)if self:IsLocked()then return end
+if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==
+Enum.UserInputType.Touch then dragging=true fineX,fineV=nil,nil self._dragStart=
+Util.DeepCopy(self.Value)if self.Range then local v=valueAt(input.Position.X)
+which=math.abs(v-self.Value.Min)<=math.abs(v-self.Value.Max)and'A'or'B'end Tween
+.Play(self._knobA,{Size=UDim2.fromOffset(14,14)},0.12)if self._knobB then Tween.
+Play(self._knobB,{Size=UDim2.fromOffset(14,14)},0.12)end apply(input.Position.X)
+end end)self.Maid:Connect(UIS.InputChanged,function(input)if dragging and(input.
+UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.
+UserInputType.Touch)then apply(input.Position.X)end end)self.Maid:Connect(UIS.
+InputEnded,function(input)if dragging and(input.UserInputType==Enum.
+UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch)then
+dragging=false Tween.Play(self._knobA,{Size=UDim2.fromOffset(10,10)},0.15)if
+self._knobB then Tween.Play(self._knobB,{Size=UDim2.fromOffset(10,10)},0.15)end
+if not Util.Equal(self._dragStart,self.Value)then self.Library:_pushHistory(self
+,self._dragStart,Util.DeepCopy(self.Value))end end end)local hovered=false row.
 MouseEnter:Connect(function()hovered=true end)row.MouseLeave:Connect(function()
 hovered=false end)self.Maid:Connect(UIS.InputBegan,function(input,processed)if
 not hovered or processed or self.Range or self:IsLocked()then return end local
@@ -2157,9 +2252,13 @@ UDim2.fromScale(a,0),Size=UDim2.fromScale(b-a,1)},t)Tween.Play(self._knobA,{
 Position=UDim2.fromScale(a,0.5)},t)Tween.Play(self._knobB,{Position=UDim2.
 fromScale(b,0.5)},t)else local p=(self.Value-self.Min)/span self._fill.Visible=p
 >0.015 Tween.Play(self._fill,{Size=UDim2.fromScale(p,1)},t)Tween.Play(self.
-_knobA,{Position=UDim2.fromScale(p,0.5)},t)end if not self._valueBox.
-TextEditable then self._valueBox.Text=self:_format(self.Value)end end function
-Slider:_onState(locked)if self._fill then Theme.Paint(self._fill,{
+_knobA,{Position=UDim2.fromScale(p,0.5)},t)if self._dangerFrom then local danger
+=self.Value>=self._dangerFrom and self.Value<=(self._dangerTo or self.Max)if
+danger~=self._inDanger then self._inDanger=danger Theme.Paint(self._fill,{
+BackgroundColor3=danger and'Risky'or'Accent'},0.15)Theme.Paint(self._knobA,{
+BackgroundColor3=danger and'Risky'or'Accent'},0.15)end end end if not self.
+_valueBox.TextEditable then self._valueBox.Text=self:_format(self.Value)end end
+function Slider:_onState(locked)if self._fill then Theme.Paint(self._fill,{
 BackgroundColor3=locked and'TextMute'or'Accent'},0.15)Theme.Paint(self._knobA,{
 BackgroundColor3=locked and'TextMute'or'Accent'},0.15)if self._knobB then Theme.
 Paint(self._knobB,{BackgroundColor3=locked and'TextMute'or'Accent'},0.15)end end
@@ -3096,8 +3195,218 @@ Eye=eye}end end self:_updateDistances()return self end function PlayerList:
 _callbackArgs()return self.Value end return{PlayerList=PlayerList}end function
 __DARKLUA_BUNDLE_MODULES.u()local v=__DARKLUA_BUNDLE_MODULES.cache.u if not v
 then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.u=v end return v.c end end
-do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal
-=__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
+do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
+__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
+=__DARKLUA_BUNDLE_MODULES.j()__DARKLUA_BUNDLE_MODULES.k()local Base=
+__DARKLUA_BUNDLE_MODULES.o()local UIS=Env.Service('UserInputService')local
+classes={}local Segmented=Base.extend('Segmented')classes.Segmented=Segmented
+function Segmented.new(section,options)local self=Base.new(Segmented,section,
+options)self.Values=table.clone(Util.Opt(options,'Values','Options','Items')or{}
+)self.Default=options.Default or self.Values[1]self.Value=self.Default return
+self:_register()end function Segmented:_normalize(v)return table.find(self.
+Values,v)and v or nil end function Segmented:_navAdjust(dir)local i=table.find(
+self.Values,self.Value)or 1 self:_userSet(self.Values[math.clamp(i+dir,1,#self.
+Values)])end function Segmented:_build(parent)local row=self:_row(parent,60)self
+._textBox.Size=UDim2.new(1,-16,0,22)self._textBox.Position=UDim2.fromOffset(8,2)
+self._title.Position=UDim2.new(0,0,0,4)local bar=Util.New('Frame',{Name=
+'Segments',Size=UDim2.new(1,-16,0,26),Position=UDim2.new(0,8,1,-31),Parent=row})
+Util.Corner(7,bar)Theme.Paint(bar,{BackgroundColor3='Surface2'})Theme.Paint(Util
+.Stroke(bar),{Color='Stroke'})local pill=Util.New('Frame',{Size=UDim2.new(1/math
+.max(#self.Values,1),-4,1,-4),Position=UDim2.fromOffset(2,2),ZIndex=2,Parent=bar
+})Util.Corner(5,pill)Theme.Paint(pill,{BackgroundColor3='Accent'})self._pill,
+self._labels=pill,{}for i,v in self.Values do local b=Util.New('TextButton',{
+Text='',AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.new(1/#self.
+Values,0,1,0),Position=UDim2.fromScale((i-1)/#self.Values,0),ZIndex=3,Parent=bar
+})local label=Util.Label({Text=tostring(v),FontFace=Theme.Fonts.SemiBold,
+TextSize=12,TextXAlignment=Enum.TextXAlignment.Center,TextTruncate=Enum.
+TextTruncate.AtEnd,Size=UDim2.new(1,-6,1,0),Position=UDim2.fromOffset(3,0),
+ZIndex=4,Parent=b})self._labels[i]=label b.Activated:Connect(function()if not
+self:IsLocked()then self:_userSet(v)end end)end end function Segmented:_render(
+animate)if not self._pill then return end local i=table.find(self.Values,self.
+Value)or 1 local n=math.max(#self.Values,1)Tween.Play(self._pill,{Position=UDim2
+.new((i-1)/n,2,0,2)},animate and 0.32 or 0,Enum.EasingStyle.Back)for j,label in
+self._labels do Theme.Paint(label,{TextColor3=j==i and'AccentInk'or'TextDim'},
+animate and 0.15 or 0)end end function Segmented:SetValues(values)self.Values=
+table.clone(values)if not table.find(self.Values,self.Value)then self.Value=self
+.Values[1]end return self:_rebuild()end function Segmented:_rebuild()if self.
+Frame and self.Frame.Parent then local parent,order=self.Frame.Parent,self.Frame
+.LayoutOrder self.Frame:Destroy()self:_build(parent)self.Frame.LayoutOrder=order
+self:_render(false)end return self end local Stepper=Base.extend('Stepper')
+classes.Stepper=Stepper function Stepper.new(section,options)local self=Base.
+new(Stepper,section,options)self.Min=options.Min or 0 self.Max=options.Max or
+100 self.Step=options.Step or options.Increment or 1 self.Suffix=options.Suffix
+or''self.Default=math.clamp(options.Default or self.Min,self.Min,self.Max)self.
+Value=self.Default return self:_register()end function Stepper:_normalize(v)v=
+tonumber(v)if not v then return nil end return math.clamp(Util.Snap(v,self.Step,
+self.Min),self.Min,self.Max)end function Stepper:_navAdjust(dir)self:_userSet(
+self.Value+dir*self.Step)end function Stepper:_build(parent)self:_row(parent)
+local function button(text,order,dir)local b=Util.New('TextButton',{Text=text,
+AutoButtonColor=false,FontFace=Theme.Fonts.Bold,TextSize=14,Size=UDim2.
+fromOffset(24,22),LayoutOrder=order,Parent=self._right})Util.Corner(5,b)Theme.
+Paint(b,{BackgroundColor3='Surface3',TextColor3='Text'})Theme.Paint(Util.Stroke(
+b),{Color='Stroke'})local holding=0 b.MouseButton1Down:Connect(function()if self
+:IsLocked()then return end holding+=1 local mine=holding self:_userSet(self.
+Value+dir*self.Step)task.delay(0.4,function()local wait=0.12 while holding==mine
+do self:_userSet(self.Value+dir*self.Step)task.wait(wait)wait=math.max(0.03,wait
+*0.85)end end)end)local function stop()holding+=1 end b.MouseButton1Up:Connect(
+stop)b.MouseLeave:Connect(stop)return b end button('-',100,-1)local value=Util.
+Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=12,TextXAlignment=Enum.
+TextXAlignment.Center,Size=UDim2.fromOffset(46,22),LayoutOrder=101,Parent=self.
+_right})Theme.Paint(value,{TextColor3='Text'})self._valueLabel=value button('+',
+102,1)end function Stepper:_render()if self._valueLabel then self._valueLabel.
+Text=Util.FormatNumber(self.Value,Util.Decimals(self.Step))..self.Suffix end end
+local Gallery=Base.extend('Gallery')classes.Gallery=Gallery local rarityColors={
+common=Color3.fromRGB(176,176,184),uncommon=Color3.fromRGB(110,200,140),rare=
+Color3.fromRGB(100,150,240),epic=Color3.fromRGB(170,110,240),legendary=Color3.
+fromRGB(240,180,80),mythic=Color3.fromRGB(240,90,110)}local function rarityColor
+(r)if typeof(r)=='Color3'then return r end return r and rarityColors[string.
+lower(tostring(r))]or nil end local function normalizeItems(items)local list={}
+for k,v in items or{}do if type(v)=='table'then table.insert(list,{Name=
+tostring(v.Name or v[1]or k),Image=v.Image or v.Icon or v[2],Description=v.
+Description,Rarity=v.Rarity,Badge=v.Badge,Data=v.Data})elseif type(k)=='string'
+then table.insert(list,{Name=k,Image=v})else table.insert(list,{Name=tostring(v)
+})end end return list end local function image(source)if source==nil then return
+''end return Icons.Get(source)or(type(source)=='string'and source)or''end
+function Gallery.new(section,options)local self=Base.new(Gallery,section,options
+)self.Items=normalizeItems(Util.Opt(options,'Items','Values','Options'))self.
+Columns=options.Columns or 3 self.Default=options.Default or(self.Items[1]and
+self.Items[1].Name)self.Value=self.Default self.Placeholder=options.Placeholder
+return self:_register()end function Gallery:_normalize(v)for _,item in self.
+Items do if item.Name==v then return v end end return nil end function Gallery:
+GetItem()for _,item in self.Items do if item.Name==self.Value then return item
+end end return nil end function Gallery:_callbackArgs()return self.Value,self:
+GetItem()end function Gallery:_navActivate()self:Open()end function Gallery:
+SetItems(items)self.Items=normalizeItems(items)if not self:_normalize(self.Value
+)then self.Value=self.Items[1]and self.Items[1].Name end self:_render(false)
+return self end function Gallery:_build(parent)local row=self:_row(parent,84)
+self._textBox.Position=UDim2.fromOffset(92,0)self._textBox.Size=UDim2.new(1,-100
+,1,0)local thumb=Util.New('Frame',{Name='Thumb',Size=UDim2.fromOffset(76,64),
+Position=UDim2.fromOffset(8,10),ClipsDescendants=true,Parent=row})Util.Corner(8,
+thumb)Theme.Paint(thumb,{BackgroundColor3='Surface2'})local thumbStroke=Util.
+Stroke(thumb)Theme.Paint(thumbStroke,{Color='Stroke'})local pic=Util.New(
+'ImageLabel',{BackgroundTransparency=1,ScaleType=Enum.ScaleType.Fit,Size=UDim2.
+new(1,-8,1,-8),Position=UDim2.fromOffset(4,4),Parent=thumb})local stripe=Util.
+New('Frame',{BorderSizePixel=0,Size=UDim2.new(1,0,0,2),Position=UDim2.new(0,0,1,
+-2),Parent=thumb})local current=Util.Label({Text='',FontFace=Theme.Fonts.Regular
+,TextSize=12,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,16),
+LayoutOrder=99,Parent=self._right})Theme.Paint(current,{TextColor3='TextDim'})
+local arrow=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get(
+'chevron-right')or'',Size=UDim2.fromOffset(15,15),LayoutOrder=100,Parent=self.
+_right})Theme.Paint(arrow,{ImageColor3='TextDim'})self._thumb,self._pic,self.
+_stripe,self._current=thumb,pic,stripe,current local hit=Util.Hitbox(row,0)hit.
+Activated:Connect(function()if not self:IsLocked()then self:Open()end end)hit.
+MouseEnter:Connect(function()Theme.Paint(thumbStroke,{Color='StrokeHi'},0.12)end
+)hit.MouseLeave:Connect(function()Theme.Paint(thumbStroke,{Color='Stroke'},0.12)
+end)hit.MouseButton2Click:Connect(function()self:OpenContextMenu()end)end
+function Gallery:_render()if not self._pic then return end local item=self:
+GetItem()self._pic.Image=image(item and item.Image or self.Placeholder)self.
+_current.Text=item and item.Name or''local color=item and rarityColor(item.
+Rarity)self._stripe.Visible=color~=nil if color then self._stripe.
+BackgroundColor3=color end if self._view then self:_renderView()end end function
+Gallery:Open()local window=self.Window if not window or not window.Main or self.
+_view then return self end window:Open()local T=Locale.T local view=Util.New(
+'Frame',{Name='GalleryView',Size=UDim2.fromScale(1,1),BorderSizePixel=0,ZIndex=
+60,Active=true,Parent=window.Main})Theme.Paint(view,{BackgroundColor3='Bg'})
+local scale=Util.New('UIScale',{Scale=0.97,Parent=view})view.
+BackgroundTransparency=1 Tween.Play(view,{BackgroundTransparency=0},0.2)Tween.
+Play(scale,{Scale=1},0.35,Enum.EasingStyle.Quint)self._view=view local back=Util
+.New('ImageButton',{BackgroundTransparency=1,Image=Icons.Get('arrow-left')or'',
+Size=UDim2.fromOffset(18,18),Position=UDim2.fromOffset(16,19),ZIndex=61,Parent=
+view})Theme.Paint(back,{ImageColor3='TextDim'})local title=Util.Label({Text=self
+.Name,FontFace=Theme.Fonts.SemiBold,TextSize=16,Size=UDim2.new(0.5,-50,0,20),
+Position=UDim2.fromOffset(44,18),ZIndex=61,Parent=view})Theme.Paint(title,{
+TextColor3='Text'})local search=Util.New('TextBox',{Text='',PlaceholderText=T(
+'Search'),ClearTextOnFocus=false,FontFace=Theme.Fonts.Medium,TextSize=12,
+TextXAlignment=Enum.TextXAlignment.Left,Size=UDim2.new(0.42,0,0,28),AnchorPoint=
+Vector2.new(1,0),Position=UDim2.new(1,-16,0,14),ZIndex=61,Parent=view})Util.
+Corner(7,search)Util.Padding(search,0,10,0,10)Theme.Paint(search,{
+BackgroundColor3='Surface2',TextColor3='Text',PlaceholderColor3='TextMute'})
+Theme.Paint(Util.Stroke(search),{Color='Stroke'})local hero=Util.New('Frame',{
+Size=UDim2.new(1,-32,0,128),Position=UDim2.fromOffset(16,54),ZIndex=61,Parent=
+view})Util.Corner(10,hero)Theme.Paint(hero,{BackgroundColor3='Surface'})Theme.
+Paint(Util.Stroke(hero),{Color='Stroke'})local heroPicBox=Util.New('Frame',{Size
+=UDim2.fromOffset(150,108),Position=UDim2.fromOffset(10,10),ClipsDescendants=
+true,ZIndex=62,Parent=hero})Util.Corner(8,heroPicBox)Theme.Paint(heroPicBox,{
+BackgroundColor3='Surface2'})local heroPic=Util.New('ImageLabel',{
+BackgroundTransparency=1,ScaleType=Enum.ScaleType.Fit,Size=UDim2.new(1,-12,1,-12
+),Position=UDim2.fromOffset(6,6),ZIndex=63,Parent=heroPicBox})local heroCaption=
+Util.Label({Text=T('Equipped'),FontFace=Theme.Fonts.Bold,TextSize=10,Size=UDim2.
+new(1,-190,0,14),Position=UDim2.fromOffset(176,16),ZIndex=62,Parent=hero})Theme.
+Paint(heroCaption,{TextColor3='TextMute'})local heroName=Util.Label({Text='',
+FontFace=Theme.Fonts.SemiBold,TextSize=18,Size=UDim2.new(1,-190,0,22),Position=
+UDim2.fromOffset(176,32),ZIndex=62,Parent=hero})Theme.Paint(heroName,{TextColor3
+='Text'})local heroRarity=Util.Label({Text='',FontFace=Theme.Fonts.Bold,TextSize
+=11,Size=UDim2.new(1,-190,0,14),Position=UDim2.fromOffset(176,58),ZIndex=62,
+Parent=hero})local heroDesc=Util.Label({Text='',FontFace=Theme.Fonts.Regular,
+TextSize=12,TextWrapped=true,TextYAlignment=Enum.TextYAlignment.Top,Size=UDim2.
+new(1,-190,0,40),Position=UDim2.fromOffset(176,76),ZIndex=62,Parent=hero})Theme.
+Paint(heroDesc,{TextColor3='TextDim'})local grid=Util.New('ScrollingFrame',{
+BackgroundTransparency=1,BorderSizePixel=0,Size=UDim2.new(1,-24,1,-200),Position
+=UDim2.fromOffset(12,194),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.
+AutomaticSize.Y,ScrollBarThickness=2,ZIndex=61,Parent=view})Util.Padding(grid,4,
+4,12,4)local layout=Util.New('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10)
+,SortOrder=Enum.SortOrder.LayoutOrder,Parent=grid})local function cellSize()
+local w=grid.AbsoluteSize.X-8 local cols=math.max(2,math.min(self.Columns+1,math
+.floor(w/130)))local cw=math.floor((w-(cols-1)*10)/cols)layout.CellSize=UDim2.
+fromOffset(cw,math.floor(cw*0.86)+30)end grid:GetPropertyChangedSignal(
+'AbsoluteSize'):Connect(cellSize)task.defer(cellSize)self._viewParts={hero=
+heroPic,name=heroName,rarity=heroRarity,desc=heroDesc,grid=grid,cards={},search=
+search}for i,item in self.Items do local card=Util.New('TextButton',{Text='',
+AutoButtonColor=false,LayoutOrder=i,ZIndex=62,Parent=grid})Util.Corner(9,card)
+Theme.Paint(card,{BackgroundColor3='Surface'})local stroke=Util.Stroke(card)
+Theme.Paint(stroke,{Color='Stroke'})local box=Util.New('Frame',{Size=UDim2.new(1
+,-12,1,-38),Position=UDim2.fromOffset(6,6),ClipsDescendants=true,ZIndex=63,
+Parent=card})Util.Corner(7,box)Theme.Paint(box,{BackgroundColor3='Surface2'})
+local pic=Util.New('ImageLabel',{BackgroundTransparency=1,ScaleType=Enum.
+ScaleType.Fit,Size=UDim2.new(1,-10,1,-10),Position=UDim2.fromOffset(5,5),Image=
+image(item.Image),ZIndex=64,Parent=box})local picScale=Util.New('UIScale',{
+Parent=pic})local name=Util.Label({Text=item.Name,FontFace=Theme.Fonts.Medium,
+TextSize=12,TextTruncate=Enum.TextTruncate.AtEnd,Size=UDim2.new(1,-16,0,16),
+Position=UDim2.new(0,8,1,-26),ZIndex=63,Parent=card})Theme.Paint(name,{
+TextColor3='Text'})local color=rarityColor(item.Rarity)if color then local
+stripe=Util.New('Frame',{BorderSizePixel=0,BackgroundColor3=color,Size=UDim2.
+new(1,0,0,2),Position=UDim2.new(0,0,1,-2),ZIndex=64,Parent=box})Util.New(
+'UIGradient',{Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),
+NumberSequenceKeypoint.new(0.5,0),NumberSequenceKeypoint.new(1,1)}),Parent=
+stripe})end if item.Badge then local badge=Util.Label({Text=string.upper(item.
+Badge),FontFace=Theme.Fonts.Bold,TextSize=9,TextXAlignment=Enum.TextXAlignment.
+Center,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,14),Position=
+UDim2.fromOffset(6,6),BackgroundTransparency=0,ZIndex=65,Parent=box})Util.
+Padding(badge,0,5,0,5)Util.Corner(4,badge)Theme.Paint(badge,{BackgroundColor3=
+'Accent',TextColor3='AccentInk'})end card.MouseEnter:Connect(function()Tween.
+Play(picScale,{Scale=1.06},0.25,Enum.EasingStyle.Quint)if self.Value~=item.Name
+then Theme.Paint(stroke,{Color='StrokeHi'},0.12)end end)card.MouseLeave:Connect(
+function()Tween.Play(picScale,{Scale=1},0.25,Enum.EasingStyle.Quint)if self.
+Value~=item.Name then Theme.Paint(stroke,{Color='Stroke'},0.12)end end)card.
+Activated:Connect(function()if self:IsLocked()then return end self:_userSet(item
+.Name)local s=Util.New('UIScale',{Scale=0.95,Parent=card})Tween.Play(s,{Scale=1}
+,0.3,Enum.EasingStyle.Back)task.delay(0.35,function()s:Destroy()end)end)self.
+_viewParts.cards[i]={Card=card,Stroke=stroke,Item=item}end search:
+GetPropertyChangedSignal('Text'):Connect(function()local q=search.Text for _,c
+in self._viewParts.cards do c.Card.Visible=q==''or Util.Fuzzy(q,c.Item.Name..' '
+..tostring(c.Item.Rarity or''))~=nil end end)back.Activated:Connect(function()
+self:Close()end)self._viewConn=UIS.InputBegan:Connect(function(input)if input.
+KeyCode==Enum.KeyCode.Escape and not UIS:GetFocusedTextBox()then self:Close()end
+end)self:_renderView()return self end function Gallery:_renderView()local parts=
+self._viewParts if not parts then return end local item=self:GetItem()parts.hero
+.Image=image(item and item.Image or self.Placeholder)parts.name.Text=item and
+item.Name or'-'local color=item and rarityColor(item.Rarity)parts.rarity.Text=
+item and item.Rarity and string.upper(tostring(item.Rarity))or''parts.rarity.
+TextColor3=color or Color3.fromRGB(150,150,158)parts.desc.Text=item and item.
+Description or''for _,c in parts.cards do local on=c.Item.Name==self.Value Theme
+.Paint(c.Stroke,{Color=on and'Accent'or'Stroke'},0.15)c.Stroke.Thickness=on and
+2 or 1 end end function Gallery:Close()local view=self._view if not view then
+return self end self._view,self._viewParts=nil,nil if self._viewConn then self.
+_viewConn:Disconnect()self._viewConn=nil end Tween.Play(view,{
+BackgroundTransparency=1},0.15)for _,d in view:GetDescendants()do if d:IsA(
+'GuiObject')then d.Visible=false end end task.delay(0.16,function()view:Destroy(
+)end)return self end function Gallery:Destroy()self:Close()Base.Destroy(self)end
+return classes end function __DARKLUA_BUNDLE_MODULES.v()local v=
+__DARKLUA_BUNDLE_MODULES.cache.v if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.v=v end return v.c end end do local function 
+__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
+__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
 __DARKLUA_BUNDLE_MODULES.i()local Shared=__DARKLUA_BUNDLE_MODULES.k()local
 Section={}Section.__index=Section function Section.new(page,options)options=
@@ -3312,19 +3621,21 @@ Keybind='Keybind',Bind='Keybind',ColorPicker='ColorPicker',Colorpicker=
 Stat='Stat',StatGrid='StatGrid',Graph='Graph',Sparkline='Graph',Chart='Graph',
 Table='Table',Catalog='Table',List='Table',Card='Card',Image='Image',Console=
 'Console',Log='Console',Code='Code',PlayerList='PlayerList',Players='PlayerList'
-}for method,className in constructors do local function make(self,options)local
-class=Shared.Lib._classes[className]if type(options)~='table'and className~=
-'Label'and className~='Divider'and className~='Paragraph'and className~='Spacer'
-then options={Name=options}end if className=='Toggle'and method=='Checkbox'then
-options.Style=options.Style or'Checkbox'end return class.new(self,options or{})
-end if method~='Toggle'then Section[method]=make end Section['Add'..method]=make
-Section['Create'..method]=make end local originalToggle=Section.Toggle function
-Section:Toggle(arg)if typeof(arg)=='Instance'or(arg==nil and self.Floating)then
-return originalToggle(self,arg)end return Shared.Lib._classes.Toggle.new(self,
-type(arg)=='table'and arg or{Name=arg})end function Section:RangeSlider(options)
-options=options or{}options.Range=true return Shared.Lib._classes.Slider.new(
-self,options)end Section.AddRangeSlider=Section.RangeSlider Section.RangedSlider
-=Section.RangeSlider function Section:TextSlider(options)options=options or{}
+,Segmented='Segmented',Segments='Segmented',Stepper='Stepper',Counter='Stepper',
+Gallery='Gallery',Cards='Gallery',Skins='Gallery'}for method,className in
+constructors do local function make(self,options)local class=Shared.Lib._classes
+[className]if type(options)~='table'and className~='Label'and className~=
+'Divider'and className~='Paragraph'and className~='Spacer'then options={Name=
+options}end if className=='Toggle'and method=='Checkbox'then options.Style=
+options.Style or'Checkbox'end return class.new(self,options or{})end if method~=
+'Toggle'then Section[method]=make end Section['Add'..method]=make Section[
+'Create'..method]=make end local originalToggle=Section.Toggle function Section:
+Toggle(arg)if typeof(arg)=='Instance'or(arg==nil and self.Floating)then return
+originalToggle(self,arg)end return Shared.Lib._classes.Toggle.new(self,type(arg)
+=='table'and arg or{Name=arg})end function Section:RangeSlider(options)options=
+options or{}options.Range=true return Shared.Lib._classes.Slider.new(self,
+options)end Section.AddRangeSlider=Section.RangeSlider Section.RangedSlider=
+Section.RangeSlider function Section:TextSlider(options)options=options or{}
 options.Labels=options.Labels or options.Values or options.TextProps return
 Shared.Lib._classes.Slider.new(self,options)end Section.AddTextSlider=Section.
 TextSlider function Section:MultiDropdown(options)options=options or{}options.
@@ -3334,13 +3645,13 @@ return Shared.Lib._classes.PlayerDropdown(self,options or{})end Section.
 AddPlayerDropdown=Section.PlayerDropdown function Section:Custom(name,options)
 local class=Shared.Lib._custom[name]assert(class,
 "[Proximity] unknown custom element '"..tostring(name).."'")return class.new(
-self,options or{})end return Section end function __DARKLUA_BUNDLE_MODULES.v()
-local v=__DARKLUA_BUNDLE_MODULES.cache.v if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.v=v end return v.c end end do local function 
+self,options or{})end return Section end function __DARKLUA_BUNDLE_MODULES.w()
+local v=__DARKLUA_BUNDLE_MODULES.cache.w if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.w=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=
 __DARKLUA_BUNDLE_MODULES.b()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Shared
-=__DARKLUA_BUNDLE_MODULES.k()local Section=__DARKLUA_BUNDLE_MODULES.v()local
+=__DARKLUA_BUNDLE_MODULES.k()local Section=__DARKLUA_BUNDLE_MODULES.w()local
 Page={}Page.__index=Page function Page.new(tab,options)options=type(options)==
 'string'and{Name=options}or(options or{})local self=setmetatable({},Page)self.
 Tab=tab self.Window=tab.Window self.Name=options.Name or tab.Name self.Icon=
@@ -3435,8 +3746,8 @@ do if page.Frame then page.Frame:Destroy()end end if self.Button then self.
 Button:Destroy()end local tabs=self.Window.Tabs local i=table.find(tabs,self)if
 i then table.remove(tabs,i)end if self.Window.CurrentTab==self and tabs[1]then
 self.Window:SelectTab(tabs[1])end end return{Page=Page,Tab=Tab}end function
-__DARKLUA_BUNDLE_MODULES.w()local v=__DARKLUA_BUNDLE_MODULES.cache.w if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.w=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.x()local v=__DARKLUA_BUNDLE_MODULES.cache.x if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.x=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
@@ -3572,8 +3883,8 @@ EasingStyle.Quint,Enum.EasingDirection.InOut)if callback then callback()end task
 .delay(0.8,function()self:Destroy()end)end)end function Skeleton:Destroy()if
 self.Conn then self.Conn:Disconnect()self.Conn=nil end if self.Root then self.
 Root:Destroy()self.Root=nil end end return Skeleton end function
-__DARKLUA_BUNDLE_MODULES.x()local v=__DARKLUA_BUNDLE_MODULES.cache.x if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.x=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.y()local v=__DARKLUA_BUNDLE_MODULES.cache.y if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.y=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local
 RunService=Env.Service('RunService')local Motion={}Motion.Styles={'Planet',
@@ -3753,8 +4064,8 @@ flourish(window)else cleanup(window)if def.Ripple and info.From then ripple(
 window,info.From,120,true)end end if done then done()end end end)end function
 Motion.Stop(window)window._motionToken=(window._motionToken or 0)+1 window.
 _motion=nil cleanup(window)end return Motion end function
-__DARKLUA_BUNDLE_MODULES.y()local v=__DARKLUA_BUNDLE_MODULES.cache.y if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.y=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.z()local v=__DARKLUA_BUNDLE_MODULES.cache.z if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
@@ -4016,8 +4327,8 @@ self._shown or 0)<0.97 or self.Build<1)and os.clock()-start<2.5 do self.Display=
 1 RunService.RenderStepped:Wait()end burst()end)end function Loader:Destroy()if
 self.Conn then self.Conn:Disconnect()self.Conn=nil end if self.Root then self.
 Root:Destroy()self.Root=nil end end return Loader end function
-__DARKLUA_BUNDLE_MODULES.z()local v=__DARKLUA_BUNDLE_MODULES.cache.z if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.A()local v=__DARKLUA_BUNDLE_MODULES.cache.A if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
@@ -4290,17 +4601,17 @@ stage=self.Stage local point=stage and(stage.AbsolutePosition+stage.AbsoluteSize
 end end)task.delay(1.1,function()self:Destroy()end)end)end function Intros:
 Destroy()if self.Conn then self.Conn:Disconnect()self.Conn=nil end if self.Root
 then self.Root:Destroy()self.Root=nil end end return Intros end function
-__DARKLUA_BUNDLE_MODULES.A()local v=__DARKLUA_BUNDLE_MODULES.cache.A if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.B()local v=__DARKLUA_BUNDLE_MODULES.cache.B if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.B=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal
 =__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
 __DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
 __DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
-Shared=__DARKLUA_BUNDLE_MODULES.k()local PageModule=__DARKLUA_BUNDLE_MODULES.w()
-local Skeleton=__DARKLUA_BUNDLE_MODULES.x()local Motion=__DARKLUA_BUNDLE_MODULES
-.y()local Loader=__DARKLUA_BUNDLE_MODULES.z()local Intros=
-__DARKLUA_BUNDLE_MODULES.A()local UIS=Env.Service('UserInputService')local
+Shared=__DARKLUA_BUNDLE_MODULES.k()local PageModule=__DARKLUA_BUNDLE_MODULES.x()
+local Skeleton=__DARKLUA_BUNDLE_MODULES.y()local Motion=__DARKLUA_BUNDLE_MODULES
+.z()local Loader=__DARKLUA_BUNDLE_MODULES.A()local Intros=
+__DARKLUA_BUNDLE_MODULES.B()local UIS=Env.Service('UserInputService')local
 RunService=Env.Service('RunService')Env.Service('Players')local Tab=PageModule.
 Tab local Window={}Window.__index=Window local DEFAULT_SIZE=Vector2.new(740,500)
 local MOBILE_SIZE=Vector2.new(600,380)function Window.new(Lib,options)options=
@@ -4679,102 +4990,117 @@ Placeholder=Locale.T('ConfigName'),Default=Lib.CurrentConfig})if name and name~=
 false)Lib:Notify({Title=Locale.T('Saved'),Content=Lib.CurrentConfig,Type=
 'success',Duration=2.5})end end)end})Shared.Overlay.Menu(items,{Anchor=chip,
 Align='End',Width=200})end)end function Window:_buildResize()if self.Options.
-Resizable==false then return end local grip=Util.New('TextButton',{Name='Resize'
-,Text='',BackgroundTransparency=1,Size=UDim2.fromOffset(16,16),AnchorPoint=
-Vector2.new(1,1),Position=UDim2.fromScale(1,1),ZIndex=10,Parent=self.Holder})
-local mark=Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get(
-'move-diagonal-2')or'',Size=UDim2.fromOffset(10,10),Position=UDim2.fromOffset(2,
-2),ImageTransparency=0.6,ZIndex=10,Parent=grip})Theme.Paint(mark,{ImageColor3=
-'TextMute'})local resizing,startMouse,startSize=false,nil,nil grip.InputBegan:
+Resizable==false then return end local corners={{Name='ResizeBR',Anchor=Vector2.
+new(1,1),Dir=Vector2.new(1,1),Icon='move-diagonal-2'},{Name='ResizeBL',Anchor=
+Vector2.new(0,1),Dir=Vector2.new(-1,1),Icon='move-diagonal'},{Name='ResizeTR',
+Anchor=Vector2.new(1,0),Dir=Vector2.new(1,-1),Icon='move-diagonal'},{Name=
+'ResizeTL',Anchor=Vector2.new(0,0),Dir=Vector2.new(-1,-1),Icon='move-diagonal-2'
+}}local active,startMouse,startSize,startPos=nil,nil,nil,nil for _,c in corners
+do local grip=Util.New('TextButton',{Name=c.Name,Text='',BackgroundTransparency=
+1,Size=UDim2.fromOffset(14,14),AnchorPoint=c.Anchor,Position=UDim2.fromScale(c.
+Anchor.X,c.Anchor.Y),ZIndex=10,Parent=self.Holder})local mark=Util.New(
+'ImageLabel',{BackgroundTransparency=1,Image=Icons.Get(c.Icon)or'',Size=UDim2.
+fromOffset(10,10),Position=UDim2.fromOffset(2,2),ImageTransparency=c.Name==
+'ResizeBR'and 0.6 or 1,ZIndex=10,Parent=grip})Theme.Paint(mark,{ImageColor3=
+'TextMute'})grip.MouseEnter:Connect(function()Tween.Play(mark,{ImageTransparency
+=0.2},0.12)end)grip.MouseLeave:Connect(function()Tween.Play(mark,{
+ImageTransparency=c.Name=='ResizeBR'and 0.6 or 1},0.2)end)grip.InputBegan:
 Connect(function(input)if input.UserInputType==Enum.UserInputType.MouseButton1
-or input.UserInputType==Enum.UserInputType.Touch then resizing,startMouse,
-startSize=true,Vector2.new(input.Position.X,input.Position.Y),self.Size end end)
-self.Maid:Connect(UIS.InputChanged,function(input)if resizing and(input.
+or input.UserInputType==Enum.UserInputType.Touch then active,startMouse,
+startSize=c,Vector2.new(input.Position.X,input.Position.Y),self.Size local p=
+self.Holder.Position startPos=Vector2.new(p.X.Offset,p.Y.Offset)if p.X.Scale~=0
+or p.Y.Scale~=0 then local centre=self.Holder.AbsolutePosition+self.Holder.
+AbsoluteSize/2-self.Holder.Parent.AbsolutePosition startPos=centre end end end)
+end self.Maid:Connect(UIS.InputChanged,function(input)if active and(input.
 UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.
-UserInputType.Touch)then local delta=(Vector2.new(input.Position.X,input.
-Position.Y)-startMouse)/self:GetScale()local w=math.max(self.MinSize.X,math.
-floor((startSize.X+delta.X)/8+0.5)*8)local h=math.max(self.MinSize.Y,math.floor(
-(startSize.Y+delta.Y)/8+0.5)*8)self:SetSize(Vector2.new(w,h),true)end end)self.
-Maid:Connect(UIS.InputEnded,function(input)if resizing and(input.UserInputType==
-Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch
-)then resizing=false self:_saveState()end end)end function Window:_makeDraggable
-(handle)if self.Options.Draggable==false then return end local dragging,start,
-startPos=false,nil,nil handle.InputBegan:Connect(function(input)if input.
+UserInputType.Touch)then local scale=self:GetScale()local delta=(Vector2.new(
+input.Position.X,input.Position.Y)-startMouse)/scale local w=math.max(self.
+MinSize.X,math.floor((startSize.X+delta.X*active.Dir.X)/8+0.5)*8)local h=math.
+max(self.MinSize.Y,math.floor((startSize.Y+delta.Y*active.Dir.Y)/8+0.5)*8)self:
+SetSize(Vector2.new(w,h),true)local grow=Vector2.new(w-startSize.X,h-startSize.Y
+)*scale/2 local p=startPos+Vector2.new(grow.X*active.Dir.X,grow.Y*active.Dir.Y)
+self.Holder.Position=UDim2.fromOffset(p.X,p.Y)end end)self.Maid:Connect(UIS.
+InputEnded,function(input)if active and(input.UserInputType==Enum.UserInputType.
+MouseButton1 or input.UserInputType==Enum.UserInputType.Touch)then active=nil
+self._restPosition=self.Holder.Position self:_saveState()end end)end function
+Window:_makeDraggable(handle)if self.Options.Draggable==false then return end
+local dragging,start,startPos=false,nil,nil handle.InputBegan:Connect(function(
+input)if input.UserInputType==Enum.UserInputType.MouseButton1 or input.
+UserInputType==Enum.UserInputType.Touch then dragging,start=true,Vector2.new(
+input.Position.X,input.Position.Y)startPos=self.Holder.AbsolutePosition+self.
+Holder.AbsoluteSize/2-self.Holder.Parent.AbsolutePosition end end)self.Maid:
+Connect(UIS.InputChanged,function(input)if dragging and(input.UserInputType==
+Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.
+Touch)then local p=startPos+(Vector2.new(input.Position.X,input.Position.Y)-
+start)self.Holder.Position=UDim2.fromOffset(p.X,p.Y)self:_clampPosition()end end
+)self.Maid:Connect(UIS.InputEnded,function(input)if dragging and(input.
 UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.
-UserInputType.Touch then dragging,start=true,Vector2.new(input.Position.X,input.
-Position.Y)startPos=self.Holder.AbsolutePosition+self.Holder.AbsoluteSize/2-self
-.Holder.Parent.AbsolutePosition end end)self.Maid:Connect(UIS.InputChanged,
-function(input)if dragging and(input.UserInputType==Enum.UserInputType.
-MouseMovement or input.UserInputType==Enum.UserInputType.Touch)then local p=
-startPos+(Vector2.new(input.Position.X,input.Position.Y)-start)self.Holder.
-Position=UDim2.fromOffset(p.X,p.Y)self:_clampPosition()end end)self.Maid:
-Connect(UIS.InputEnded,function(input)if dragging and(input.UserInputType==Enum.
-UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch)then
-dragging=false self:_saveState()self._restPosition=self.Holder.Position if self.
-Library._snapWindow then self.Library:_snapWindow(self)end end end)end function
-Window:_clampPosition()local holder=self.Holder if holder.Position.X.Scale~=0
-then return end local view=workspace.CurrentCamera.ViewportSize local half=
-holder.AbsoluteSize/2 local x=math.clamp(holder.Position.X.Offset,half.X*0.3,
-view.X-half.X*0.3)local y=math.clamp(holder.Position.Y.Offset,half.Y*0.2+4,view.
-Y-half.Y*0.3)holder.Position=UDim2.fromOffset(x,y)end function Window:_saveState
-()local p=self.Holder.Position self.Library:SetSetting('Window.'..self.Title,{X=
-p.X.Scale==0 and p.X.Offset or nil,Y=p.X.Scale==0 and p.Y.Offset or nil,W=self.
-Size.X,H=self.Size.Y,Tab=self.CurrentTab and self.CurrentTab.Name})end function
-Window:_buildBubble(force)if not force then return end local bubble=Util.New(
-'TextButton',{Name='Bubble',Text='',AutoButtonColor=false,Size=UDim2.fromOffset(
-46,46),Position=UDim2.new(0,20,0.3,0),Parent=Shared.Gui.Widgets})Util.Round(
-bubble)Theme.Paint(bubble,{BackgroundColor3='Bg'})Theme.Paint(Util.Stroke(bubble
-),{Color='StrokeHi'})local logo=self:_drawLogo(bubble,26)logo.AnchorPoint=
-Vector2.new(0.5,0.5)logo.Position=UDim2.fromScale(0.5,0.5)local moved,start,
-startPos=false,nil,nil bubble.InputBegan:Connect(function(input)if input.
-UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.
-UserInputType.Touch then moved,start,startPos=false,Vector2.new(input.Position.X
-,input.Position.Y),bubble.AbsolutePosition-bubble.Parent.AbsolutePosition end
-end)self.Maid:Connect(UIS.InputChanged,function(input)if start and(input.
-UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.
-UserInputType.Touch)then local d=Vector2.new(input.Position.X,input.Position.Y)-
-start if d.Magnitude>6 then moved=true end if moved then local view=workspace.
-CurrentCamera.ViewportSize bubble.Position=UDim2.fromOffset(math.clamp(startPos.
-X+d.X,4,view.X-50),math.clamp(startPos.Y+d.Y,4,view.Y-50))end end end)self.Maid:
-Connect(UIS.InputEnded,function(input)if start and(input.UserInputType==Enum.
-UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch)then
-if not moved then self:Toggle()end start=nil end end)self.Bubble=bubble self.
-Maid:Give(bubble)end function Window:_railTab(tab)local rail=self.Navigation==
-'Rail'tab._label.Visible=not rail tab._icon.Position=rail and UDim2.new(0.5,-8,
-0.5,-8)or UDim2.new(0,10,0.5,-8)tab._badge.Visible=not rail and tab.Badge~=nil
-end function Window:SetNavigation(mode)mode=mode=='Rail'and'Rail'or'Sidebar'self
-.Navigation=mode local rail=mode=='Rail'local width=rail and 64 or self.
-SidebarWidth local t=self.State=='Ready'and 0.25 or 0 Tween.Play(self.Sidebar,{
-Size=UDim2.new(0,width,1,0)},t)Tween.Play(self.Main,{Size=UDim2.new(1,-width,1,0
-),Position=UDim2.fromOffset(width,0)},t)self._titleLabel.Visible=not rail self.
-_subLabel.Visible=not rail if self._brandLogo then Tween.Play(self._brandLogo,{
-Position=UDim2.fromOffset(rail and 19 or 16,18)},t)end self._searchText.Visible=
-not rail self._searchKbd.Visible=not rail self._searchIcon.Position=rail and
-UDim2.new(0.5,-6,0.5,-6)or UDim2.new(0,10,0.5,-6)for _,label in self._categories
-or{}do label.Text=rail and''or(label:GetAttribute('Text')or label.Text)label.
-Size=UDim2.new(1,0,0,rail and 10 or 24)end for _,tab in self.Tabs do self:
-_railTab(tab)end if self._profile then self._profile.Name.Visible=not rail self.
-_profile.Status.Visible=not rail self._profile.Avatar.Position=rail and UDim2.
-new(0.5,-14,0.5,-14)or UDim2.new(0,8,0.5,-14)end return self end function Window
-:GetNavigation()return self.Navigation end function Window:SetMini(on)on=on and
-true or false if self.Mini==on then return self end self.Mini=on local holder=
-self.Holder if not self._miniBar then local bar=Util.New('TextButton',{Name=
-'MiniBar',Text='',AutoButtonColor=false,Size=UDim2.fromScale(1,1),Visible=false,
-ZIndex=70,Parent=self.Canvas})Theme.Paint(bar,{BackgroundColor3='Bg'})local logo
-=self:_drawLogo(bar,26)logo.Position=UDim2.new(0,14,0.5,-13)local title=Util.
-Label({Text=self.Title,FontFace=Theme.Fonts.Bold,TextSize=13,Position=UDim2.
-fromOffset(50,9),Size=UDim2.new(1,-90,0,16),ZIndex=71,Parent=bar})Theme.Paint(
-title,{TextColor3='Text'})local stats=Util.Label({Text='',FontFace=Theme.Fonts.
-Mono,TextSize=11,Position=UDim2.fromOffset(50,27),Size=UDim2.new(1,-90,0,14),
-ZIndex=71,Parent=bar})Theme.Paint(stats,{TextColor3='TextMute'})local expand=
-Util.New('ImageLabel',{BackgroundTransparency=1,Image=Icons.Get('maximize-2')or
-'',Size=UDim2.fromOffset(15,15),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.
-new(1,-16,0.5,0),ZIndex=71,Parent=bar})Theme.Paint(expand,{ImageColor3='TextDim'
-})bar.Activated:Connect(function()self:SetMini(false)end)self:_makeDraggable(bar
-)task.spawn(function()while bar.Parent do if bar.Visible then stats.Text=self.
-Library.Providers.FPS()..' fps  \u{b7}  '..self.Library.Providers.Ping()..
-'  \u{b7}  '..os.date('%H:%M')end task.wait(0.5)end end)self._miniBar=bar end if
-on then self._fullSize=self.Size self._miniBar.Visible=true self._miniBar.
+UserInputType.Touch)then dragging=false self:_saveState()self._restPosition=self
+.Holder.Position if self.Library._snapWindow then self.Library:_snapWindow(self)
+end end end)end function Window:_clampPosition()local holder=self.Holder if
+holder.Position.X.Scale~=0 then return end local view=workspace.CurrentCamera.
+ViewportSize local half=holder.AbsoluteSize/2 local x=math.clamp(holder.Position
+.X.Offset,half.X*0.3,view.X-half.X*0.3)local y=math.clamp(holder.Position.Y.
+Offset,half.Y*0.2+4,view.Y-half.Y*0.3)holder.Position=UDim2.fromOffset(x,y)end
+function Window:_saveState()local p=self.Holder.Position self.Library:
+SetSetting('Window.'..self.Title,{X=p.X.Scale==0 and p.X.Offset or nil,Y=p.X.
+Scale==0 and p.Y.Offset or nil,W=self.Size.X,H=self.Size.Y,Tab=self.CurrentTab
+and self.CurrentTab.Name})end function Window:_buildBubble(force)if not force
+then return end local bubble=Util.New('TextButton',{Name='Bubble',Text='',
+AutoButtonColor=false,Size=UDim2.fromOffset(46,46),Position=UDim2.new(0,20,0.3,0
+),Parent=Shared.Gui.Widgets})Util.Round(bubble)Theme.Paint(bubble,{
+BackgroundColor3='Bg'})Theme.Paint(Util.Stroke(bubble),{Color='StrokeHi'})local
+logo=self:_drawLogo(bubble,26)logo.AnchorPoint=Vector2.new(0.5,0.5)logo.Position
+=UDim2.fromScale(0.5,0.5)local moved,start,startPos=false,nil,nil bubble.
+InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.
+MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then moved,start,
+startPos=false,Vector2.new(input.Position.X,input.Position.Y),bubble.
+AbsolutePosition-bubble.Parent.AbsolutePosition end end)self.Maid:Connect(UIS.
+InputChanged,function(input)if start and(input.UserInputType==Enum.UserInputType
+.MouseMovement or input.UserInputType==Enum.UserInputType.Touch)then local d=
+Vector2.new(input.Position.X,input.Position.Y)-start if d.Magnitude>6 then moved
+=true end if moved then local view=workspace.CurrentCamera.ViewportSize bubble.
+Position=UDim2.fromOffset(math.clamp(startPos.X+d.X,4,view.X-50),math.clamp(
+startPos.Y+d.Y,4,view.Y-50))end end end)self.Maid:Connect(UIS.InputEnded,
+function(input)if start and(input.UserInputType==Enum.UserInputType.MouseButton1
+or input.UserInputType==Enum.UserInputType.Touch)then if not moved then self:
+Toggle()end start=nil end end)self.Bubble=bubble self.Maid:Give(bubble)end
+function Window:_railTab(tab)local rail=self.Navigation=='Rail'tab._label.
+Visible=not rail tab._icon.Position=rail and UDim2.new(0.5,-8,0.5,-8)or UDim2.
+new(0,10,0.5,-8)tab._badge.Visible=not rail and tab.Badge~=nil end function
+Window:SetNavigation(mode)mode=mode=='Rail'and'Rail'or'Sidebar'self.Navigation=
+mode local rail=mode=='Rail'local width=rail and 64 or self.SidebarWidth local t
+=self.State=='Ready'and 0.25 or 0 Tween.Play(self.Sidebar,{Size=UDim2.new(0,
+width,1,0)},t)Tween.Play(self.Main,{Size=UDim2.new(1,-width,1,0),Position=UDim2.
+fromOffset(width,0)},t)self._titleLabel.Visible=not rail self._subLabel.Visible=
+not rail if self._brandLogo then Tween.Play(self._brandLogo,{Position=UDim2.
+fromOffset(rail and 19 or 16,18)},t)end self._searchText.Visible=not rail self.
+_searchKbd.Visible=not rail self._searchIcon.Position=rail and UDim2.new(0.5,-6,
+0.5,-6)or UDim2.new(0,10,0.5,-6)for _,label in self._categories or{}do label.
+Text=rail and''or(label:GetAttribute('Text')or label.Text)label.Size=UDim2.new(1
+,0,0,rail and 10 or 24)end for _,tab in self.Tabs do self:_railTab(tab)end if
+self._profile then self._profile.Name.Visible=not rail self._profile.Status.
+Visible=not rail self._profile.Avatar.Position=rail and UDim2.new(0.5,-14,0.5,-
+14)or UDim2.new(0,8,0.5,-14)end return self end function Window:GetNavigation()
+return self.Navigation end function Window:SetMini(on)on=on and true or false if
+self.Mini==on then return self end self.Mini=on local holder=self.Holder if not
+self._miniBar then local bar=Util.New('TextButton',{Name='MiniBar',Text='',
+AutoButtonColor=false,Size=UDim2.fromScale(1,1),Visible=false,ZIndex=70,Parent=
+self.Canvas})Theme.Paint(bar,{BackgroundColor3='Bg'})local logo=self:_drawLogo(
+bar,26)logo.Position=UDim2.new(0,14,0.5,-13)local title=Util.Label({Text=self.
+Title,FontFace=Theme.Fonts.Bold,TextSize=13,Position=UDim2.fromOffset(50,9),Size
+=UDim2.new(1,-90,0,16),ZIndex=71,Parent=bar})Theme.Paint(title,{TextColor3=
+'Text'})local stats=Util.Label({Text='',FontFace=Theme.Fonts.Mono,TextSize=11,
+Position=UDim2.fromOffset(50,27),Size=UDim2.new(1,-90,0,14),ZIndex=71,Parent=bar
+})Theme.Paint(stats,{TextColor3='TextMute'})local expand=Util.New('ImageLabel',{
+BackgroundTransparency=1,Image=Icons.Get('maximize-2')or'',Size=UDim2.
+fromOffset(15,15),AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-16,0.5,0)
+,ZIndex=71,Parent=bar})Theme.Paint(expand,{ImageColor3='TextDim'})bar.Activated:
+Connect(function()self:SetMini(false)end)self:_makeDraggable(bar)task.spawn(
+function()while bar.Parent do if bar.Visible then stats.Text=self.Library.
+Providers.FPS()..' fps  \u{b7}  '..self.Library.Providers.Ping()..'  \u{b7}  '..
+os.date('%H:%M')end task.wait(0.5)end end)self._miniBar=bar end if on then self.
+_fullSize=self.Size self._miniBar.Visible=true self._miniBar.
 BackgroundTransparency=1 Tween.Play(self._miniBar,{BackgroundTransparency=0},0.2
 )Tween.Play(holder,{Size=UDim2.fromOffset(250,52)},0.35,Enum.EasingStyle.Quint)
 Shared.Overlay.CloseAll()else local size=self._fullSize or self.Size Tween.Play(
@@ -5075,8 +5401,8 @@ then return end self._destroyed=true if self.Skeleton then self.Skeleton:
 Destroy()end for _,tab in table.clone(self.Tabs)do for _,el in tab:GetElements()
 do pcall(el.Destroy,el)end end self.Maid:Clean()local list=self.Library.Windows
 local i=table.find(list,self)if i then table.remove(list,i)end end return Window
-end function __DARKLUA_BUNDLE_MODULES.B()local v=__DARKLUA_BUNDLE_MODULES.cache.
-B if not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.B=v end return v
+end function __DARKLUA_BUNDLE_MODULES.C()local v=__DARKLUA_BUNDLE_MODULES.cache.
+C if not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.C=v end return v
 .c end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
 local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()
 local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()
@@ -5229,9 +5555,9 @@ format('%d/%d  \u{b7}  %s',i,#steps,step.Title or''),Content=step.Text or step.
 Content,Buttons={{Text=Locale.T('Cancel')},{Text=i==#steps and Locale.T('Ok')or
 '\u{2192}',Style='Primary'}}})if ring then ring:Destroy()end if index~=2 then
 break end end if options.Key then Lib:SetSetting('Tour.'..options.Key,true)end
-end)return self end end end function __DARKLUA_BUNDLE_MODULES.C()local v=
-__DARKLUA_BUNDLE_MODULES.cache.C if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.C=v end return v.c end end do local function 
+end)return self end end end function __DARKLUA_BUNDLE_MODULES.D()local v=
+__DARKLUA_BUNDLE_MODULES.cache.D if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.D=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Env=
 __DARKLUA_BUNDLE_MODULES.e()__DARKLUA_BUNDLE_MODULES.f()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Locale
@@ -5290,39 +5616,42 @@ Lib:SetSetting('Rim',v)window:SetRim(v)end})look:Toggle({Name=T('Planet'),Icon=
 v)Lib:SetSetting('Decoration',v)window:SetDecoration(v)end})look:Toggle({Name=T(
 'ReducedMotion'),Icon='motion',Default=Lib:GetSetting('ReducedMotion',false),
 Save=false,Callback=function(v)Lib:SetSetting('ReducedMotion',v)Tween.Speed=v
-and 0 or 1 end})look:Dropdown({Name=T('ClickSound'),Icon='volume-2',Values={
-'None','Default','Experience','Halloween','Pride','Wood'},Display=function(v)
-return v=='None'and T('Off')or v end,Default=Lib:GetSetting('ClickSound','None')
-,Description=T('ClickSoundHint'),Save=false,Callback=function(v)if v then Lib:
-SetSetting('ClickSound',v)Lib:PlaySound(v,(Lib:GetSetting('ClickVolume',50)or 50
-)/100)end end})look:Slider({Name=T('SoundVolume'),Icon='volume-1',Min=0,Max=100,
-Default=Lib:GetSetting('ClickVolume',50),Suffix='%',Save=false,Callback=function
-(v)Lib:SetSetting('ClickVolume',v)end})look:Toggle({Name=T('NotifySound'),Icon=
-'bell',Default=Lib:GetSetting('NotifySound',false),Save=false,Callback=function(
-on)Lib:SetSetting('NotifySound',on)end})look:Dropdown({Name=T('OpenAnimation'),
-Icon='move',Values={'Planet','Rise','Zoom','Drop','Slide','Swing','Wipe',
-'Unfold','Scan','Glitch','Fade','None'},Display=function(v)return T('Anim'..v)
-end,Default=window:GetAnimation(),Description=T('OpenAnimationHint'),Save=false,
-Callback=function(v)if v and v~=window:GetAnimation()then window:SetAnimation(v)
-task.spawn(function()window:Close()task.wait(0.5)window:Open()end)end end})look:
-Dropdown({Name=T('LoadingStyle'),Icon='loader',Values={'Planet','Orbit',
-'Eclipse','Constellation','Terminal','Skeleton','None'},Display=function(v)
-return T('Loading'..v)end,Default=Lib:GetSetting('LoadingStyle','Planet'),
-Description=T('LoadingStyleHint'),Save=false,Callback=function(v)if v then Lib:
-SetSetting('LoadingStyle',v)end end})look:Dropdown({Name=T('Navigation'),Icon=
-'sidebar',Values={'Sidebar','Rail'},Display=function(v)return T(v)end,Default=
-window.Navigation,Save=false,Callback=function(v)if v then Lib:SetSetting(
-'Navigation',v)window:SetNavigation(v)end end})look:Dropdown({Name=T('Font'),
-Icon='type',Values=Lib:GetFonts(),Default=Lib:GetSetting('Font','Builder Sans'),
-Search=true,Save=false,Callback=function(v)if v then task.spawn(function()if not
-Lib:SetFont(v)then Lib:Notify({Content=T('FontFailed'),Type='warning',Duration=4
-})end end)end end})look:Dropdown({Name=T('Density'),Icon='align-justify',Values=
-{'Compact','Normal','Comfortable','Touch'},Display=function(v)return T(v)end,
-Default=Lib.DensityName,Save=false,Callback=function(v)if v then Lib:SetDensity(
-v)end end})look:Dropdown({Name=T('ToggleStyle'),Icon='toggle-right',Values=Lib.
-_classes.Toggle.Styles,Default=Lib.ToggleStyle,Save=false,Callback=function(v)if
-v then Lib:SetToggleStyle(v)end end})local bgSaved=Lib:GetSetting('Background')
-local bgInput=look:Input({Name=T('BackgroundImage'),Icon='image',Placeholder=
+and 0 or 1 end})look:Segmented({Name=T('TextSize'),Values={'12','13','14'},
+Default=tostring(Lib:GetSetting('TextSize',13)),Save=false,Callback=function(v)
+Lib:SetTextSize(tonumber(v))end})look:Dropdown({Name=T('ClickSound'),Icon=
+'volume-2',Values={'None','Default','Experience','Halloween','Pride','Wood'},
+Display=function(v)return v=='None'and T('Off')or v end,Default=Lib:GetSetting(
+'ClickSound','None'),Description=T('ClickSoundHint'),Save=false,Callback=
+function(v)if v then Lib:SetSetting('ClickSound',v)Lib:PlaySound(v,(Lib:
+GetSetting('ClickVolume',50)or 50)/100)end end})look:Slider({Name=T(
+'SoundVolume'),Icon='volume-1',Min=0,Max=100,Default=Lib:GetSetting(
+'ClickVolume',50),Suffix='%',Save=false,Callback=function(v)Lib:SetSetting(
+'ClickVolume',v)end})look:Toggle({Name=T('NotifySound'),Icon='bell',Default=Lib:
+GetSetting('NotifySound',false),Save=false,Callback=function(on)Lib:SetSetting(
+'NotifySound',on)end})look:Dropdown({Name=T('OpenAnimation'),Icon='move',Values=
+{'Planet','Rise','Zoom','Drop','Slide','Swing','Wipe','Unfold','Scan','Glitch',
+'Fade','None'},Display=function(v)return T('Anim'..v)end,Default=window:
+GetAnimation(),Description=T('OpenAnimationHint'),Save=false,Callback=function(v
+)if v and v~=window:GetAnimation()then window:SetAnimation(v)task.spawn(function
+()window:Close()task.wait(0.5)window:Open()end)end end})look:Dropdown({Name=T(
+'LoadingStyle'),Icon='loader',Values={'Planet','Orbit','Eclipse','Constellation'
+,'Terminal','Skeleton','None'},Display=function(v)return T('Loading'..v)end,
+Default=Lib:GetSetting('LoadingStyle','Planet'),Description=T('LoadingStyleHint'
+),Save=false,Callback=function(v)if v then Lib:SetSetting('LoadingStyle',v)end
+end})look:Dropdown({Name=T('Navigation'),Icon='sidebar',Values={'Sidebar','Rail'
+},Display=function(v)return T(v)end,Default=window.Navigation,Save=false,
+Callback=function(v)if v then Lib:SetSetting('Navigation',v)window:
+SetNavigation(v)end end})look:Dropdown({Name=T('Font'),Icon='type',Values=Lib:
+GetFonts(),Default=Lib:GetSetting('Font','Builder Sans'),Search=true,Save=false,
+Callback=function(v)if v then task.spawn(function()if not Lib:SetFont(v)then Lib
+:Notify({Content=T('FontFailed'),Type='warning',Duration=4})end end)end end})
+look:Dropdown({Name=T('Density'),Icon='align-justify',Values={'Compact','Normal'
+,'Comfortable','Touch'},Display=function(v)return T(v)end,Default=Lib.
+DensityName,Save=false,Callback=function(v)if v then Lib:SetDensity(v)end end})
+look:Dropdown({Name=T('ToggleStyle'),Icon='toggle-right',Values=Lib._classes.
+Toggle.Styles,Default=Lib.ToggleStyle,Save=false,Callback=function(v)if v then
+Lib:SetToggleStyle(v)end end})local bgSaved=Lib:GetSetting('Background')local
+bgInput=look:Input({Name=T('BackgroundImage'),Icon='image',Placeholder=
 'rbxassetid:// or https://',Default=type(bgSaved)=='table'and bgSaved.Image or''
 ,Finished=true,Save=false})local bgDim=look:Slider({Name=T('BackgroundDim'),Icon
 ='moon',Min=0,Max=90,Default=type(bgSaved)=='table'and math.floor((bgSaved.Dim
@@ -5442,58 +5771,57 @@ misc=tab:RightSection({Name=T('About'),Icon='planet'})misc:Stat({Name=
 'Proximity',Value='v'..Lib.Version,Icon='info'})misc:Stat({Name=T('Executor'),
 Value=Env.ExecutorName(),Icon='code'})if options.Tour then misc:Button({Name=T(
 'ReplayTour'),Icon='tour',Callback=function()window:Tour(options.Tour,{Force=
-true})end})end misc:Button({Name=T('Unload'),Style='Danger',Icon='power',Confirm
-=T('UnloadConfirm'),Callback=function()Lib:Unload()end})if options.Configs~=
-false then self:ConfigTab({Tab=tab})end return tab end function Window:ConfigTab
-(options)options=options or{}local Lib=self.Library local window=self local tab=
-options.Tab or self:Tab({Name=options.Name or T('Configs'),Icon=options.Icon or
-'folder',Order=999})local section=tab:RightSection({Name=T('Configs'),Icon=
-'folder'})local nameInput=section:Input({Name=T('ConfigName'),Icon='edit-3',
-Placeholder='legit',Save=false,Finished=true})local list list=section:Dropdown({
-Name=T('ConfigList'),Icon='configs',Values=Lib:ListConfigs(),Save=false,
-Deletable=true,Search=true,OnDelete=function(name)Lib:DeleteConfig(name)end,
-Callback=function(v)if v then nameInput:Set(v,true)end end})local function 
-selected()local n=Util.Trim(nameInput:Get()or'')if n==''then n=list:Get()end
-return n end Lib.ConfigsChanged:Connect(function()list:SetValues(Lib:
-ListConfigs(),true)end)section:ButtonGroup({{Name=T('Save'),Style='Primary',
-Callback=function()local name=selected()if not name or name==''then return end
-task.spawn(function()if Lib:ConfigExists(name)and not window:Confirm({Title=T(
-'Save'),Content=T('Overwrite',name)})then return end local ok=Lib:SaveConfig(
-name)if ok then Lib.CurrentConfig=Util.SafeName(name)Lib:_setDirty(false)list:
-Set(Util.SafeName(name),true)Lib:Notify({Title=T('Saved'),Content=name,Type=
-'success',Duration=2.5})end end)end},{Name=T('Load'),Callback=function()local
-name=selected()if not name or not Lib:ConfigExists(name)then return end task.
-spawn(function()local diff=Lib:DiffConfig(name)if#diff>0 then local lines={}for
-i=1,math.min(#diff,8)do table.insert(lines,'\u{2022} '..diff[i].Flag)end if#diff
->8 then table.insert(lines,'\u{2026} +'..(#diff-8))end if not window:Confirm({
-Title=T('Load')..' '..name,Content=T('Changes',#diff)..string.char(10)..table.
-concat(lines,string.char(10))})then return end end Lib:LoadConfig(name)Lib.
-CurrentConfig=Util.SafeName(name)Lib:_setDirty(false)Lib:Notify({Title=T(
-'Loaded'),Content=name,Type='success',Duration=2.5})end)end}})section:
-ButtonGroup({{Name=T('Export'),Callback=function()local text=Lib:ExportConfig(
-list:Get())if text then Env.Clipboard(text)Lib:Notify({Content=T('Copied'),Type=
-'success',Duration=2})end end},{Name=T('Import'),Callback=function()task.spawn(
-function()local text=window:Prompt({Title=T('Import'),Placeholder=
-'PRX1.\u{2026}'})if not text then return end local ok=Lib:ImportConfig(text,
-selected()~=''and selected()or nil)Lib:Notify({Content=ok and T('Imported')or T(
-'InvalidConfig'),Type=ok and'success'or'error',Duration=3})end)end}})section:
-ButtonGroup({{Name=T('ShareCode'),Callback=function()task.spawn(function()local
-code=Lib:ShareConfig(list:Get())if code then Env.Clipboard(code)Lib:Notify({
-Title=T('ShareCode'),Content=T('CodeCopied',code),Type='success',Duration=6})
-else Lib:Notify({Content=T('CodeFailed'),Type='error',Duration=4})end end)end},{
-Name=T('ImportCode'),Callback=function()task.spawn(function()local code=window:
-Prompt({Title=T('ImportCode'),Placeholder='AbC12'})if not code then return end
-local ok=Lib:ImportCode(code,selected()~=''and selected()or nil)Lib:Notify({
-Content=ok and T('Imported')or T('CodeInvalid'),Type=ok and'success'or'error',
-Duration=3})end)end}})section:Toggle({Name=T('AutoLoad'),Icon='load',Default=Lib
-:GetAutoLoad()~=nil,Save=false,Callback=function(v)Lib:SetAutoLoad(v and(list:
-Get()or Lib.CurrentConfig)or nil)end})section:Toggle({Name=T('AutoSave'),Icon=
-'save',Default=Lib:GetAutoSave()~=nil,Save=false,Callback=function(v)Lib:
+true})end})end misc:Button({Name=T('Unload'),Style='Danger',Icon='power',Hold=1,
+Callback=function()Lib:Unload()end})if options.Configs~=false then self:
+ConfigTab({Tab=tab})end return tab end function Window:ConfigTab(options)options
+=options or{}local Lib=self.Library local window=self local tab=options.Tab or
+self:Tab({Name=options.Name or T('Configs'),Icon=options.Icon or'folder',Order=
+999})local section=tab:RightSection({Name=T('Configs'),Icon='folder'})local
+nameInput=section:Input({Name=T('ConfigName'),Icon='edit-3',Placeholder='legit',
+Save=false,Finished=true})local list list=section:Dropdown({Name=T('ConfigList')
+,Icon='configs',Values=Lib:ListConfigs(),Save=false,Deletable=true,Search=true,
+OnDelete=function(name)Lib:DeleteConfig(name)end,Callback=function(v)if v then
+nameInput:Set(v,true)end end})local function selected()local n=Util.Trim(
+nameInput:Get()or'')if n==''then n=list:Get()end return n end Lib.ConfigsChanged
+:Connect(function()list:SetValues(Lib:ListConfigs(),true)end)section:
+ButtonGroup({{Name=T('Save'),Style='Primary',Callback=function()local name=
+selected()if not name or name==''then return end task.spawn(function()if Lib:
+ConfigExists(name)and not window:Confirm({Title=T('Save'),Content=T('Overwrite',
+name)})then return end local ok=Lib:SaveConfig(name)if ok then Lib.CurrentConfig
+=Util.SafeName(name)Lib:_setDirty(false)list:Set(Util.SafeName(name),true)Lib:
+Notify({Title=T('Saved'),Content=name,Type='success',Duration=2.5})end end)end},
+{Name=T('Load'),Callback=function()local name=selected()if not name or not Lib:
+ConfigExists(name)then return end task.spawn(function()local diff=Lib:
+DiffConfig(name)if#diff>0 then local lines={}for i=1,math.min(#diff,8)do table.
+insert(lines,'\u{2022} '..diff[i].Flag)end if#diff>8 then table.insert(lines,
+'\u{2026} +'..(#diff-8))end if not window:Confirm({Title=T('Load')..' '..name,
+Content=T('Changes',#diff)..string.char(10)..table.concat(lines,string.char(10))
+})then return end end Lib:LoadConfig(name)Lib.CurrentConfig=Util.SafeName(name)
+Lib:_setDirty(false)Lib:Notify({Title=T('Loaded'),Content=name,Type='success',
+Duration=2.5})end)end}})section:ButtonGroup({{Name=T('Export'),Callback=function
+()local text=Lib:ExportConfig(list:Get())if text then Env.Clipboard(text)Lib:
+Notify({Content=T('Copied'),Type='success',Duration=2})end end},{Name=T('Import'
+),Callback=function()task.spawn(function()local text=window:Prompt({Title=T(
+'Import'),Placeholder='PRX1.\u{2026}'})if not text then return end local ok=Lib:
+ImportConfig(text,selected()~=''and selected()or nil)Lib:Notify({Content=ok and
+T('Imported')or T('InvalidConfig'),Type=ok and'success'or'error',Duration=3})end
+)end}})section:ButtonGroup({{Name=T('ShareCode'),Callback=function()task.spawn(
+function()local code=Lib:ShareConfig(list:Get())if code then Env.Clipboard(code)
+Lib:Notify({Title=T('ShareCode'),Content=T('CodeCopied',code),Type='success',
+Duration=6})else Lib:Notify({Content=T('CodeFailed'),Type='error',Duration=4})
+end end)end},{Name=T('ImportCode'),Callback=function()task.spawn(function()local
+code=window:Prompt({Title=T('ImportCode'),Placeholder='AbC12'})if not code then
+return end local ok=Lib:ImportCode(code,selected()~=''and selected()or nil)Lib:
+Notify({Content=ok and T('Imported')or T('CodeInvalid'),Type=ok and'success'or
+'error',Duration=3})end)end}})section:Toggle({Name=T('AutoLoad'),Icon='load',
+Default=Lib:GetAutoLoad()~=nil,Save=false,Callback=function(v)Lib:SetAutoLoad(v
+and(list:Get()or Lib.CurrentConfig)or nil)end})section:Toggle({Name=T('AutoSave'
+),Icon='save',Default=Lib:GetAutoSave()~=nil,Save=false,Callback=function(v)Lib:
 SetAutoSave(v and(list:Get()or Lib.CurrentConfig)or nil)end})section:Label({Text
 =T('Folder')..': '..Lib.Folder..'/configs',Color='TextMute',Icon='folder'})
-return tab end end end function __DARKLUA_BUNDLE_MODULES.D()local v=
-__DARKLUA_BUNDLE_MODULES.cache.D if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.D=v end return v.c end end do local function 
+return tab end end end function __DARKLUA_BUNDLE_MODULES.E()local v=
+__DARKLUA_BUNDLE_MODULES.cache.E if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.E=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
 __DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
@@ -5714,9 +6042,9 @@ frame,'Keybinds',{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,12,0.5,0)}
 )local widget={Frame=frame}function widget:SetVisible(v)Lib:SetSetting(
 'KeybindList',v)rebuild()return self end function widget:ShowInactive(v)showAll=
 v rebuild()return self end widget.Refresh=rebuild rebuild()Lib.KeybindListWidget
-=widget return widget end end end function __DARKLUA_BUNDLE_MODULES.E()local v=
-__DARKLUA_BUNDLE_MODULES.cache.E if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.E=v end return v.c end end do local function 
+=widget return widget end end end function __DARKLUA_BUNDLE_MODULES.F()local v=
+__DARKLUA_BUNDLE_MODULES.cache.F if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.F=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
@@ -5902,9 +6230,9 @@ Root:GetDescendants(),'memory    '..math.floor(gcinfo()/1024*10)/10 ..' MB',
 insert(lines,string.format('  %-12s %3d el  %4.0f ms',string.sub(tab.Name,1,12),
 tab._total,(tab._buildTime or 0)*1000))end end text.Text=table.concat(lines,'\n'
 )task.wait(0.5)end end)Lib._debugPanel={Destroy=function()alive=false frame:
-Destroy()end}return self end end end function __DARKLUA_BUNDLE_MODULES.F()local
-v=__DARKLUA_BUNDLE_MODULES.cache.F if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.F=v end return v.c end end do local function 
+Destroy()end}return self end end end function __DARKLUA_BUNDLE_MODULES.G()local
+v=__DARKLUA_BUNDLE_MODULES.cache.G if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.G=v end return v.c end end do local function 
 __modImpl()local HttpService=game:GetService('HttpService')local Util=
 __DARKLUA_BUNDLE_MODULES.a()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=
 __DARKLUA_BUNDLE_MODULES.e()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
@@ -6001,8 +6329,8 @@ then submit()end end)if getBtn then getBtn.Activated:Connect(function()local
 copied=Env.Clipboard(options.GetKey)status.Visible=true Theme.Paint(status,{
 TextColor3='TextDim'})status.Text=copied and Locale.T('LinkCopied')or options.
 GetKey end)end return coroutine.yield()end end end function
-__DARKLUA_BUNDLE_MODULES.G()local v=__DARKLUA_BUNDLE_MODULES.cache.G if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.G=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.H()local v=__DARKLUA_BUNDLE_MODULES.cache.H if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.H=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Shared=__DARKLUA_BUNDLE_MODULES.k()local
@@ -6060,8 +6388,8 @@ _refreshBlur()end)window.Closed:Connect(function()self:_refreshBlur()end)end
 task.defer(function()local cap=Lib:GetSetting('FpsCap',0)if cap and cap>0 then
 Lib:SetFpsCap(cap)end local style=Lib:GetSetting('Cursor','Default')if style~=
 'Default'then Lib:SetCursor(style)end end)end end function
-__DARKLUA_BUNDLE_MODULES.H()local v=__DARKLUA_BUNDLE_MODULES.cache.H if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.H=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.I()local v=__DARKLUA_BUNDLE_MODULES.cache.I if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.I=v end return v.c end end
 end local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=__DARKLUA_BUNDLE_MODULES
 .b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=__DARKLUA_BUNDLE_MODULES.
 d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=__DARKLUA_BUNDLE_MODULES.f()
@@ -6092,41 +6420,41 @@ Init(root)Shared.Overlay=Overlay Library.Gui=root end __DARKLUA_BUNDLE_MODULES.
 n()(Library)for _,module in{__DARKLUA_BUNDLE_MODULES.p(),
 __DARKLUA_BUNDLE_MODULES.q(),__DARKLUA_BUNDLE_MODULES.r(),
 __DARKLUA_BUNDLE_MODULES.s(),__DARKLUA_BUNDLE_MODULES.t(),
-__DARKLUA_BUNDLE_MODULES.u()}do for name,class in module do Library._classes[
-name]=class end end local Section=__DARKLUA_BUNDLE_MODULES.v()Library._classes.
-Section=Section Library.Base=__DARKLUA_BUNDLE_MODULES.o()local Window=
-__DARKLUA_BUNDLE_MODULES.B()__DARKLUA_BUNDLE_MODULES.C()(Window)
-__DARKLUA_BUNDLE_MODULES.D()(Window)__DARKLUA_BUNDLE_MODULES.E()(Library)
+__DARKLUA_BUNDLE_MODULES.u(),__DARKLUA_BUNDLE_MODULES.v()}do for name,class in
+module do Library._classes[name]=class end end local Section=
+__DARKLUA_BUNDLE_MODULES.w()Library._classes.Section=Section Library.Base=
+__DARKLUA_BUNDLE_MODULES.o()local Window=__DARKLUA_BUNDLE_MODULES.C()
+__DARKLUA_BUNDLE_MODULES.D()(Window)__DARKLUA_BUNDLE_MODULES.E()(Window)
 __DARKLUA_BUNDLE_MODULES.F()(Library)__DARKLUA_BUNDLE_MODULES.G()(Library)
-Library._drawLogo=Window._drawLogo function Library:_setDirty(value)if self.
-Dirty~=value then self.Dirty=value self.DirtyChanged:Fire(value)end end function
-Library:_onElementChanged(element,new,old)if element.Flag then self.FlagChanged:
-Fire(element.Flag,new,old)if not self.Loading and self._autoSaveArmed and
-element.Save~=false then self:_setDirty(true)self:_scheduleAutoSave()end end if
-element.Type=='Toggle'and#element.Links>0 then self.KeybindsChanged:Fire()end
-end function Library:GetFlag(flag)return self.Flags[flag]end function Library:
-SetFlag(flag,value)local el=self.Elements[flag]if el then el:Set(value)return
-true end return false end function Library:OnFlag(flag,fn)return self.
-FlagChanged:Connect(function(f,new,old)if f==flag then fn(new,old)end end)end
-function Library:GetElement(flag)return self.Elements[flag]end local undoStack,
-redoStack={},{}function Library:_pushHistory(element,old,new)table.insert(
-undoStack,{element,old,new})if#undoStack>100 then table.remove(undoStack,1)end
-table.clear(redoStack)end function Library:Undo()local step=table.remove(
-undoStack)if step and not step[1]._destroyed then step[1]:Set(step[2])table.
-insert(redoStack,step)step[1]:Highlight()return true end return false end
-function Library:Redo()local step=table.remove(redoStack)if step and not step[1]
-._destroyed then step[1]:Set(step[3])table.insert(undoStack,step)step[1]:
-Highlight()return true end return false end function Library:ClearHistory()table
-.clear(undoStack)table.clear(redoStack)end local function favKey(el)return el.
-Flag or(el:GetPath()..'/'..el.Name)end function Library:IsFavorite(el)local list
-=self:GetSetting('Favorites',{})return table.find(list,favKey(el))~=nil end
-function Library:ToggleFavorite(el)local list=table.clone(self:GetSetting(
-'Favorites',{}))local key=favKey(el)local i=table.find(list,key)if i then table.
-remove(list,i)else table.insert(list,key)end self:SetSetting('Favorites',list)
-self.FavoritesChanged:Fire()return i==nil end function Library:GetFavorites()
-local out={}local list=self:GetSetting('Favorites',{})for _,el in self.
-AllElements do if el.Section and not el.Parent and table.find(list,favKey(el))
-then table.insert(out,el)end end return out end function Window:Favorites(
+__DARKLUA_BUNDLE_MODULES.H()(Library)Library._drawLogo=Window._drawLogo function
+Library:_setDirty(value)if self.Dirty~=value then self.Dirty=value self.
+DirtyChanged:Fire(value)end end function Library:_onElementChanged(element,new,
+old)if element.Flag then self.FlagChanged:Fire(element.Flag,new,old)if not self.
+Loading and self._autoSaveArmed and element.Save~=false then self:_setDirty(true
+)self:_scheduleAutoSave()end end if element.Type=='Toggle'and#element.Links>0
+then self.KeybindsChanged:Fire()end end function Library:GetFlag(flag)return
+self.Flags[flag]end function Library:SetFlag(flag,value)local el=self.Elements[
+flag]if el then el:Set(value)return true end return false end function Library:
+OnFlag(flag,fn)return self.FlagChanged:Connect(function(f,new,old)if f==flag
+then fn(new,old)end end)end function Library:GetElement(flag)return self.
+Elements[flag]end local undoStack,redoStack={},{}function Library:_pushHistory(
+element,old,new)table.insert(undoStack,{element,old,new})if#undoStack>100 then
+table.remove(undoStack,1)end table.clear(redoStack)end function Library:Undo()
+local step=table.remove(undoStack)if step and not step[1]._destroyed then step[1
+]:Set(step[2])table.insert(redoStack,step)step[1]:Highlight()return true end
+return false end function Library:Redo()local step=table.remove(redoStack)if
+step and not step[1]._destroyed then step[1]:Set(step[3])table.insert(undoStack,
+step)step[1]:Highlight()return true end return false end function Library:
+ClearHistory()table.clear(undoStack)table.clear(redoStack)end local function 
+favKey(el)return el.Flag or(el:GetPath()..'/'..el.Name)end function Library:
+IsFavorite(el)local list=self:GetSetting('Favorites',{})return table.find(list,
+favKey(el))~=nil end function Library:ToggleFavorite(el)local list=table.clone(
+self:GetSetting('Favorites',{}))local key=favKey(el)local i=table.find(list,key)
+if i then table.remove(list,i)else table.insert(list,key)end self:SetSetting(
+'Favorites',list)self.FavoritesChanged:Fire()return i==nil end function Library:
+GetFavorites()local out={}local list=self:GetSetting('Favorites',{})for _,el in
+self.AllElements do if el.Section and not el.Parent and table.find(list,favKey(
+el))then table.insert(out,el)end end return out end function Window:Favorites(
 options)options=options or{}local Lib=self.Library local tab=self:Tab({Name=
 options.Name or Locale.T('Favorites'),Icon=options.Icon or'star',Order=options.
 Order})local section=tab:FullSection({Name=Locale.T('Favorites')})local rows={}
@@ -6307,5 +6635,13 @@ local key=element:GetQuickBind()if key and Keys.MatchesCombo(key,name)then task.
 spawn(element._quickPress,element)end end end end)Shared.Maid:Give(self.
 _quickConn)end task.defer(function()local binds=Library:GetSetting('QuickBinds',
 nil)if type(binds)=='table'and next(binds)~=nil then Library:
-_ensureQuickListener()end end)__DARKLUA_BUNDLE_MODULES.H()(Library)return
-Library
+_ensureQuickListener()end end)local baseSizes=table.clone(Theme.Size)function
+Library:SetTextSize(n)n=math.clamp(tonumber(n)or 13,11,16)self:SetSetting(
+'TextSize',n)local k=n/13 for key,v in baseSizes do Theme.Size[key]=math.floor(v
+*k+0.5)end self.TextScale=k local root=Shared.Gui and Shared.Gui.Root if root
+then for _,d in root:GetDescendants()do if d:IsA('TextLabel')or d:IsA('TextBox')
+or d:IsA('TextButton')then local base=d:GetAttribute('BaseTextSize')if not base
+then base=d.TextSize d:SetAttribute('BaseTextSize',base)end d.TextSize=math.
+floor(base*k+0.5)end end end return self end task.defer(function()local n=
+Library:GetSetting('TextSize',13)if n and n~=13 then Library:SetTextSize(n)end
+end)__DARKLUA_BUNDLE_MODULES.I()(Library)return Library

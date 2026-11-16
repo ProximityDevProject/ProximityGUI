@@ -807,30 +807,58 @@ function Window:_buildConfigChip(parent)
 	end)
 end
 
+-- Resize from any of the four corners; the opposite corner stays where it is.
 function Window:_buildResize()
 	if self.Options.Resizable == false then
 		return
 	end
-	local grip = Util.New("TextButton", { Name = "Resize", Text = "", BackgroundTransparency = 1, Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1), ZIndex = 10, Parent = self.Holder })
-	local mark = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = Icons.Get("move-diagonal-2") or "", Size = UDim2.fromOffset(10, 10), Position = UDim2.fromOffset(2, 2), ImageTransparency = 0.6, ZIndex = 10, Parent = grip })
-	Theme.Paint(mark, { ImageColor3 = "TextMute" })
-	local resizing, startMouse, startSize = false, nil, nil
-	grip.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			resizing, startMouse, startSize = true, Vector2.new(input.Position.X, input.Position.Y), self.Size
-		end
-	end)
+	local corners = {
+		{ Name = "ResizeBR", Anchor = Vector2.new(1, 1), Dir = Vector2.new(1, 1), Icon = "move-diagonal-2" },
+		{ Name = "ResizeBL", Anchor = Vector2.new(0, 1), Dir = Vector2.new(-1, 1), Icon = "move-diagonal" },
+		{ Name = "ResizeTR", Anchor = Vector2.new(1, 0), Dir = Vector2.new(1, -1), Icon = "move-diagonal" },
+		{ Name = "ResizeTL", Anchor = Vector2.new(0, 0), Dir = Vector2.new(-1, -1), Icon = "move-diagonal-2" },
+	}
+	local active, startMouse, startSize, startPos = nil, nil, nil, nil
+	for _, c in corners do
+		local grip = Util.New("TextButton", { Name = c.Name, Text = "", BackgroundTransparency = 1, Size = UDim2.fromOffset(14, 14), AnchorPoint = c.Anchor, Position = UDim2.fromScale(c.Anchor.X, c.Anchor.Y), ZIndex = 10, Parent = self.Holder })
+		-- a small corner mark that shows up on hover (always on for the bottom-right one)
+		local mark = Util.New("ImageLabel", { BackgroundTransparency = 1, Image = Icons.Get(c.Icon) or "", Size = UDim2.fromOffset(10, 10), Position = UDim2.fromOffset(2, 2), ImageTransparency = c.Name == "ResizeBR" and 0.6 or 1, ZIndex = 10, Parent = grip })
+		Theme.Paint(mark, { ImageColor3 = "TextMute" })
+		grip.MouseEnter:Connect(function()
+			Tween.Play(mark, { ImageTransparency = 0.2 }, 0.12)
+		end)
+		grip.MouseLeave:Connect(function()
+			Tween.Play(mark, { ImageTransparency = c.Name == "ResizeBR" and 0.6 or 1 }, 0.2)
+		end)
+		grip.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				active, startMouse, startSize = c, Vector2.new(input.Position.X, input.Position.Y), self.Size
+				local p = self.Holder.Position
+				startPos = Vector2.new(p.X.Offset, p.Y.Offset)
+				if p.X.Scale ~= 0 or p.Y.Scale ~= 0 then
+					local centre = self.Holder.AbsolutePosition + self.Holder.AbsoluteSize / 2 - self.Holder.Parent.AbsolutePosition
+					startPos = centre
+				end
+			end
+		end)
+	end
 	self.Maid:Connect(UIS.InputChanged, function(input)
-		if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			local delta = (Vector2.new(input.Position.X, input.Position.Y) - startMouse) / self:GetScale()
-			local w = math.max(self.MinSize.X, math.floor((startSize.X + delta.X) / 8 + 0.5) * 8)
-			local h = math.max(self.MinSize.Y, math.floor((startSize.Y + delta.Y) / 8 + 0.5) * 8)
+		if active and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local scale = self:GetScale()
+			local delta = (Vector2.new(input.Position.X, input.Position.Y) - startMouse) / scale
+			local w = math.max(self.MinSize.X, math.floor((startSize.X + delta.X * active.Dir.X) / 8 + 0.5) * 8)
+			local h = math.max(self.MinSize.Y, math.floor((startSize.Y + delta.Y * active.Dir.Y) / 8 + 0.5) * 8)
 			self:SetSize(Vector2.new(w, h), true)
+			-- the window is anchored at its centre: move it by half the growth
+			local grow = Vector2.new(w - startSize.X, h - startSize.Y) * scale / 2
+			local p = startPos + Vector2.new(grow.X * active.Dir.X, grow.Y * active.Dir.Y)
+			self.Holder.Position = UDim2.fromOffset(p.X, p.Y)
 		end
 	end)
 	self.Maid:Connect(UIS.InputEnded, function(input)
-		if resizing and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-			resizing = false
+		if active and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+			active = nil
+			self._restPosition = self.Holder.Position
 			self:_saveState()
 		end
 	end)

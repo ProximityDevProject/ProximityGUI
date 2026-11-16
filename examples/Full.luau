@@ -143,6 +143,30 @@ utils:Code({ Title = "Loader", Code = 'loadstring(game:HttpGet("https://raw.gith
 
 -- ─── Built-ins ───────────────────────────────────────────────────────────
 Window:Favorites()
+-- 1.3: new elements and touches
+local Skins = Window:Tab({ Name = "Skins", Icon = "gem", Badge = "BETA" })
+local Look = Skins:Section({ Name = "Weapon" })
+Look:Gallery({
+	Name = "Knife",
+	Flag = "skin.knife",
+	Description = "Click to pick a skin",
+	Items = {
+		{ Name = "Default", Image = "rbxassetid://10734898934", Description = "Stock knife", Rarity = "Common" },
+		{ Name = "Fade", Image = "rbxassetid://10734919691", Description = "A smooth colour fade", Rarity = "Rare" },
+		{ Name = "Doppler", Image = "rbxassetid://10723416765", Rarity = "Epic", Badge = "NEW" },
+		{ Name = "Crimson Web", Image = "rbxassetid://10747375679", Rarity = "Legendary" },
+	},
+	Callback = function(name)
+		print("[skin]", name)
+	end,
+})
+Look:Segmented({ Name = "Mode", Values = { "Legit", "Rage", "Off" }, Flag = "mode", New = true })
+Look:Stepper({ Name = "Burst", Min = 1, Max = 10, Default = 3, Flag = "burst" })
+Look:Slider({ Name = "Smoothness", Min = 0, Max = 100, Default = 40, Danger = 85, Marks = 5, Flag = "smooth" })
+Look:Button({ Name = "Reset everything", Style = "Danger", Hold = 1.2, Callback = function()
+	print("[reset] held long enough")
+end })
+
 Window:SettingsTab({
 	Tour = {
 		{ Target = "search", Title = "Search", Text = "Press Ctrl+K to find any feature." },

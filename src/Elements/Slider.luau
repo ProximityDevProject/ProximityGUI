@@ -7,8 +7,11 @@
 	                   Presets = { Low = 10, High = 90 }, Callback })
 	  Section:RangeSlider({ ..., Default = { 10, 250 } })      → value { Min, Max }
 	  Section:TextSlider({ ..., Labels = { "Slow", "Medium", "Fast" } })
-	Double-click the value to type an exact number. Arrow keys nudge while
-	hovered (Shift = ×10).
+	Double-click the value (or right-click -> Set value) to type an exact
+	number. Arrow keys nudge while hovered (Shift = ×10). Hold Shift while
+	dragging for a 10x finer step.
+	Danger = 80 or { From = 80, To = 100 } paints a red zone on the track and
+	turns the fill red inside it; Marks = { 0, 25, 50 } or Marks = 5 adds ticks.
 	Methods: :SetMin :SetMax :SetLimits :SetStep :Increment :Decrement :GetPercent
 ]]
 
@@ -32,6 +35,8 @@ function Slider.new(section, options)
 		Shared.Lib:_optionWarning("Slider", self.Name, string.format("Min (%s) is bigger than Max (%s), swapped them", tostring(self.Min), tostring(self.Max)))
 		self.Min, self.Max = self.Max, self.Min
 	end
+	self.Danger = options.Danger
+	self.Marks = options.Marks
 	self.Labels = options.Labels or options.TextProps
 	if self.Labels then
 		self.Min, self.Max, self.Step = 1, #self.Labels, 1
@@ -230,6 +235,33 @@ function Slider:_build(parent)
 	if self.Range then
 		self._knobB = knob()
 	end
+	-- the danger zone and the marks
+	local function rel(v)
+		return math.clamp((v - self.Min) / math.max(self.Max - self.Min, 1e-9), 0, 1)
+	end
+	if self.Danger and not self.Labels then
+		local from = type(self.Danger) == "table" and (self.Danger.From or self.Danger[1]) or self.Danger
+		local to = type(self.Danger) == "table" and (self.Danger.To or self.Danger[2]) or self.Max
+		self._dangerFrom, self._dangerTo = from, to
+		local zone = Util.New("Frame", { Size = UDim2.fromScale(rel(to) - rel(from), 1), Position = UDim2.fromScale(rel(from), 0), BackgroundTransparency = 0.6, ZIndex = 1, Parent = track })
+		Util.Round(zone)
+		Theme.Paint(zone, { BackgroundColor3 = "Risky" })
+	end
+	if self.Marks and not self.Labels then
+		local marks = self.Marks
+		if type(marks) == "number" then
+			local list = {}
+			for i = 0, marks - 1 do
+				table.insert(list, self.Min + (self.Max - self.Min) * i / math.max(marks - 1, 1))
+			end
+			marks = list
+		end
+		for _, m in marks do
+			local tick = Util.New("Frame", { Size = UDim2.fromOffset(2, 8), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(rel(m), 0.5), BorderSizePixel = 0, ZIndex = 2, Parent = track })
+			Util.Round(tick)
+			Theme.Paint(tick, { BackgroundColor3 = "StrokeHi" })
+		end
+	end
 	-- discrete ticks for text sliders
 	if self.Labels and #self.Labels <= 12 then
 		for i = 1, #self.Labels do
@@ -245,8 +277,19 @@ function Slider:_build(parent)
 		local rel = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
 		return self.Min + (self.Max - self.Min) * rel
 	end
+	-- Shift while dragging: 10x finer, measured from where Shift went down
+	local fineX, fineV = nil, nil
 	local function apply(x)
 		local v = valueAt(x)
+		local shift = UIS:IsKeyDown(Enum.KeyCode.LeftShift) or UIS:IsKeyDown(Enum.KeyCode.RightShift)
+		if shift and not self.Range and type(self.Value) == "number" then
+			if not fineX then
+				fineX, fineV = x, self.Value
+			end
+			v = fineV + (x - fineX) / math.max(track.AbsoluteSize.X, 1) * (self.Max - self.Min) / 10
+		else
+			fineX, fineV = nil, nil
+		end
 		if self.Range then
 			local cur = self.Value
 			if which == "A" then
@@ -264,6 +307,7 @@ function Slider:_build(parent)
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
+			fineX, fineV = nil, nil
 			self._dragStart = Util.DeepCopy(self.Value)
 			if self.Range then
 				local v = valueAt(input.Position.X)
@@ -384,6 +428,15 @@ function Slider:_render(animate)
 		self._fill.Visible = p > 0.015
 		Tween.Play(self._fill, { Size = UDim2.fromScale(p, 1) }, t)
 		Tween.Play(self._knobA, { Position = UDim2.fromScale(p, 0.5) }, t)
+		-- inside the danger zone the fill and the knob turn red
+		if self._dangerFrom then
+			local danger = self.Value >= self._dangerFrom and self.Value <= (self._dangerTo or self.Max)
+			if danger ~= self._inDanger then
+				self._inDanger = danger
+				Theme.Paint(self._fill, { BackgroundColor3 = danger and "Risky" or "Accent" }, 0.15)
+				Theme.Paint(self._knobA, { BackgroundColor3 = danger and "Risky" or "Accent" }, 0.15)
+			end
+		end
 	end
 	if not self._valueBox.TextEditable then
 		self._valueBox.Text = self:_format(self.Value)

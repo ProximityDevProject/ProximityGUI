@@ -107,6 +107,7 @@ for _, module in {
 	require("./Elements/Pickers"),
 	require("./Elements/Data"),
 	require("./Elements/PlayerList"),
+	require("./Elements/Extra"),
 } do
 	for name, class in module do
 		Library._classes[name] = class
@@ -874,6 +875,40 @@ task.defer(function()
 	local binds = Library:GetSetting("QuickBinds", nil)
 	if type(binds) == "table" and next(binds) ~= nil then
 		Library:_ensureQuickListener()
+	end
+end)
+
+-- ═══ Text size ═══════════════════════════════════════════════════════════
+-- Library:SetTextSize(12 | 13 | 14): every text in the menu scales with it,
+-- now and for everything built later.
+local baseSizes = table.clone(Theme.Size)
+function Library:SetTextSize(n)
+	n = math.clamp(tonumber(n) or 13, 11, 16)
+	self:SetSetting("TextSize", n)
+	local k = n / 13
+	for key, v in baseSizes do
+		Theme.Size[key] = math.floor(v * k + 0.5)
+	end
+	self.TextScale = k
+	local root = Shared.Gui and Shared.Gui.Root
+	if root then
+		for _, d in root:GetDescendants() do
+			if d:IsA("TextLabel") or d:IsA("TextBox") or d:IsA("TextButton") then
+				local base = d:GetAttribute("BaseTextSize")
+				if not base then
+					base = d.TextSize
+					d:SetAttribute("BaseTextSize", base)
+				end
+				d.TextSize = math.floor(base * k + 0.5)
+			end
+		end
+	end
+	return self
+end
+task.defer(function()
+	local n = Library:GetSetting("TextSize", 13)
+	if n and n ~= 13 then
+		Library:SetTextSize(n)
 	end
 end)
 

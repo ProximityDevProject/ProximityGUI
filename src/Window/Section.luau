@@ -761,6 +761,13 @@ local constructors = {
 	Code = "Code",
 	PlayerList = "PlayerList",
 	Players = "PlayerList",
+	Segmented = "Segmented",
+	Segments = "Segmented",
+	Stepper = "Stepper",
+	Counter = "Stepper",
+	Gallery = "Gallery",
+	Cards = "Gallery",
+	Skins = "Gallery",
 }
 
 for method, className in constructors do

@@ -323,7 +323,7 @@ end
 	Fuzzy score: every query char must appear in order. Consecutive matches,
 	word starts and prefix matches score higher. Returns nil when no match.
 ]]
-function Util.Fuzzy(query: string, text: string): number?
+local function fuzzyCore(query: string, text: string): number?
 	query = string.lower(query)
 	text = string.lower(text)
 	if query == "" then
@@ -360,6 +360,104 @@ function Util.Fuzzy(query: string, text: string): number?
 		return nil
 	end
 	return score - skipped * 2 - #text * 0.1
+end
+
+-- keyboard layout swap: "ghbdtn" <-> "привет"
+local EN = "qwertyuiop[]asdfghjkl;'zxcvbnm,."
+local RU = { "й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ", "ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э", "я", "ч", "с", "м", "и", "т", "ь", "б", "ю" }
+local enToRu, ruToEn = {}, {}
+for i = 1, #EN do
+	enToRu[string.sub(EN, i, i)] = RU[i]
+	ruToEn[RU[i]] = string.sub(EN, i, i)
+end
+local upperRu = { ["Й"] = "й", ["Ц"] = "ц", ["У"] = "у", ["К"] = "к", ["Е"] = "е", ["Н"] = "н", ["Г"] = "г", ["Ш"] = "ш", ["Щ"] = "щ", ["З"] = "з", ["Х"] = "х", ["Ъ"] = "ъ", ["Ф"] = "ф", ["Ы"] = "ы", ["В"] = "в", ["А"] = "а", ["П"] = "п", ["Р"] = "р", ["О"] = "о", ["Л"] = "л", ["Д"] = "д", ["Ж"] = "ж", ["Э"] = "э", ["Я"] = "я", ["Ч"] = "ч", ["С"] = "с", ["М"] = "м", ["И"] = "и", ["Т"] = "т", ["Ь"] = "ь", ["Б"] = "б", ["Ю"] = "ю", ["Ё"] = "е", ["ё"] = "е" }
+
+-- lower case that also knows Cyrillic
+function Util.Lower(text: string): string
+	text = string.lower(text)
+	return (string.gsub(text, utf8.charpattern, function(ch)
+		return upperRu[ch] or ch
+	end))
+end
+
+function Util.SwapLayout(text: string): string
+	local out, changed = {}, false
+	for _, code in utf8.codes(text) do
+		local ch = utf8.char(code)
+		local swapped = enToRu[ch] or ruToEn[ch]
+		if swapped then
+			changed = true
+		end
+		table.insert(out, swapped or ch)
+	end
+	return changed and table.concat(out) or text
+end
+
+local function chars(text)
+	local list = {}
+	for _, code in utf8.codes(text) do
+		table.insert(list, code)
+	end
+	return list
+end
+
+-- edit distance with an early exit once it goes over the limit
+local function distance(a, b, limit)
+	local n, m = #a, #b
+	if math.abs(n - m) > limit then
+		return limit + 1
+	end
+	local prev = {}
+	for j = 0, m do
+		prev[j] = j
+	end
+	for i = 1, n do
+		local cur, best = { [0] = i }, i
+		for j = 1, m do
+			cur[j] = math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i] == b[j] and 0 or 1))
+			best = math.min(best, cur[j])
+		end
+		if best > limit then
+			return limit + 1
+		end
+		prev = cur
+	end
+	return prev[m]
+end
+
+--[[
+	Fuzzy score: every query char must appear in order. Consecutive matches,
+	word starts and prefix matches score higher. If nothing matches it tries
+	the other keyboard layout ("ghbdtn" -> "привет") and then small typos
+	(one wrong letter in short words, two in long ones). nil = no match.
+]]
+function Util.Fuzzy(query: string, text: string): number?
+	query, text = Util.Lower(query), Util.Lower(text)
+	local score = fuzzyCore(query, text)
+	if score then
+		return score
+	end
+	local swapped = Util.SwapLayout(query)
+	if swapped ~= query then
+		score = fuzzyCore(swapped, text)
+		if score then
+			return score - 5
+		end
+	end
+	if utf8.len(query) and utf8.len(query) >= 4 then
+		local limit = utf8.len(query) >= 7 and 2 or 1
+		local q = chars(query)
+		for word in string.gmatch(text, "[^%s%-_%.]+") do
+			local w = chars(word)
+			-- compare with the word, and with its start of the same length
+			local head = { table.unpack(w, 1, math.min(#w, #q)) }
+			local d = math.min(distance(q, w, limit), distance(q, head, limit))
+			if d <= limit then
+				return 40 - d * 15 - #text * 0.1
+			end
+		end
+	end
+	return nil
 end
 
 function Util.Uid(): string

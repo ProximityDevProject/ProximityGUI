@@ -302,6 +302,7 @@ end
 		Confirm = false | "text"   (asks first)
 		DoubleClick = false        (first click arms, second runs)
 		Cooldown = 0               (seconds)
+		Hold = false | seconds     (press and hold; a bar fills, letting go early cancels)
 	})
 	Methods: :Press() :SetStyle() :SetIcon() :SetHint() :SetCooldown()
 ]]
@@ -316,6 +317,7 @@ function Button.new(section, options)
 	self.ConfirmText = options.Confirm
 	self.DoubleClick = options.DoubleClick
 	self.Cooldown = options.Cooldown or 0
+	self.Hold = options.Hold == true and 1 or tonumber(options.Hold)
 	self._last = 0
 	return self:_register()
 end
@@ -441,10 +443,61 @@ function Button:_build(parent)
 	button.MouseButton1Up:Connect(function()
 		Tween.Play(scaleObj, { Scale = 1 }, 0.2, Enum.EasingStyle.Back)
 	end)
+	-- press and hold: a bar fills across the button, letting go cancels
+	if self.Hold then
+		local bar = Util.New("Frame", { Size = UDim2.fromScale(0, 1), BorderSizePixel = 0, BackgroundTransparency = 0.75, ZIndex = 0, Parent = button })
+		Theme.Paint(bar, { BackgroundColor3 = self.Style == "Danger" and "Risky" or "Accent" })
+		local holding, token = false, 0
+		local function stop()
+			if not holding then
+				return
+			end
+			holding = false
+			token += 1
+			Tween.Play(bar, { Size = UDim2.fromScale(0, 1) }, 0.25, Enum.EasingStyle.Quint)
+			if self._label then
+				self._label.Text = self.Name
+			end
+		end
+		button.InputBegan:Connect(function(input)
+			if self:IsLocked() or (input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch) then
+				return
+			end
+			holding = true
+			token += 1
+			local mine = token
+			self._label.Text = Locale.T("HoldToConfirm")
+			bar.Size = UDim2.fromScale(0, 1)
+			Tween.Play(bar, { Size = UDim2.fromScale(1, 1) }, self.Hold, Enum.EasingStyle.Linear)
+			task.delay(self.Hold, function()
+				if holding and token == mine then
+					holding = false
+					self._label.Text = self.Name
+					bar.BackgroundTransparency = 0.45
+					Tween.Play(bar, { BackgroundTransparency = 1 }, 0.4)
+					task.delay(0.4, function()
+						bar.Size = UDim2.fromScale(0, 1)
+						bar.BackgroundTransparency = 0.75
+					end)
+					self.Library:_click()
+					self:Press()
+				end
+			end)
+		end)
+		button.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				stop()
+			end
+		end)
+		button.MouseLeave:Connect(stop)
+	end
 	button.MouseButton2Click:Connect(function()
 		self:OpenContextMenu()
 	end)
 	button.Activated:Connect(function(input)
+		if self.Hold then
+			return -- handled by press and hold
+		end
 		self.Library:_click()
 		self:_ripple(input)
 		self:_activate()

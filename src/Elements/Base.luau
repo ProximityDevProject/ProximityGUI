@@ -63,6 +63,7 @@ function Base.new(class, section, options: { [string]: any })
 	self.Locked = options.Locked ~= nil and options.Locked ~= false
 	self.LockReason = type(options.Locked) == "string" and options.Locked or options.LockReason
 	self.BadgeText = options.Badge
+	self._newDays = options.New == true and 7 or tonumber(options.New)
 	self.Icon = options.Icon
 	self.Changed = Signal.new()
 	self.Destroyed = Signal.new()
@@ -276,13 +277,68 @@ function Base:SetRisky(risky: boolean)
 	return self
 end
 
+-- one look per kind of badge, everywhere in the menu
+local badgeKinds = {
+	risky = { "RISKY", "DANGER", "UNSAFE", "DETECTED", "BAN" },
+	beta = { "BETA", "TEST", "WIP", "ALPHA", "EXPERIMENTAL" },
+	vip = { "VIP", "PREMIUM", "PRO", "PAID", "DONATOR" },
+}
+local function badgeKind(text)
+	local upper = string.upper(text or "")
+	for kind, words in badgeKinds do
+		for _, w in words do
+			if upper == w then
+				return kind
+			end
+		end
+	end
+	return "new"
+end
+
 function Base:SetBadge(text: string?)
 	self.BadgeText = text
 	if self._badge then
 		self._badge.Visible = text ~= nil and text ~= ""
-		self._badgeLabel.Text = text or ""
+		self._badgeLabel.Text = text and string.upper(text) or ""
+		local kind = badgeKind(text)
+		local bg, ink, outline = "Accent", "AccentInk", false
+		if kind == "risky" then
+			bg, ink = "Risky", "AccentInk"
+		elseif kind == "beta" then
+			bg, ink, outline = "Surface2", "Accent", true
+		elseif kind == "vip" then
+			bg, ink = "Warning", "Bg"
+		end
+		Theme.Paint(self._badge, { BackgroundColor3 = bg })
+		Theme.Paint(self._badgeLabel, { TextColor3 = ink })
+		if outline and not self._badgeStroke then
+			self._badgeStroke = Util.Stroke(self._badge, nil, 1, 0)
+			Theme.Paint(self._badgeStroke, { Color = "Accent" })
+		elseif self._badgeStroke then
+			self._badgeStroke.Enabled = outline
+		end
 	end
 	return self
+end
+
+-- New = true (or a number of days, 7 by default): a NEW badge that goes
+-- away by itself that many days after the player first saw this element
+function Base:_newBadge()
+	local days = self._newDays
+	if not days or (self.BadgeText and self.BadgeText ~= "") then
+		return
+	end
+	local Lib = self.Library
+	local seen = Lib:GetSetting("NewSeen", nil)
+	seen = type(seen) == "table" and table.clone(seen) or {}
+	local id = self:_quickId()
+	if not seen[id] then
+		seen[id] = os.time()
+		Lib:SetSetting("NewSeen", seen)
+	end
+	if os.time() - seen[id] < days * 86400 then
+		self.BadgeText = "NEW"
+	end
 end
 
 --[[
@@ -462,6 +518,7 @@ function Base:_row(parent: Instance, height: number?)
 	end
 	title:GetPropertyChangedSignal("TextBounds"):Connect(placeBadge)
 	task.defer(placeBadge)
+	self:_newBadge()
 	self:SetBadge(self.BadgeText)
 
 	local right = Util.New("Frame", {

@@ -209,6 +209,15 @@ return function(Window)
 			end,
 		})
 
+		look:Segmented({
+			Name = T("TextSize"),
+			Values = { "12", "13", "14" },
+			Default = tostring(Lib:GetSetting("TextSize", 13)),
+			Save = false,
+			Callback = function(v)
+				Lib:SetTextSize(tonumber(v))
+			end,
+		})
 		look:Dropdown({
 			Name = T("ClickSound"),
 			Icon = "volume-2",
@@ -739,7 +748,7 @@ return function(Window)
 			Name = T("Unload"),
 			Style = "Danger",
 			Icon = "power",
-			Confirm = T("UnloadConfirm"),
+			Hold = 1,
 			Callback = function()
 				Lib:Unload()
 			end,
