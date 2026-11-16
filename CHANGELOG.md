@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.6 - menu animations
+
+- 9 new ways for the menu to appear and hide on the menu key: Rise, Zoom, Drop, Slide, Swing, Wipe, Unfold, Scan and Fade, next to Planet and None
+- Pick one in Settings > Menu animation (it plays right away), or `Animation = "Swing"` in the window options, or `Window:SetAnimation("Wipe")`
+- Opening and closing are the same motion played both ways, so pressing the key mid-animation turns it around smoothly
+
 ## 1.2.5
 
 - The floating planet button now shows only on phones; on PC the menu key opens the window and nothing sits over the game UI (`ToggleButton = "Bubble"` or `"Topbar"` still force one)

@@ -74,6 +74,7 @@ local Window = Proximity:Window({
 	Watermark = true, KeybindList = true,
 	Profile = true, Status = "Premium",
 	ConfigButton = true,               -- config chip in the header
+	Animation = "Planet",              -- open / hide motion: Rise, Zoom, Drop, Slide, Swing, Wipe, Unfold, Scan, Fade, None
 	ToggleButton = nil,                -- default: floating bubble on phones only, none on PC; "Bubble", "Topbar" or false
 	Resizable = true, Draggable = true,
 	UnlockMouse = true,                -- frees the cursor in first-person games while open

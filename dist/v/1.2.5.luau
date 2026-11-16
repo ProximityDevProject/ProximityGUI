@@ -799,7 +799,11 @@ ShareCode='Share code',ImportCode='Enter code',CodeCopied=
 'Could not upload. Your executor needs the request function',CodeInvalid=
 'That code did not work',Restore='Restore',DeletedHint='%s is deleted',
 SaveBeforeUnload='Save changes to %s before unloading?',DontSave="Don't save",
-Replaced='Replaced the old copy v%s with v%s',LoadingStyle='Loading screen',
+Replaced='Replaced the old copy v%s with v%s',OpenAnimation='Menu animation',
+OpenAnimationHint='How the menu appears and hides',AnimPlanet=
+'Planet - out of the button',AnimRise='Rise',AnimZoom='Zoom',AnimDrop='Drop',
+AnimSlide='Slide',AnimSwing='Swing',AnimWipe='Wipe',AnimUnfold='Unfold',AnimScan
+='Scan',AnimFade='Fade',AnimNone='None',LoadingStyle='Loading screen',
 LoadingStyleHint='Applies the next time the script starts',LoadingPlanet=
 'Planet',LoadingSkeleton='Menu skeleton',LoadingNone='None'},ru={Search=
 '\u{41f}\u{43e}\u{438}\u{441}\u{43a}',SearchHint=
@@ -1009,6 +1013,23 @@ CodeCopied=
 '\u{41d}\u{435} \u{441}\u{43e}\u{445}\u{440}\u{430}\u{43d}\u{44f}\u{442}\u{44c}'
 ,Replaced=
 '\u{421}\u{442}\u{430}\u{440}\u{430}\u{44f} \u{43a}\u{43e}\u{43f}\u{438}\u{44f} v%s \u{437}\u{430}\u{43c}\u{435}\u{43d}\u{435}\u{43d}\u{430} \u{43d}\u{430} v%s'
+,OpenAnimation=
+'\u{410}\u{43d}\u{438}\u{43c}\u{430}\u{446}\u{438}\u{44f} \u{43c}\u{435}\u{43d}\u{44e}'
+,OpenAnimationHint=
+'\u{41a}\u{430}\u{43a} \u{43c}\u{435}\u{43d}\u{44e} \u{43f}\u{43e}\u{44f}\u{432}\u{43b}\u{44f}\u{435}\u{442}\u{441}\u{44f} \u{438} \u{43f}\u{440}\u{44f}\u{447}\u{435}\u{442}\u{441}\u{44f}'
+,AnimPlanet=
+'\u{41f}\u{43b}\u{430}\u{43d}\u{435}\u{442}\u{430} - \u{438}\u{437} \u{43a}\u{43d}\u{43e}\u{43f}\u{43a}\u{438}'
+,AnimRise='\u{41f}\u{43e}\u{434}\u{44a}\u{451}\u{43c}',AnimZoom=
+'\u{417}\u{443}\u{43c}',AnimDrop=
+'\u{41f}\u{430}\u{434}\u{435}\u{43d}\u{438}\u{435}',AnimSlide=
+'\u{421}\u{434}\u{432}\u{438}\u{433}',AnimSwing=
+'\u{412}\u{437}\u{43c}\u{430}\u{445}',AnimWipe=
+'\u{428}\u{442}\u{43e}\u{440}\u{43a}\u{430}',AnimUnfold=
+'\u{420}\u{430}\u{441}\u{43a}\u{440}\u{44b}\u{442}\u{438}\u{435}',AnimScan=
+'\u{421}\u{43a}\u{430}\u{43d}',AnimFade=
+'\u{420}\u{430}\u{441}\u{442}\u{432}\u{43e}\u{440}\u{435}\u{43d}\u{438}\u{435}',
+AnimNone=
+'\u{411}\u{435}\u{437} \u{430}\u{43d}\u{438}\u{43c}\u{430}\u{446}\u{438}\u{438}'
 ,LoadingStyle=
 '\u{42d}\u{43a}\u{440}\u{430}\u{43d} \u{437}\u{430}\u{433}\u{440}\u{443}\u{437}\u{43a}\u{438}'
 ,LoadingStyleHint=
@@ -3328,11 +3349,89 @@ Root:Destroy()self.Root=nil end end return Skeleton end function
 __DARKLUA_BUNDLE_MODULES.w()local v=__DARKLUA_BUNDLE_MODULES.cache.w if not v
 then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.w=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
-__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
-__DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
-Shared=__DARKLUA_BUNDLE_MODULES.k()local RunService=Env.Service('RunService')
-local UserInputService=Env.Service('UserInputService')local Loader={}Loader.
-__index=Loader local PHONE=UserInputService.TouchEnabled and not
+__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local
+RunService=Env.Service('RunService')local Motion={}Motion.Styles={'Planet',
+'Rise','Zoom','Drop','Slide','Swing','Wipe','Unfold','Scan','Fade','None'}local 
+function clamp01(x)return math.clamp(x,0,1)end local Ease={}function Ease.Quint(
+x)return 1-(1-x)^5 end function Ease.Cubic(x)return 1-(1-x)^3 end function Ease.
+Back(x)local c1,c3=1.4,2.4 return 1+c3*(x-1)^3+c1*(x-1)^2 end function Ease.Sine
+(x)return-(math.cos(math.pi*x)-1)/2 end function Ease.QuintIn(x)return x^4 end
+local function sequence(points)table.sort(points,function(a,b)return a[1]<b[1]
+end)local out,last={},-1 for _,pt in points do local t=math.clamp(pt[1],0,1)if t
+<=last then t=last+0.0005 end if t<=1 then table.insert(out,
+NumberSequenceKeypoint.new(t,math.clamp(pt[2],0,1)))last=t end end if out[1].
+Time>0 then table.insert(out,1,NumberSequenceKeypoint.new(0,out[1].Value))end if
+out[#out].Time<1 then table.insert(out,NumberSequenceKeypoint.new(1,out[#out].
+Value))end return NumberSequence.new(out)end local S={}S.Rise={T=0.42,Ease=
+'Quint',Apply=function(c,p)c.Offset=Vector2.new(0,(1-p)*26)c.Scale=0.985+0.015*p
+c.Alpha=p end}S.Zoom={T=0.5,Ease='Back',Apply=function(c,p)c.Scale=0.82+0.18*p c
+.Alpha=clamp01(p*1.7)end}S.Drop={T=0.55,Ease='Back',Apply=function(c,p)c.Offset=
+Vector2.new(0,-(1-p)*80)c.Scale=0.97+0.03*p c.Alpha=clamp01(p*1.5)end}S.Slide={T
+=0.48,Ease='Quint',Apply=function(c,p)c.Offset=Vector2.new(-(1-p)*140,0)c.Alpha=
+clamp01(p*1.3)end}S.Swing={T=0.6,Ease='Back',Apply=function(c,p)c.Rotation=-(1-p
+)*9 c.Offset=Vector2.new(-(1-p)*30,(1-p)*40)c.Scale=0.9+0.1*p c.Alpha=clamp01(p*
+1.6)c.Frame=clamp01((p-0.85)/0.15)end}S.Wipe={T=0.6,Ease='Sine',Apply=function(c
+,p)local e=p*1.36-0.18 c.Mask={Rotation=20,Seq=sequence({{0,0},{e-0.12,0},{e+
+0.12,1},{1,1}})}c.Alpha=clamp01(p*3)c.Frame=clamp01((p-0.7)/0.3)c.Offset=Vector2
+.new((1-p)*-10,0)end}S.Unfold={T=0.5,Ease='Quint',Apply=function(c,p)local half,
+soft=p*0.56,0.05 c.Mask={Rotation=90,Seq=sequence({{0,1},{0.5-half-soft,1},{0.5-
+half,0},{0.5+half,0},{0.5+half+soft,1},{1,1}})}c.Scale=0.97+0.03*p c.Alpha=
+clamp01(p*4)c.Frame=clamp01((p-0.75)/0.25)end}S.Scan={T=0.62,Ease='Cubic',Apply=
+function(c,p)local e=p*1.12-0.06 c.Mask={Rotation=90,Seq=sequence({{0,0},{e,0},{
+e+0.035,1},{1,1}})}c.Line={Y=e,Alpha=math.sin(math.clamp(p,0,1)*math.pi)}c.Alpha
+=clamp01(p*4)c.Frame=clamp01((p-0.8)/0.2)end}S.Fade={T=0.32,Ease='Sine',Apply=
+function(c,p)c.Scale=0.995+0.005*p c.Alpha=p end}function Motion.Has(style)
+return S[style]~=nil end function Motion.Play(window,style,opening,rest,done)
+local def=S[style]window._motionToken=(window._motionToken or 0)+1 local token=
+window._motionToken local holder,canvas=window.Holder,window.Canvas local scale=
+window:GetScale()local glass=window.GlassTransparency or 0 local from=window.
+_motionP or(opening and 0 or 1)local to=opening and 1 or 0 local duration=def.T*
+(opening and 1 or 0.7)*math.abs(to-from)*Tween.Speed local mask=canvas:
+FindFirstChild('ProximityMotionMask')local line=holder:FindFirstChild(
+'ProximityMotionLine')local function cleanup()if mask then mask:Destroy()mask=
+nil end if line then line:Destroy()line=nil end canvas.Rotation=0 end local 
+function apply(p)window._motionP=p local c={Offset=Vector2.zero,Scale=1,Rotation
+=0,Alpha=1,Frame=nil,Mask=nil,Line=nil}def.Apply(c,p)local frameA=c.Frame or c.
+Alpha holder.Position=rest+UDim2.fromOffset(c.Offset.X,c.Offset.Y)window.
+_uiScale.Scale=scale*c.Scale canvas.Rotation=c.Rotation canvas.GroupTransparency
+=glass+(1-glass)*(1-c.Alpha)window.Plate.BackgroundTransparency=c.Mask and 1 or(
+glass+(1-glass)*(1-c.Alpha))window._borderStroke.Transparency=1-frameA window.
+_rim.Transparency=window.RimEnabled and(1-frameA)or 1 if c.Mask then if not mask
+then mask=Util.New('UIGradient',{Name='ProximityMotionMask',Parent=canvas})end
+mask.Rotation=c.Mask.Rotation mask.Transparency=c.Mask.Seq elseif mask then mask
+:Destroy()mask=nil end if c.Line then if not line then line=Util.New('Frame',{
+Name='ProximityMotionLine',BorderSizePixel=0,BackgroundColor3=Color3.new(1,1,1),
+Size=UDim2.new(1,24,0,2),AnchorPoint=Vector2.new(0.5,0.5),ZIndex=20,Parent=
+holder})Util.Gradient(line,nil,NumberSequence.new({NumberSequenceKeypoint.new(0,
+1),NumberSequenceKeypoint.new(0.2,0.2),NumberSequenceKeypoint.new(0.8,0.2),
+NumberSequenceKeypoint.new(1,1)}))local glow=Util.New('Frame',{BorderSizePixel=0
+,BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0.85,Size=UDim2.new(1
+,0,0,10),AnchorPoint=Vector2.new(0,0.5),Position=UDim2.fromScale(0,0.5),ZIndex=
+19,Parent=line})Util.Gradient(glow,nil,NumberSequence.new({
+NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.5,0),
+NumberSequenceKeypoint.new(1,1)}),90)end line.Position=UDim2.new(0.5,0,math.
+clamp(c.Line.Y,0,1),0)line.BackgroundTransparency=1-c.Line.Alpha*0.9 elseif line
+then line:Destroy()line=nil end end local function settle()apply(1)cleanup()
+window.Plate.BackgroundTransparency=glass end if duration<=0 then apply(to)if
+opening then settle()end if done then done()end return end local ease=opening
+and Ease[def.Ease]or Ease.QuintIn local started=os.clock()local conn conn=
+RunService.RenderStepped:Connect(function()if window._motionToken~=token or not
+holder.Parent then conn:Disconnect()return end local x=clamp01((os.clock()-
+started)/duration)local k=ease(x)apply(from+(to-from)*k)if x>=1 then conn:
+Disconnect()if opening then settle()end if done then done()end end end)end
+function Motion.Stop(window)window._motionToken=(window._motionToken or 0)+1
+window._motionP=nil local canvas=window.Canvas local mask=canvas and canvas:
+FindFirstChild('ProximityMotionMask')if mask then mask:Destroy()end local line=
+window.Holder and window.Holder:FindFirstChild('ProximityMotionLine')if line
+then line:Destroy()end if canvas then canvas.Rotation=0 end end return Motion
+end function __DARKLUA_BUNDLE_MODULES.x()local v=__DARKLUA_BUNDLE_MODULES.cache.
+x if not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.x=v end return v
+.c end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
+local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()
+local Theme=__DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j(
+)local Shared=__DARKLUA_BUNDLE_MODULES.k()local RunService=Env.Service(
+'RunService')local UserInputService=Env.Service('UserInputService')local Loader=
+{}Loader.__index=Loader local PHONE=UserInputService.TouchEnabled and not
 UserInputService.KeyboardEnabled local SPHERE,RING=PHONE and 560 or 900,PHONE
 and 380 or 600 local TILES=PHONE and 330 or 520 local RADIUS=92 local RING_IN,
 RING_OUT=1.36,2.02 local STAGE=420 local FOV=30 local DIST=(STAGE/2)/(RADIUS*
@@ -3581,46 +3680,46 @@ self._shown or 0)<0.97 or self.Build<1)and os.clock()-start<2.5 do self.Display=
 1 RunService.RenderStepped:Wait()end burst()end)end function Loader:Destroy()if
 self.Conn then self.Conn:Disconnect()self.Conn=nil end if self.Root then self.
 Root:Destroy()self.Root=nil end end return Loader end function
-__DARKLUA_BUNDLE_MODULES.x()local v=__DARKLUA_BUNDLE_MODULES.cache.x if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.x=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.y()local v=__DARKLUA_BUNDLE_MODULES.cache.y if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.y=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal
 =__DARKLUA_BUNDLE_MODULES.b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
 __DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
 __DARKLUA_BUNDLE_MODULES.i()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
 Shared=__DARKLUA_BUNDLE_MODULES.k()local PageModule=__DARKLUA_BUNDLE_MODULES.v()
-local Skeleton=__DARKLUA_BUNDLE_MODULES.w()local Loader=__DARKLUA_BUNDLE_MODULES
-.x()local UIS=Env.Service('UserInputService')local RunService=Env.Service(
-'RunService')Env.Service('Players')local Tab=PageModule.Tab local Window={}
-Window.__index=Window local DEFAULT_SIZE=Vector2.new(740,500)local MOBILE_SIZE=
-Vector2.new(600,380)function Window.new(Lib,options)options=options or{}local
-self=setmetatable({},Window)self.Library=Lib self.Options=options self.Title=
-Util.Opt(options,'Title','Name')or'Proximity'self.Subtitle=Util.Opt(options,
-'Subtitle','SubTitle','SubName','Description')or('v'..Lib.Version)self.Logo=Util
-.Opt(options,'Logo','Icon')self.Keybind=Keys.Normalize(Util.Opt(options,
-'Keybind','MenuKey','Key')or'RightShift')self.SidebarWidth=options.SidebarWidth
-or 196 local touch=UIS.TouchEnabled and not UIS.KeyboardEnabled local size=
-options.Size if typeof(size)=='UDim2'then size=Vector2.new(size.X.Offset,size.Y.
-Offset)end self.BaseSize=size or(touch and MOBILE_SIZE or DEFAULT_SIZE)self.
-MinSize=options.MinSize or Vector2.new(560,360)self.Loading=type(options.Loading
-)=='table'and options.Loading or{Enabled=options.Loading~=false}self.Loading.
-Enabled=self.Loading.Enabled~=false and Lib:GetSetting('LoadingStyle','Planet')
-~='None'self.Loading.MinTime=self.Loading.MinTime or 0.6 self.AutoReady=options.
-AutoReady~=false self.Tabs={}self.State='Loading'self.Maid=Maid.new()self.Ready=
-Signal.new()self.Opened=Signal.new()self.Closed=Signal.new()self.TabChanged=
-Signal.new()self.PageChanged=Signal.new()self._queue={}self._tasks={}self.
-_declaring=true self._lastDeclare=os.clock()self._navOrder=0 self._history={}
-self._isOpen=false self._commands={}self.Touch=touch self:_build()self.
-LoadingStyle=self.Loading.Style or Lib:GetSetting('LoadingStyle','Planet')self:
-SetScale(options.Scale or Lib:GetSetting('Scale','Auto'))self:
-_setupToggleButton()if self.Loading.Enabled and self.LoadingStyle=='Planet'then
-self.Loader=Loader.new(self,self.Loading)self.Holder.Visible=false else if self.
-Loading.Enabled then self.Skeleton=Skeleton.new(self)end self:Open()end self:
-SetNavigation(options.Navigation or Lib:GetSetting('Navigation','Sidebar'))self:
-_applyEconomy()local bg=Lib:GetSetting('Background')if options.Background or
-type(bg)=='table'then self:SetBackground(options.Background or bg)end self:
-_bindInput()self:_bindNavigation()task.defer(function()self:_pump()end)return
-self end local LOGO_URL=
+local Skeleton=__DARKLUA_BUNDLE_MODULES.w()local Motion=__DARKLUA_BUNDLE_MODULES
+.x()local Loader=__DARKLUA_BUNDLE_MODULES.y()local UIS=Env.Service(
+'UserInputService')local RunService=Env.Service('RunService')Env.Service(
+'Players')local Tab=PageModule.Tab local Window={}Window.__index=Window local
+DEFAULT_SIZE=Vector2.new(740,500)local MOBILE_SIZE=Vector2.new(600,380)function
+Window.new(Lib,options)options=options or{}local self=setmetatable({},Window)
+self.Library=Lib self.Options=options self.Title=Util.Opt(options,'Title','Name'
+)or'Proximity'self.Subtitle=Util.Opt(options,'Subtitle','SubTitle','SubName',
+'Description')or('v'..Lib.Version)self.Logo=Util.Opt(options,'Logo','Icon')self.
+Keybind=Keys.Normalize(Util.Opt(options,'Keybind','MenuKey','Key')or'RightShift'
+)self.SidebarWidth=options.SidebarWidth or 196 local touch=UIS.TouchEnabled and
+not UIS.KeyboardEnabled local size=options.Size if typeof(size)=='UDim2'then
+size=Vector2.new(size.X.Offset,size.Y.Offset)end self.BaseSize=size or(touch and
+MOBILE_SIZE or DEFAULT_SIZE)self.MinSize=options.MinSize or Vector2.new(560,360)
+self.Loading=type(options.Loading)=='table'and options.Loading or{Enabled=
+options.Loading~=false}self.Loading.Enabled=self.Loading.Enabled~=false and Lib:
+GetSetting('LoadingStyle','Planet')~='None'self.Loading.MinTime=self.Loading.
+MinTime or 0.6 self.AutoReady=options.AutoReady~=false self.Tabs={}self.State=
+'Loading'self.Maid=Maid.new()self.Ready=Signal.new()self.Opened=Signal.new()self
+.Closed=Signal.new()self.TabChanged=Signal.new()self.PageChanged=Signal.new()
+self._queue={}self._tasks={}self._declaring=true self._lastDeclare=os.clock()
+self._navOrder=0 self._history={}self._isOpen=false self._commands={}self.Touch=
+touch self:_build()self.LoadingStyle=self.Loading.Style or Lib:GetSetting(
+'LoadingStyle','Planet')self:SetScale(options.Scale or Lib:GetSetting('Scale',
+'Auto'))self:_setupToggleButton()if self.Loading.Enabled and self.LoadingStyle==
+'Planet'then self.Loader=Loader.new(self,self.Loading)self.Holder.Visible=false
+else if self.Loading.Enabled then self.Skeleton=Skeleton.new(self)end self:Open(
+)end self:SetNavigation(options.Navigation or Lib:GetSetting('Navigation',
+'Sidebar'))self:_applyEconomy()local bg=Lib:GetSetting('Background')if options.
+Background or type(bg)=='table'then self:SetBackground(options.Background or bg)
+end self:_bindInput()self:_bindNavigation()task.defer(function()self:_pump()end)
+return self end local LOGO_URL=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-256.png]]
 local PLANET_URL=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/assets/logo-512.png]]
@@ -4259,20 +4358,28 @@ Windows.AbsolutePosition end return nil end function Window:Open(options)if self
 self.Holder holder.Visible=true self._modal.Visible=self.Options.UnlockMouse~=
 false local canvas=self.Canvas canvas.GroupTransparency=1 local s=self:GetScale(
 )local rest=self._restPosition or holder.Position self._restPosition=rest local
-from=options and options.From or self:_anchorPoint()if from and Tween.Speed>0
-then holder.Position=UDim2.fromOffset(from.X,from.Y)self._uiScale.Scale=s*0.05
-Tween.Play(holder,{Position=rest},0.5,Enum.EasingStyle.Quint)Tween.Play(self.
-_uiScale,{Scale=s},0.55,Enum.EasingStyle.Back)else holder.Position=rest self.
-_uiScale.Scale=s*0.96 Tween.Play(self._uiScale,{Scale=s},0.3,Enum.EasingStyle.
-Back)end Tween.Play(canvas,{GroupTransparency=self.GlassTransparency or 0},0.3)
-Tween.Play(self._borderStroke,{Transparency=0},0.3)Tween.Play(self._rim,{
-Transparency=self.RimEnabled and 0 or 1},0.5)Tween.Play(self.Plate,{
-BackgroundTransparency=self.GlassTransparency or 0},0.3)self.Opened:Fire()return
-self end function Window:Close()if not self._isOpen then return self end self.
-_isOpen=false self._modal.Visible=false Shared.Overlay.CloseAll()Shared.Overlay.
-HideTooltip()local holder=self.Holder local s=self:GetScale()if not self.
-_animating then self._restPosition=holder.Position end local to=self:
-_anchorPoint()local time=Tween.Speed>0 and(to and 0.38 or 0.2)or 0 if to then
+style=self:GetAnimation()if Motion.Has(style)and not(options and options.From)
+then self._animating=true Motion.Play(self,style,true,rest,function()self.
+_animating=false end)self.Opened:Fire()return self end Motion.Stop(self)local
+from=options and options.From or self:_anchorPoint()if style=='None'then from=
+nil end if from and Tween.Speed>0 then holder.Position=UDim2.fromOffset(from.X,
+from.Y)self._uiScale.Scale=s*0.05 Tween.Play(holder,{Position=rest},0.5,Enum.
+EasingStyle.Quint)Tween.Play(self._uiScale,{Scale=s},0.55,Enum.EasingStyle.Back)
+else holder.Position=rest self._uiScale.Scale=s*0.96 Tween.Play(self._uiScale,{
+Scale=s},0.3,Enum.EasingStyle.Back)end Tween.Play(canvas,{GroupTransparency=self
+.GlassTransparency or 0},0.3)Tween.Play(self._borderStroke,{Transparency=0},0.3)
+Tween.Play(self._rim,{Transparency=self.RimEnabled and 0 or 1},0.5)Tween.Play(
+self.Plate,{BackgroundTransparency=self.GlassTransparency or 0},0.3)self.Opened:
+Fire()return self end function Window:Close()if not self._isOpen then return
+self end self._isOpen=false self._modal.Visible=false Shared.Overlay.CloseAll()
+Shared.Overlay.HideTooltip()local holder=self.Holder local s=self:GetScale()if
+not self._animating then self._restPosition=holder.Position end local style=self
+:GetAnimation()if Motion.Has(style)then self._animating=true Motion.Play(self,
+style,false,self._restPosition,function()self._animating=false if not self.
+_isOpen and holder.Parent then holder.Visible=false holder.Position=self.
+_restPosition or holder.Position end end)self:_afterClose()return self end
+Motion.Stop(self)local to=style~='None'and self:_anchorPoint()or nil local time=
+Tween.Speed>0 and(style=='None'and 0.01 or to and 0.38 or 0.2)or 0 if to then
 Tween.Play(holder,{Position=UDim2.fromOffset(to.X,to.Y)},time,Enum.EasingStyle.
 Quint,Enum.EasingDirection.In)Tween.Play(self._uiScale,{Scale=s*0.05},time,Enum.
 EasingStyle.Quint,Enum.EasingDirection.In)else Tween.Play(self._uiScale,{Scale=s
@@ -4281,26 +4388,31 @@ Play(self._borderStroke,{Transparency=1},time*0.8)Tween.Play(self._rim,{
 Transparency=1},time*0.6)Tween.Play(self.Plate,{BackgroundTransparency=1},time*
 0.9)self._animating=true task.delay(time+0.02,function()self._animating=false if
 not self._isOpen and holder.Parent then holder.Visible=false holder.Position=
-self._restPosition or holder.Position end end)self.Closed:Fire()local Lib=self.
-Library if Lib.Dirty and Lib.CurrentConfig and not self._dirtyNoticed then self.
-_dirtyNoticed=true Lib:Notify({Title=Locale.T('Unsaved'),Content=Locale.T(
-'UnsavedHint',Lib.CurrentConfig),Type='warning',Duration=6,Actions={{Text=Locale
-.T('Save'),Callback=function()Lib:QuickSave(self)end}}})elseif self.Options.
-HiddenHint~=false and not self._hintShown then self._hintShown=true Lib:Notify({
-Content=Locale.T('Hidden',Keys.Display(self.Keybind)),Duration=3})end return
-self end Window.Minimize=Window.Close Window.Hide=Window.Close Window.Show=
-Window.Open function Window:Toggle()if self._isOpen then return self:Close()end
-return self:Open()end function Window:SetOpen(open)return open and self:Open()or
-self:Close()end function Window:IsOpen()return self._isOpen end function Window:
-SetScale(value)if value=='Auto'or value==nil then self._autoScale=true local
-view=workspace.CurrentCamera.ViewportSize value=math.min(1,(view.X-40)/self.Size
-.X,(view.Y-40)/self.Size.Y)value=math.max(value,0.5)else self._autoScale=false
-value=math.clamp(tonumber(value)or 1,0.5,2)end self._scaleValue=value self.
-_uiScale.Scale=value Shared.Scale=value Shared.Overlay.SetScale(value)return
-self end function Window:GetScale()return self._scaleValue or 1 end function
-Window:SetSize(size,keepScale)if typeof(size)=='UDim2'then size=Vector2.new(size
-.X.Offset,size.Y.Offset)end self.Size=Vector2.new(math.max(size.X,self.MinSize.X
-),math.max(size.Y,self.MinSize.Y))self.Holder.Size=UDim2.fromOffset(self.Size.X,
+self._restPosition or holder.Position end end)self:_afterClose()return self end
+function Window:SetAnimation(style)self.Library:SetSetting('OpenAnimation',style
+)return self end function Window:GetAnimation()local style=self.Library:
+GetSetting('OpenAnimation',self.Options.Animation or'Planet')if style~='Planet'
+and style~='None'and not Motion.Has(style)then style='Planet'end return style
+end function Window:_afterClose()self.Closed:Fire()local Lib=self.Library if Lib
+.Dirty and Lib.CurrentConfig and not self._dirtyNoticed then self._dirtyNoticed=
+true Lib:Notify({Title=Locale.T('Unsaved'),Content=Locale.T('UnsavedHint',Lib.
+CurrentConfig),Type='warning',Duration=6,Actions={{Text=Locale.T('Save'),
+Callback=function()Lib:QuickSave(self)end}}})elseif self.Options.HiddenHint~=
+false and not self._hintShown then self._hintShown=true Lib:Notify({Content=
+Locale.T('Hidden',Keys.Display(self.Keybind)),Duration=3})end return self end
+Window.Minimize=Window.Close Window.Hide=Window.Close Window.Show=Window.Open
+function Window:Toggle()if self._isOpen then return self:Close()end return self:
+Open()end function Window:SetOpen(open)return open and self:Open()or self:Close(
+)end function Window:IsOpen()return self._isOpen end function Window:SetScale(
+value)if value=='Auto'or value==nil then self._autoScale=true local view=
+workspace.CurrentCamera.ViewportSize value=math.min(1,(view.X-40)/self.Size.X,(
+view.Y-40)/self.Size.Y)value=math.max(value,0.5)else self._autoScale=false value
+=math.clamp(tonumber(value)or 1,0.5,2)end self._scaleValue=value self._uiScale.
+Scale=value Shared.Scale=value Shared.Overlay.SetScale(value)return self end
+function Window:GetScale()return self._scaleValue or 1 end function Window:
+SetSize(size,keepScale)if typeof(size)=='UDim2'then size=Vector2.new(size.X.
+Offset,size.Y.Offset)end self.Size=Vector2.new(math.max(size.X,self.MinSize.X),
+math.max(size.Y,self.MinSize.Y))self.Holder.Size=UDim2.fromOffset(self.Size.X,
 self.Size.Y)if self._autoScale and not keepScale then self:SetScale('Auto')end
 return self end function Window:GetSize()return self.Size end function Window:
 SetPosition(pos)if typeof(pos)=='Vector2'then pos=UDim2.fromOffset(pos.X,pos.Y)
@@ -4337,9 +4449,9 @@ Destroy()if self._destroyed then return end self._destroyed=true if self.
 Skeleton then self.Skeleton:Destroy()end for _,tab in table.clone(self.Tabs)do
 for _,el in tab:GetElements()do pcall(el.Destroy,el)end end self.Maid:Clean()
 local list=self.Library.Windows local i=table.find(list,self)if i then table.
-remove(list,i)end end return Window end function __DARKLUA_BUNDLE_MODULES.y()
-local v=__DARKLUA_BUNDLE_MODULES.cache.y if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.y=v end return v.c end end do local function 
+remove(list,i)end end return Window end function __DARKLUA_BUNDLE_MODULES.z()
+local v=__DARKLUA_BUNDLE_MODULES.cache.z if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
@@ -4492,9 +4604,9 @@ format('%d/%d  \u{b7}  %s',i,#steps,step.Title or''),Content=step.Text or step.
 Content,Buttons={{Text=Locale.T('Cancel')},{Text=i==#steps and Locale.T('Ok')or
 '\u{2192}',Style='Primary'}}})if ring then ring:Destroy()end if index~=2 then
 break end end if options.Key then Lib:SetSetting('Tour.'..options.Key,true)end
-end)return self end end end function __DARKLUA_BUNDLE_MODULES.z()local v=
-__DARKLUA_BUNDLE_MODULES.cache.z if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.z=v end return v.c end end do local function 
+end)return self end end end function __DARKLUA_BUNDLE_MODULES.A()local v=
+__DARKLUA_BUNDLE_MODULES.cache.A if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Env=
 __DARKLUA_BUNDLE_MODULES.e()__DARKLUA_BUNDLE_MODULES.f()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Locale
@@ -4553,37 +4665,43 @@ Lib:SetSetting('Rim',v)window:SetRim(v)end})look:Toggle({Name=T('Planet'),Icon=
 v)Lib:SetSetting('Decoration',v)window:SetDecoration(v)end})look:Toggle({Name=T(
 'ReducedMotion'),Icon='motion',Default=Lib:GetSetting('ReducedMotion',false),
 Save=false,Callback=function(v)Lib:SetSetting('ReducedMotion',v)Tween.Speed=v
-and 0 or 1 end})look:Dropdown({Name=T('LoadingStyle'),Icon='loader',Values={
-'Planet','Skeleton','None'},Display=function(v)return T('Loading'..v)end,Default
-=Lib:GetSetting('LoadingStyle','Planet'),Description=T('LoadingStyleHint'),Save=
-false,Callback=function(v)if v then Lib:SetSetting('LoadingStyle',v)end end})
-look:Dropdown({Name=T('Navigation'),Icon='sidebar',Values={'Sidebar','Rail'},
-Display=function(v)return T(v)end,Default=window.Navigation,Save=false,Callback=
-function(v)if v then Lib:SetSetting('Navigation',v)window:SetNavigation(v)end
-end})look:Dropdown({Name=T('Font'),Icon='type',Values=Lib:GetFonts(),Default=Lib
-:GetSetting('Font','Builder Sans'),Search=true,Save=false,Callback=function(v)if
-v then task.spawn(function()if not Lib:SetFont(v)then Lib:Notify({Content=T(
-'FontFailed'),Type='warning',Duration=4})end end)end end})look:Dropdown({Name=T(
-'Density'),Icon='align-justify',Values={'Compact','Normal','Comfortable','Touch'
-},Display=function(v)return T(v)end,Default=Lib.DensityName,Save=false,Callback=
-function(v)if v then Lib:SetDensity(v)end end})look:Dropdown({Name=T(
-'ToggleStyle'),Icon='toggle-right',Values=Lib._classes.Toggle.Styles,Default=Lib
-.ToggleStyle,Save=false,Callback=function(v)if v then Lib:SetToggleStyle(v)end
-end})local bgSaved=Lib:GetSetting('Background')local bgInput=look:Input({Name=T(
-'BackgroundImage'),Icon='image',Placeholder='rbxassetid:// or https://',Default=
-type(bgSaved)=='table'and bgSaved.Image or'',Finished=true,Save=false})local
-bgDim=look:Slider({Name=T('BackgroundDim'),Icon='moon',Min=0,Max=90,Default=
-type(bgSaved)=='table'and math.floor((bgSaved.Dim or 0.55)*100)or 55,Suffix='%',
-Save=false})local function applyBg()local image=Util.Trim(bgInput:Get()or'')
-local spec=image~=''and{Image=image,Dim=bgDim:Get()/100}or nil Lib:SetSetting(
-'Background',spec or false)window:SetBackground(spec)end bgInput:AddCallback(
-applyBg)bgDim:AddCallback(Util.Debounce(0.3,applyBg))bgDim:DependsOn(bgInput,
-function(v)return v~=nil and v~=''end)local ui=tab:LeftSection({Name=T(
-'Interface'),Icon='layout-dashboard'})ui:Keybind({Name=T('MenuKey'),Icon=
-'keyboard',Default=window.Keybind,Modes={'Press'},Mode='Press',ShowInList=false,
-Save=false,Callback=function(key)Lib:SetSetting('MenuKey',key)window:SetKeybind(
-key)end})local langs,flags={},{en='\u{1f1ec}\u{1f1e7}',ru='\u{1f1f7}\u{1f1fa}',
-de='\u{1f1e9}\u{1f1ea}',es='\u{1f1ea}\u{1f1f8}',fr='\u{1f1eb}\u{1f1f7}',uk=
+and 0 or 1 end})look:Dropdown({Name=T('OpenAnimation'),Icon='sparkles',Values={
+'Planet','Rise','Zoom','Drop','Slide','Swing','Wipe','Unfold','Scan','Fade',
+'None'},Display=function(v)return T('Anim'..v)end,Default=window:GetAnimation(),
+Description=T('OpenAnimationHint'),Save=false,Callback=function(v)if v and v~=
+window:GetAnimation()then window:SetAnimation(v)task.spawn(function()window:
+Close()task.wait(0.5)window:Open()end)end end})look:Dropdown({Name=T(
+'LoadingStyle'),Icon='loader',Values={'Planet','Skeleton','None'},Display=
+function(v)return T('Loading'..v)end,Default=Lib:GetSetting('LoadingStyle',
+'Planet'),Description=T('LoadingStyleHint'),Save=false,Callback=function(v)if v
+then Lib:SetSetting('LoadingStyle',v)end end})look:Dropdown({Name=T('Navigation'
+),Icon='sidebar',Values={'Sidebar','Rail'},Display=function(v)return T(v)end,
+Default=window.Navigation,Save=false,Callback=function(v)if v then Lib:
+SetSetting('Navigation',v)window:SetNavigation(v)end end})look:Dropdown({Name=T(
+'Font'),Icon='type',Values=Lib:GetFonts(),Default=Lib:GetSetting('Font',
+'Builder Sans'),Search=true,Save=false,Callback=function(v)if v then task.spawn(
+function()if not Lib:SetFont(v)then Lib:Notify({Content=T('FontFailed'),Type=
+'warning',Duration=4})end end)end end})look:Dropdown({Name=T('Density'),Icon=
+'align-justify',Values={'Compact','Normal','Comfortable','Touch'},Display=
+function(v)return T(v)end,Default=Lib.DensityName,Save=false,Callback=function(v
+)if v then Lib:SetDensity(v)end end})look:Dropdown({Name=T('ToggleStyle'),Icon=
+'toggle-right',Values=Lib._classes.Toggle.Styles,Default=Lib.ToggleStyle,Save=
+false,Callback=function(v)if v then Lib:SetToggleStyle(v)end end})local bgSaved=
+Lib:GetSetting('Background')local bgInput=look:Input({Name=T('BackgroundImage'),
+Icon='image',Placeholder='rbxassetid:// or https://',Default=type(bgSaved)==
+'table'and bgSaved.Image or'',Finished=true,Save=false})local bgDim=look:Slider(
+{Name=T('BackgroundDim'),Icon='moon',Min=0,Max=90,Default=type(bgSaved)=='table'
+and math.floor((bgSaved.Dim or 0.55)*100)or 55,Suffix='%',Save=false})local 
+function applyBg()local image=Util.Trim(bgInput:Get()or'')local spec=image~=''
+and{Image=image,Dim=bgDim:Get()/100}or nil Lib:SetSetting('Background',spec or
+false)window:SetBackground(spec)end bgInput:AddCallback(applyBg)bgDim:
+AddCallback(Util.Debounce(0.3,applyBg))bgDim:DependsOn(bgInput,function(v)return
+v~=nil and v~=''end)local ui=tab:LeftSection({Name=T('Interface'),Icon=
+'layout-dashboard'})ui:Keybind({Name=T('MenuKey'),Icon='keyboard',Default=window
+.Keybind,Modes={'Press'},Mode='Press',ShowInList=false,Save=false,Callback=
+function(key)Lib:SetSetting('MenuKey',key)window:SetKeybind(key)end})local langs
+,flags={},{en='\u{1f1ec}\u{1f1e7}',ru='\u{1f1f7}\u{1f1fa}',de=
+'\u{1f1e9}\u{1f1ea}',es='\u{1f1ea}\u{1f1f8}',fr='\u{1f1eb}\u{1f1f7}',uk=
 '\u{1f1fa}\u{1f1e6}',pt='\u{1f1e7}\u{1f1f7}',tr='\u{1f1f9}\u{1f1f7}'}local
 codeByName={}for _,code in Locale.List()do local name=Locale.Names[code]or code
 codeByName[name]=code table.insert(langs,name)end local prefixes={}for name,code
@@ -4691,9 +4809,9 @@ Get()or Lib.CurrentConfig)or nil)end})section:Toggle({Name=T('AutoSave'),Icon=
 'save',Default=Lib:GetAutoSave()~=nil,Save=false,Callback=function(v)Lib:
 SetAutoSave(v and(list:Get()or Lib.CurrentConfig)or nil)end})section:Label({Text
 =T('Folder')..': '..Lib.Folder..'/configs',Color='TextMute',Icon='folder'})
-return tab end end end function __DARKLUA_BUNDLE_MODULES.A()local v=
-__DARKLUA_BUNDLE_MODULES.cache.A if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end do local function 
+return tab end end end function __DARKLUA_BUNDLE_MODULES.B()local v=
+__DARKLUA_BUNDLE_MODULES.cache.B if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.B=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=
 __DARKLUA_BUNDLE_MODULES.f()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
@@ -4911,9 +5029,9 @@ frame,'Keybinds',{AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,12,0.5,0)}
 )local widget={Frame=frame}function widget:SetVisible(v)Lib:SetSetting(
 'KeybindList',v)rebuild()return self end function widget:ShowInactive(v)showAll=
 v rebuild()return self end widget.Refresh=rebuild rebuild()Lib.KeybindListWidget
-=widget return widget end end end function __DARKLUA_BUNDLE_MODULES.B()local v=
-__DARKLUA_BUNDLE_MODULES.cache.B if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.B=v end return v.c end end do local function 
+=widget return widget end end end function __DARKLUA_BUNDLE_MODULES.C()local v=
+__DARKLUA_BUNDLE_MODULES.cache.C if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.C=v end return v.c end end do local function 
 __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
 __DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
@@ -5099,9 +5217,9 @@ Root:GetDescendants(),'memory    '..math.floor(gcinfo()/1024*10)/10 ..' MB',
 insert(lines,string.format('  %-12s %3d el  %4.0f ms',string.sub(tab.Name,1,12),
 tab._total,(tab._buildTime or 0)*1000))end end text.Text=table.concat(lines,'\n'
 )task.wait(0.5)end end)Lib._debugPanel={Destroy=function()alive=false frame:
-Destroy()end}return self end end end function __DARKLUA_BUNDLE_MODULES.C()local
-v=__DARKLUA_BUNDLE_MODULES.cache.C if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.C=v end return v.c end end do local function 
+Destroy()end}return self end end end function __DARKLUA_BUNDLE_MODULES.D()local
+v=__DARKLUA_BUNDLE_MODULES.cache.D if not v then v={c=__modImpl()}
+__DARKLUA_BUNDLE_MODULES.cache.D=v end return v.c end end do local function 
 __modImpl()local HttpService=game:GetService('HttpService')local Util=
 __DARKLUA_BUNDLE_MODULES.a()local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=
 __DARKLUA_BUNDLE_MODULES.e()local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=
@@ -5198,8 +5316,8 @@ then submit()end end)if getBtn then getBtn.Activated:Connect(function()local
 copied=Env.Clipboard(options.GetKey)status.Visible=true Theme.Paint(status,{
 TextColor3='TextDim'})status.Text=copied and Locale.T('LinkCopied')or options.
 GetKey end)end return coroutine.yield()end end end function
-__DARKLUA_BUNDLE_MODULES.D()local v=__DARKLUA_BUNDLE_MODULES.cache.D if not v
-then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.D=v end return v.c end end
+__DARKLUA_BUNDLE_MODULES.E()local v=__DARKLUA_BUNDLE_MODULES.cache.E if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.E=v end return v.c end end
 end local Util=__DARKLUA_BUNDLE_MODULES.a()local Signal=__DARKLUA_BUNDLE_MODULES
 .b()local Maid=__DARKLUA_BUNDLE_MODULES.c()local Tween=__DARKLUA_BUNDLE_MODULES.
 d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Keys=__DARKLUA_BUNDLE_MODULES.f()
@@ -5232,9 +5350,9 @@ __DARKLUA_BUNDLE_MODULES.r(),__DARKLUA_BUNDLE_MODULES.s(),
 __DARKLUA_BUNDLE_MODULES.t()}do for name,class in module do Library._classes[
 name]=class end end local Section=__DARKLUA_BUNDLE_MODULES.u()Library._classes.
 Section=Section Library.Base=__DARKLUA_BUNDLE_MODULES.n()local Window=
-__DARKLUA_BUNDLE_MODULES.y()__DARKLUA_BUNDLE_MODULES.z()(Window)
-__DARKLUA_BUNDLE_MODULES.A()(Window)__DARKLUA_BUNDLE_MODULES.B()(Library)
-__DARKLUA_BUNDLE_MODULES.C()(Library)__DARKLUA_BUNDLE_MODULES.D()(Library)
+__DARKLUA_BUNDLE_MODULES.z()__DARKLUA_BUNDLE_MODULES.A()(Window)
+__DARKLUA_BUNDLE_MODULES.B()(Window)__DARKLUA_BUNDLE_MODULES.C()(Library)
+__DARKLUA_BUNDLE_MODULES.D()(Library)__DARKLUA_BUNDLE_MODULES.E()(Library)
 Library._drawLogo=Window._drawLogo function Library:_setDirty(value)if self.
 Dirty~=value then self.Dirty=value self.DirtyChanged:Fire(value)end end function
 Library:_onElementChanged(element,new,old)if element.Flag then self.FlagChanged:

@@ -210,6 +210,28 @@ return function(Window)
 		})
 
 		look:Dropdown({
+			Name = T("OpenAnimation"),
+			Icon = "move",
+			Values = { "Planet", "Rise", "Zoom", "Drop", "Slide", "Swing", "Wipe", "Unfold", "Scan", "Fade", "None" },
+			Display = function(v)
+				return T("Anim" .. v)
+			end,
+			Default = window:GetAnimation(),
+			Description = T("OpenAnimationHint"),
+			Save = false,
+			Callback = function(v)
+				if v and v ~= window:GetAnimation() then
+					window:SetAnimation(v)
+					-- show it right away: hide and bring the menu back
+					task.spawn(function()
+						window:Close()
+						task.wait(0.5)
+						window:Open()
+					end)
+				end
+			end,
+		})
+		look:Dropdown({
 			Name = T("LoadingStyle"),
 			Icon = "loader",
 			Values = { "Planet", "Skeleton", "None" },

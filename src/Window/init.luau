@@ -24,6 +24,7 @@ local Locale = require("../Locale")
 local Shared = require("../Shared")
 local PageModule = require("./Page")
 local Skeleton = require("./Skeleton")
+local Motion = require("./Motion")
 local Loader = require("../Widgets/Loader")
 
 local UIS = Env.Service("UserInputService")
@@ -1663,7 +1664,21 @@ function Window:Open(options)
 	local s = self:GetScale()
 	local rest = self._restPosition or holder.Position
 	self._restPosition = rest
+	local style = self:GetAnimation()
+	-- the loader burst always grows the window out of the planet
+	if Motion.Has(style) and not (options and options.From) then
+		self._animating = true
+		Motion.Play(self, style, true, rest, function()
+			self._animating = false
+		end)
+		self.Opened:Fire()
+		return self
+	end
+	Motion.Stop(self)
 	local from = options and options.From or self:_anchorPoint()
+	if style == "None" then
+		from = nil
+	end
 	if from and Tween.Speed > 0 then
 		holder.Position = UDim2.fromOffset(from.X, from.Y)
 		self._uiScale.Scale = s * 0.05
@@ -1696,8 +1711,22 @@ function Window:Close()
 	if not self._animating then
 		self._restPosition = holder.Position
 	end
-	local to = self:_anchorPoint()
-	local time = Tween.Speed > 0 and (to and 0.38 or 0.2) or 0
+	local style = self:GetAnimation()
+	if Motion.Has(style) then
+		self._animating = true
+		Motion.Play(self, style, false, self._restPosition, function()
+			self._animating = false
+			if not self._isOpen and holder.Parent then
+				holder.Visible = false
+				holder.Position = self._restPosition or holder.Position
+			end
+		end)
+		self:_afterClose()
+		return self
+	end
+	Motion.Stop(self)
+	local to = style ~= "None" and self:_anchorPoint() or nil
+	local time = Tween.Speed > 0 and (style == "None" and 0.01 or to and 0.38 or 0.2) or 0
 	if to then
 		Tween.Play(holder, { Position = UDim2.fromOffset(to.X, to.Y) }, time, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 		Tween.Play(self._uiScale, { Scale = s * 0.05 }, time, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
@@ -1716,6 +1745,25 @@ function Window:Close()
 			holder.Position = self._restPosition or holder.Position
 		end
 	end)
+	self:_afterClose()
+	return self
+end
+
+-- Window:SetAnimation("Swing") - how the window appears and hides (Motion.Styles)
+function Window:SetAnimation(style)
+	self.Library:SetSetting("OpenAnimation", style)
+	return self
+end
+
+function Window:GetAnimation()
+	local style = self.Library:GetSetting("OpenAnimation", self.Options.Animation or "Planet")
+	if style ~= "Planet" and style ~= "None" and not Motion.Has(style) then
+		style = "Planet"
+	end
+	return style
+end
+
+function Window:_afterClose()
 	self.Closed:Fire()
 	local Lib = self.Library
 	if Lib.Dirty and Lib.CurrentConfig and not self._dirtyNoticed then
