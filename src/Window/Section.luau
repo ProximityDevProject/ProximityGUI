@@ -768,6 +768,7 @@ local constructors = {
 	Gallery = "Gallery",
 	Cards = "Gallery",
 	Skins = "Gallery",
+	Canvas = "Canvas",
 }
 
 for method, className in constructors do

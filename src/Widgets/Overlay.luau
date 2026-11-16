@@ -456,7 +456,7 @@ function Overlay.Hover(gui: GuiObject, getText: () -> string?)
 	gui.MouseEnter:Connect(function()
 		token += 1
 		local mine = token
-		task.delay(0.45, function()
+		task.delay(Overlay.HoverDelay or 0.45, function()
 			if mine == token and Overlay.Root then
 				local text = getText()
 				if text and text ~= "" then

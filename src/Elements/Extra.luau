@@ -494,4 +494,31 @@ function Gallery:Destroy()
 	Base.Destroy(self)
 end
 
+-- ═══ Canvas ════════════════════════════════════════════════════════════
+-- Section:Canvas({ Height = 160, Build = function(frame) ... end })
+-- A blank row of a fixed height; Build runs whenever the row is built.
+local Canvas = Base.extend("Canvas")
+classes.Canvas = Canvas
+function Canvas.new(section, options)
+	local self = Base.new(Canvas, section, options)
+	self.Height = options.Height or 120
+	self.Builder = options.Build
+	return self:_register()
+end
+function Canvas:_build(parent)
+	local frame = Util.New("Frame", { Name = "Canvas_" .. self.Name, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, self.Height), Parent = parent })
+	self.Frame = frame
+	if self.Builder then
+		Util.SafeCall(self.Builder, frame)
+	end
+end
+function Canvas:_applyState()
+	if self.Frame then
+		self.Frame.Visible = self.Visible
+	end
+end
+function Canvas:_contextItems()
+	return {}
+end
+
 return classes

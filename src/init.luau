@@ -1018,6 +1018,7 @@ function Library:T(key, ...)
 end
 
 require("./Lifecycle")(Library)
+require("./Widgets/Tools")(Library)
 require("./Widgets/Screen")(Library)
 
 return Library

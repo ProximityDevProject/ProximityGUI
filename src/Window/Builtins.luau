@@ -270,6 +270,30 @@ return function(Window)
 				Lib:SetSetting("ClickVolume", v)
 			end,
 		})
+		look:Dropdown({
+			Name = T("ToggleSound"),
+			Icon = "volume",
+			Values = (function()
+				local list = { "None" }
+				for _, n in Lib.Media.Lists.hitsounds do
+					table.insert(list, n)
+				end
+				return list
+			end)(),
+			Display = function(v)
+				return v == "None" and T("Off") or Lib.Media.Pretty(v)
+			end,
+			Default = Lib:GetSetting("ToggleSound", "None"),
+			Save = false,
+			Callback = function(v)
+				if v then
+					Lib:SetSetting("ToggleSound", v)
+					if v ~= "None" then
+						Lib.Media:Play("hitsounds", v, { Volume = (Lib:GetSetting("ClickVolume", 50) or 50) / 100 })
+					end
+				end
+			end,
+		})
 		look:Toggle({
 			Name = T("NotifySound"),
 			Icon = "bell",
@@ -693,6 +717,25 @@ return function(Window)
 		})
 
 		local widgets = tab:RightSection({ Name = T("Widgets"), Icon = "layout-grid" })
+		local function widgetToggle(name, icon, open, field)
+			widgets:Toggle({ Name = T(name), Icon = icon, Default = false, Save = false, Callback = function(on)
+				local w = Lib[field]
+				if on and not w then
+					open(Lib)
+				elseif w then
+					w:SetVisible(on)
+				end
+			end })
+		end
+		widgetToggle("SessionData", "clock", Lib.SessionData, "_sessionWidget")
+		widgetToggle("Events", "activity", Lib.EventFeed, "_eventWidget")
+		widgetToggle("ChatLog", "message", Lib.ChatLog, "_chatWidget")
+		widgetToggle("FriendsHere", "users", Lib.FriendsHere, "_friendsWidget")
+		widgetToggle("LookingAtMe", "eye", Lib.LookingAtMe, "_lookWidget")
+		widgetToggle("Inventory", "inventory", Lib.InventoryViewer, "_invWidget")
+		widgets:Toggle({ Name = T("Hints"), Icon = "info", Description = T("HintsHint"), Default = Lib:GetSetting("Hints", false), Save = false, Callback = function(on)
+			Lib:SetHints(on)
+		end })
 		local function widgetToggle(name, icon, key, make)
 			widgets:Toggle({
 				Name = T(name),

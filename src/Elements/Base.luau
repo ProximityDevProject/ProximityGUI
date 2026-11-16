@@ -154,6 +154,15 @@ function Base:_userSet(value: any)
 	if not Util.Equal(old, self.Value) then
 		self.Library:_pushHistory(self, old, Util.DeepCopy(self.Value))
 		self.Library:_click()
+		-- a toggle can play a hit sound when it turns on (option Sound, or the Toggle sound setting)
+		if self.Type == "Toggle" and self.Value == true then
+			local sound = (self.Opts and self.Opts.Sound) or self.Library:GetSetting("ToggleSound", "None")
+			if sound and sound ~= "None" and self.Library.Media then
+				task.spawn(function()
+					self.Library.Media:Play("hitsounds", sound, { Volume = (self.Library:GetSetting("ClickVolume", 50) or 50) / 100 })
+				end)
+			end
+		end
 	end
 end
 

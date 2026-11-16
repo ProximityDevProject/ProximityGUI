@@ -8,7 +8,8 @@
 	  Proximity:Window({ KeySystem = {
 	      Keys = { "alpha-123", "beta-456" },          -- accepted keys, or:
 	      Check = function(key) return key == "x" end, -- your own check (can yield, e.g. HttpGet)
-	      Url = "https://my.site/check?key=%s",       -- or: GET this, "true"/"valid"/"ok" in the body = valid
+	      Url = "https://my.site/check?key={key}&hwid={hwid}", -- or: GET this, "true"/"valid"/"ok" in the body = valid
+	                                                  -- {hwid} ties a key to one device (old "%s" still works)
 	      GetKey = "https://my.site/getkey",          -- copied by the "Get key" button
 	      Discord = "https://discord.gg/...",         -- optional second link
 	      Attempts = 5, Cooldown = 30,                -- lock after 5 misses for 30 s
@@ -49,7 +50,16 @@ return function(Lib)
 			end
 		end
 		if options.Url then
-			local body = Env.HttpGet(string.format(options.Url, HttpService:UrlEncode(key)))
+			-- {key} and {hwid} placeholders (or the old %s for the key); the hwid
+			-- lets your server tie a key to one device
+			local url = options.Url
+			local hwid = HttpService:UrlEncode(Env.Hwid())
+			if string.find(url, "{key}", 1, true) or string.find(url, "{hwid}", 1, true) then
+				url = string.gsub(string.gsub(url, "{key}", HttpService:UrlEncode(key)), "{hwid}", hwid)
+			else
+				url = string.format(url, HttpService:UrlEncode(key))
+			end
+			local body = Env.HttpGet(url)
 			if body then
 				local b = string.lower(Util.Trim(body))
 				if b == "true" or b == "valid" or b == "ok" or b == "1" or string.find(b, '"valid"%s*:%s*true') then
