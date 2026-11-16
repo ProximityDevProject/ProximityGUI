@@ -19,7 +19,7 @@
   <canvas id="planet" aria-hidden="true"></canvas>
   <svg class="orbit-badge" viewBox="0 0 120 120" aria-hidden="true"><defs><path id="c" d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs><text font-family="Manrope" font-size="10.5" letter-spacing="3.2" fill="#fff"><textPath href="#c">PROXIMITY · UI LIBRARY · FOR ROBLOX ·</textPath></text><circle cx="60" cy="60" r="18" fill="none" stroke="#fff" stroke-opacity=".35"/><circle cx="68" cy="52" r="2.2" fill="#fff"/></svg>
   <div class="in">
-    <span class="pill"><i></i>v1.2.1 · tested on Potassium</span>
+    <span class="pill"><i></i>v1.2.2 · tested on Potassium</span>
     <h1>Menus that <em>orbit</em> your script</h1>
     <p>Proximity is a black and white interface library for Roblox. One line to load it, a planet that builds your menu while the script loads, and everything a hub needs out of the box.</p>
     <div class="cta">
@@ -100,9 +100,8 @@ Window:SettingsTab()</code></pre>
 <script src="assets/app.js"></script>
 <script src="assets/planet.js"></script>
 <script>
-  // points assemble the planet, then condense into the real 3D render
-  const solid = proximityPlanet3D(document.getElementById("planet3d"), { cy: 0.44, radius: 0.27, delay: 1.3 });
-  proximityPlanetPoints(document.getElementById("planet"), { cy: 0.44, radius: 0.27, solid, handoff: 1.3, morph: 1.0 });
+  // points fly in, land on the turning planet and fuse into its surface
+  proximityPlanetScene(document.getElementById("planet3d"), document.getElementById("planet"), { cy: 0.44, radius: 0.27 });
 </script>
 </body>
 </html>

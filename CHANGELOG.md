@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2 - built from points
+
+- The loader planet is really assembled now: ~1500 points land on it while it turns, and a build front lays down ~500 surface tiles and the ring segment by segment exactly where they land - the points flash and fuse as it passes
+- Planet and ring turn together around the planet's own tilted axis, in place; banded surface with storms so the turning is easy to see
+- The burst waits for the planet to finish forming (sped up if the menu is already ready)
+- Website: one shared scene - 3200 points and 2400 ring points land on the spinning WebGL planet, the far side shows through until the front closes, the surface grows under them
+- Website: the hero planet is no longer cut off on the left on phones, and the left half of the ring no longer fades away after it forms
+
 ## 1.2.1 - a real planet
 
 - The planet loader is now a drawn 3D model: points gather into a dark sphere with a lit crescent edge and a tilted glowing ring, then it spins while the menu builds
