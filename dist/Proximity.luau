@@ -803,11 +803,12 @@ Replaced='Replaced the old copy v%s with v%s',OpenAnimation='Menu animation',
 OpenAnimationHint='How the menu appears and hides',AnimPlanet=
 'Planet - out of the button',AnimRise='Rise',AnimZoom='Zoom',AnimDrop='Drop',
 AnimSlide='Slide',AnimSwing='Swing',AnimWipe='Wipe',AnimUnfold='Unfold',AnimScan
-='Scan',AnimFade='Fade',AnimNone='None',LoadingStyle='Loading screen',
-LoadingStyleHint='Applies the next time the script starts',LoadingPlanet=
-'Planet',LoadingSkeleton='Menu skeleton',LoadingOrbit='Orbit',LoadingEclipse=
-'Eclipse',LoadingConstellation='Constellation',LoadingTerminal='Terminal',
-LoadingNone='None'},ru={Search='\u{41f}\u{43e}\u{438}\u{441}\u{43a}',SearchHint=
+='Scan',AnimGlitch='Glitch',AnimFade='Fade',AnimNone='None',LoadingStyle=
+'Loading screen',LoadingStyleHint='Applies the next time the script starts',
+LoadingPlanet='Planet',LoadingSkeleton='Menu skeleton',LoadingOrbit='Orbit',
+LoadingEclipse='Eclipse',LoadingConstellation='Constellation',LoadingTerminal=
+'Terminal',LoadingNone='None'},ru={Search='\u{41f}\u{43e}\u{438}\u{441}\u{43a}',
+SearchHint=
 '\u{41d}\u{430}\u{439}\u{434}\u{438} \u{444}\u{443}\u{43d}\u{43a}\u{446}\u{438}\u{44e}, \u{432}\u{43a}\u{43b}\u{430}\u{434}\u{43a}\u{443} \u{438}\u{43b}\u{438} \u{434}\u{435}\u{439}\u{441}\u{442}\u{432}\u{438}\u{435}'
 ,NoResults=
 '\u{41d}\u{438}\u{447}\u{435}\u{433}\u{43e} \u{43d}\u{435} \u{43d}\u{430}\u{448}\u{43b}\u{43e}\u{441}\u{44c}'
@@ -1027,7 +1028,8 @@ CodeCopied=
 '\u{412}\u{437}\u{43c}\u{430}\u{445}',AnimWipe=
 '\u{428}\u{442}\u{43e}\u{440}\u{43a}\u{430}',AnimUnfold=
 '\u{420}\u{430}\u{441}\u{43a}\u{440}\u{44b}\u{442}\u{438}\u{435}',AnimScan=
-'\u{421}\u{43a}\u{430}\u{43d}',AnimFade=
+'\u{421}\u{43a}\u{430}\u{43d}',AnimGlitch='\u{413}\u{43b}\u{438}\u{442}\u{447}',
+AnimFade=
 '\u{420}\u{430}\u{441}\u{442}\u{432}\u{43e}\u{440}\u{435}\u{43d}\u{438}\u{435}',
 AnimNone=
 '\u{411}\u{435}\u{437} \u{430}\u{43d}\u{438}\u{43c}\u{430}\u{446}\u{438}\u{438}'
@@ -3356,90 +3358,193 @@ then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.w=v end return v.c end end
 do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
 __DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local
 RunService=Env.Service('RunService')local Motion={}Motion.Styles={'Planet',
-'Rise','Zoom','Drop','Slide','Swing','Wipe','Unfold','Scan','Fade','None'}local 
-function clamp01(x)return math.clamp(x,0,1)end local Ease={}function Ease.Quint(
-x)return 1-(1-x)^5 end function Ease.Cubic(x)return 1-(1-x)^3 end function Ease.
-Back(x)local c1,c3=1.4,2.4 return 1+c3*(x-1)^3+c1*(x-1)^2 end function Ease.Sine
-(x)return-(math.cos(math.pi*x)-1)/2 end function Ease.QuintIn(x)return x^4 end
-local function sequence(points)table.sort(points,function(a,b)return a[1]<b[1]
-end)local out,last={},-1 for _,pt in points do local t=math.clamp(pt[1],0,1)if t
-<=last then t=last+0.0005 end if t<=1 then table.insert(out,
-NumberSequenceKeypoint.new(t,math.clamp(pt[2],0,1)))last=t end end if out[1].
-Time>0 then table.insert(out,1,NumberSequenceKeypoint.new(0,out[1].Value))end if
-out[#out].Time<1 then table.insert(out,NumberSequenceKeypoint.new(1,out[#out].
-Value))end return NumberSequence.new(out)end local S={}S.Rise={T=0.42,Ease=
-'Quint',Apply=function(c,p)c.Offset=Vector2.new(0,(1-p)*26)c.Scale=0.985+0.015*p
-c.Alpha=p end}S.Zoom={T=0.5,Ease='Back',Apply=function(c,p)c.Scale=0.82+0.18*p c
-.Alpha=clamp01(p*1.7)end}S.Drop={T=0.55,Ease='Back',Apply=function(c,p)c.Offset=
-Vector2.new(0,-(1-p)*80)c.Scale=0.97+0.03*p c.Alpha=clamp01(p*1.5)end}S.Slide={T
-=0.48,Ease='Quint',Apply=function(c,p)c.Offset=Vector2.new(-(1-p)*140,0)c.Alpha=
-clamp01(p*1.3)end}S.Swing={T=0.6,Ease='Back',Apply=function(c,p)c.Rotation=-(1-p
-)*9 c.Offset=Vector2.new(-(1-p)*30,(1-p)*40)c.Scale=0.9+0.1*p c.Alpha=clamp01(p*
-1.6)c.Frame=clamp01((p-0.85)/0.15)end}S.Wipe={T=0.6,Ease='Sine',Apply=function(c
-,p)local e=p*1.36-0.18 c.Mask={Rotation=20,Seq=sequence({{0,0},{e-0.12,0},{e+
-0.12,1},{1,1}})}c.Alpha=clamp01(p*3)c.Frame=clamp01((p-0.7)/0.3)c.Offset=Vector2
-.new((1-p)*-10,0)end}S.Unfold={T=0.5,Ease='Quint',Apply=function(c,p)local half,
-soft=p*0.56,0.05 c.Mask={Rotation=90,Seq=sequence({{0,1},{0.5-half-soft,1},{0.5-
-half,0},{0.5+half,0},{0.5+half+soft,1},{1,1}})}c.Scale=0.97+0.03*p c.Alpha=
-clamp01(p*4)c.Frame=clamp01((p-0.75)/0.25)end}S.Scan={T=0.62,Ease='Cubic',Apply=
-function(c,p)local e=p*1.12-0.06 c.Mask={Rotation=90,Seq=sequence({{0,0},{e,0},{
-e+0.035,1},{1,1}})}c.Line={Y=e,Alpha=math.sin(math.clamp(p,0,1)*math.pi)}c.Alpha
-=clamp01(p*4)c.Frame=clamp01((p-0.8)/0.2)end}S.Fade={T=0.32,Ease='Sine',Apply=
-function(c,p)c.Scale=0.995+0.005*p c.Alpha=p end}function Motion.Has(style)
-return S[style]~=nil end function Motion.Play(window,style,opening,rest,done)
-local def=S[style]window._motionToken=(window._motionToken or 0)+1 local token=
-window._motionToken local holder,canvas=window.Holder,window.Canvas local scale=
-window:GetScale()local glass=window.GlassTransparency or 0 local from=window.
-_motionP or(opening and 0 or 1)local to=opening and 1 or 0 local duration=def.T*
-(opening and 1 or 0.7)*math.abs(to-from)*Tween.Speed local mask=canvas:
-FindFirstChild('ProximityMotionMask')local line=holder:FindFirstChild(
-'ProximityMotionLine')local function cleanup()if mask then mask:Destroy()mask=
-nil end if line then line:Destroy()line=nil end canvas.Rotation=0 end local 
-function apply(p)window._motionP=p local c={Offset=Vector2.zero,Scale=1,Rotation
-=0,Alpha=1,Frame=nil,Mask=nil,Line=nil}def.Apply(c,p)local frameA=c.Frame or c.
-Alpha holder.Position=rest+UDim2.fromOffset(c.Offset.X,c.Offset.Y)window.
-_uiScale.Scale=scale*c.Scale canvas.Rotation=c.Rotation canvas.GroupTransparency
-=glass+(1-glass)*(1-c.Alpha)window.Plate.BackgroundTransparency=c.Mask and 1 or(
-glass+(1-glass)*(1-c.Alpha))window._borderStroke.Transparency=1-frameA window.
-_rim.Transparency=window.RimEnabled and(1-frameA)or 1 if c.Mask then if not mask
-then mask=Util.New('UIGradient',{Name='ProximityMotionMask',Parent=canvas})end
-mask.Rotation=c.Mask.Rotation mask.Transparency=c.Mask.Seq elseif mask then mask
-:Destroy()mask=nil end if c.Line then if not line then line=Util.New('Frame',{
-Name='ProximityMotionLine',BorderSizePixel=0,BackgroundColor3=Color3.new(1,1,1),
-Size=UDim2.new(1,24,0,2),AnchorPoint=Vector2.new(0.5,0.5),ZIndex=20,Parent=
-holder})Util.Gradient(line,nil,NumberSequence.new({NumberSequenceKeypoint.new(0,
-1),NumberSequenceKeypoint.new(0.2,0.2),NumberSequenceKeypoint.new(0.8,0.2),
-NumberSequenceKeypoint.new(1,1)}))local glow=Util.New('Frame',{BorderSizePixel=0
-,BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0.85,Size=UDim2.new(1
-,0,0,10),AnchorPoint=Vector2.new(0,0.5),Position=UDim2.fromScale(0,0.5),ZIndex=
-19,Parent=line})Util.Gradient(glow,nil,NumberSequence.new({
-NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.5,0),
-NumberSequenceKeypoint.new(1,1)}),90)end line.Position=UDim2.new(0.5,0,math.
-clamp(c.Line.Y,0,1),0)line.BackgroundTransparency=1-c.Line.Alpha*0.9 elseif line
-then line:Destroy()line=nil end end local function settle()apply(1)cleanup()
-window.Plate.BackgroundTransparency=glass end if duration<=0 then apply(to)if
-opening then settle()end if done then done()end return end local ease=opening
-and Ease[def.Ease]or Ease.QuintIn local started=os.clock()local conn conn=
-RunService.RenderStepped:Connect(function()if window._motionToken~=token or not
-holder.Parent then conn:Disconnect()return end local x=clamp01((os.clock()-
-started)/duration)local k=ease(x)apply(from+(to-from)*k)if x>=1 then conn:
-Disconnect()if opening then settle()end if done then done()end end end)end
-function Motion.Stop(window)window._motionToken=(window._motionToken or 0)+1
-window._motionP=nil local canvas=window.Canvas local mask=canvas and canvas:
-FindFirstChild('ProximityMotionMask')if mask then mask:Destroy()end local line=
-window.Holder and window.Holder:FindFirstChild('ProximityMotionLine')if line
-then line:Destroy()end if canvas then canvas.Rotation=0 end end return Motion
-end function __DARKLUA_BUNDLE_MODULES.x()local v=__DARKLUA_BUNDLE_MODULES.cache.
-x if not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.x=v end return v
-.c end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
-local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()
-local Theme=__DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j(
-)local Shared=__DARKLUA_BUNDLE_MODULES.k()local RunService=Env.Service(
-'RunService')local UserInputService=Env.Service('UserInputService')local Loader=
-{}Loader.__index=Loader local PHONE=UserInputService.TouchEnabled and not
+'Rise','Zoom','Drop','Slide','Swing','Wipe','Unfold','Scan','Glitch','Fade',
+'None'}local WHITE=Color3.new(1,1,1)local function clamp01(x)return math.clamp(x
+,0,1)end local function sequence(points)table.sort(points,function(a,b)return a[
+1]<b[1]end)local out,last={},-1 for _,pt in points do local t=math.clamp(pt[1],0
+,1)if t<=last then t=last+0.0005 end if t<=1 and#out<18 then table.insert(out,
+NumberSequenceKeypoint.new(t,math.clamp(pt[2],0,1)))last=t end end if#out==0
+then return NumberSequence.new(1)end if out[1].Time>0 then table.insert(out,1,
+NumberSequenceKeypoint.new(0,out[1].Value))end if out[#out].Time<1 then table.
+insert(out,NumberSequenceKeypoint.new(1,out[#out].Value))end return
+NumberSequence.new(out)end local function band(e,width,peak)return sequence({{0,
+1},{e-width,1},{e,1-peak},{e+width*0.6,1},{1,1}})end local S={}S.Planet={Open={
+2.3,0.74},Close={3.4,1},Ripple=true,Map=function(c,p,ctx)local d=ctx.From if d
+then local qx,qy=clamp01(p)^0.8,clamp01(p)^1.15 c.Offset=Vector2.new(d.X*(1-qx),
+d.Y*(1-qy))c.Scale=0.04+0.96*p c.Rotation=(1-clamp01(p))*(d.X>=0 and 8 or-8)else
+c.Scale=0.6+0.4*p c.Offset=Vector2.new(0,(1-p)*16)end c.Alpha=clamp01(p*2.4)c.
+Exposure=clamp01(p*1.3)c.Frame=clamp01((p-0.5)/0.5)end}S.Rise={Open={2.1,0.86},
+Close={3.2,1},Map=function(c,p)c.Offset=Vector2.new(0,(1-p)*38)c.Scale=0.95+0.05
+*p c.Alpha=clamp01(p*1.5)c.Exposure=clamp01(p*1.2)c.ShadowK=clamp01(p)^2 end}S.
+Zoom={Open={2.7,0.58},Close={3.6,1},Map=function(c,p)c.Scale=0.8+0.2*p c.Alpha=
+clamp01(p*2.2)c.Exposure=clamp01(p*1.5)c.Offset=Vector2.new(0,(1-p)*10)end}S.
+Drop={Open={2,0.5},Close={3,1},Map=function(c,p)c.Offset=Vector2.new(0,-(1-p)*
+130)c.Rotation=(1-p)*-3.2 c.Scale=0.96+0.04*p c.Alpha=clamp01(p*2.6)c.Exposure=
+clamp01(p*1.4)end}S.Slide={Open={2.2,0.8},Close={3.2,1},Trail=true,Map=function(
+c,p,ctx)c.Offset=Vector2.new(ctx.Dir*(1-p)*240,0)c.Rotation=ctx.Dir*(1-p)*-1.6 c
+.Alpha=clamp01(p*1.9)c.Exposure=clamp01(p*1.3)end}S.Swing={Open={1.7,0.45},Close
+={3,1},Map=function(c,p,ctx)local theta=-(1-p)*17 local r=math.rad(theta)local v
+=ctx.Size/2 local rv=Vector2.new(v.X*math.cos(r)-v.Y*math.sin(r),v.X*math.sin(r)
++v.Y*math.cos(r))c.Rotation=theta c.Offset=rv-v+Vector2.new(0,(1-p)*18)c.Scale=
+0.96+0.04*p c.Alpha=clamp01(p*2.4)c.Exposure=clamp01(p*1.4)end}S.Wipe={Open={
+1.45,1},Close={2.3,1},Masked=true,Map=function(c,p)local e=p*1.42-0.21 c.Mask={
+Rotation=24,Seq=sequence({{0,0},{e-0.09,0},{e+0.09,1},{1,1}})}c.Fx={Rotation=24,
+Seq=band(e+0.05,0.1,0.55),Alpha=math.sin(clamp01(p)*math.pi)}c.Alpha=clamp01(p*4
+)c.Exposure=0.7+0.3*clamp01(p)c.Frame=clamp01((p-0.72)/0.28)c.Offset=Vector2.
+new((1-p)*-12,0)end}S.Unfold={Open={1.6,1},Close={2.5,1},Masked=true,Map=
+function(c,p)local half,soft=clamp01(p)*0.57,0.04 c.Mask={Rotation=90,Seq=
+sequence({{0,1},{0.5-half-soft,1},{0.5-half,0},{0.5+half,0},{0.5+half+soft,1},{1
+,1}})}local glow=1-clamp01((p-0.8)/0.2)c.Fx={Rotation=90,Seq=sequence({{0,1},{
+0.5-half-0.035,1},{0.5-half,0.35},{0.5-half+0.03,1},{0.5+half-0.03,1},{0.5+half,
+0.35},{0.5+half+0.035,1},{1,1}}),Alpha=glow*clamp01(p*6)}c.Scale=0.985+0.015*p c
+.Alpha=clamp01(p*5)c.Exposure=0.75+0.25*clamp01(p)c.Frame=clamp01((p-0.75)/0.25)
+end}S.Scan={Open={1.35,1},Close={2.2,1},Masked=true,Map=function(c,p)local e=p*
+1.16-0.08 c.Mask={Rotation=90,Seq=sequence({{0,0},{e,0},{e+0.03,1},{1,1}})}c.Fx=
+{Rotation=90,Seq=sequence({{0,1},{e-0.14,1},{e-0.005,0.72},{e+0.004,0.15},{e+
+0.02,1},{1,1}}),Alpha=math.sin(clamp01(p)*math.pi)^0.6}c.Alpha=clamp01(p*5)c.
+Exposure=0.8+0.2*clamp01(p)c.Frame=clamp01((p-0.82)/0.18)end}local SLICES=9
+local SLICE_AT={}do local rng=Random.new(31)for k=1,SLICES do SLICE_AT[k]=rng:
+NextNumber(0.02,0.9)end end S.Glitch={Open={1.5,1},Close={2.4,1},Masked=true,Map
+=function(c,p)local rng=Random.new(math.floor(os.clock()*22))local calm=clamp01(
+p)^2 local pts={}for k=1,SLICES do local on=(p*1.18-0.08)>SLICE_AT[k]if p<0.97
+and rng:NextNumber()<0.14*(1-calm)then on=not on end local v=on and 0 or 1 table
+.insert(pts,{(k-1)/SLICES,v})table.insert(pts,{k/SLICES-0.001,v})end c.Mask={
+Rotation=90,Seq=sequence(pts)}c.Offset=Vector2.new((rng:NextNumber()-0.5)*18*(1-
+calm),(rng:NextNumber()-0.5)*4*(1-calm))c.Alpha=clamp01(p*3)c.Exposure=0.65+0.35
+*clamp01(p)+(rng:NextNumber()<0.2 and 0.25*(1-calm)or 0)c.Fx={Rotation=0,Seq=
+NumberSequence.new(0.4),Alpha=(rng:NextNumber()<0.25 and 0.18 or 0.04)*(1-calm)}
+c.Frame=clamp01((p-0.85)/0.15)end}S.Fade={Open={1.8,1},Close={2.8,1},Map=
+function(c,p)c.Scale=1.018-0.018*p c.Alpha=clamp01(p)c.Exposure=clamp01(p)end}
+function Motion.Has(style)return S[style]~=nil end local function shadowOf(
+window)local plate=window.Plate local shadow=plate and(plate:
+FindFirstChildOfClass('UIShadow')or plate:FindFirstChild('Shadow'))if shadow and
+window._shadowBase==nil then local ok,value=pcall(function()return shadow:IsA(
+'ImageLabel')and shadow.ImageTransparency or shadow.Transparency end)window.
+_shadowBase=ok and value or 0.35 end return shadow end local function setShadow(
+window,k)local shadow=shadowOf(window)if shadow then local value=1-(1-(window.
+_shadowBase or 0.35))*clamp01(k)pcall(function()if shadow:IsA('ImageLabel')then
+shadow.ImageTransparency=value else shadow.Transparency=value end end)end end
+local function fxLayer(window)local fx=window.Holder:FindFirstChild(
+'ProximityMotionFx')if not fx then fx=Util.New('CanvasGroup',{Name=
+'ProximityMotionFx',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=8,
+GroupTransparency=1,Parent=window.Holder})Util.Corner(10,fx)Util.New('Frame',{
+BorderSizePixel=0,BackgroundColor3=WHITE,Size=UDim2.fromScale(1,1),Parent=fx})
+Util.New('UIGradient',{Name='Shape',Parent=fx})end return fx end local function 
+ripple(window,point,size,strong)local parent=window.Holder.Parent if not(parent
+and point)then return end local ring=Util.New('Frame',{AnchorPoint=Vector2.new(
+0.5,0.5),Position=UDim2.fromOffset(point.X,point.Y),Size=UDim2.fromOffset(8,8),
+BackgroundTransparency=1,ZIndex=50,Parent=parent})Util.Round(ring)local stroke=
+Util.Stroke(ring,WHITE,strong and 1.6 or 1.1,strong and 0.15 or 0.4)local dot=
+Util.New('Frame',{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,
+0.5),Size=UDim2.fromOffset(14,14),BackgroundColor3=WHITE,BackgroundTransparency=
+0.3,ZIndex=51,Parent=ring})Util.Round(dot)Tween.Play(ring,{Size=UDim2.
+fromOffset(size,size)},0.75,Enum.EasingStyle.Quint)Tween.Play(stroke,{
+Transparency=1,Thickness=0.4},0.75,Enum.EasingStyle.Sine)Tween.Play(dot,{
+BackgroundTransparency=1,Size=UDim2.fromOffset(2,2)},0.4)task.delay(0.8,function
+()ring:Destroy()end)end local function flourish(window)local fx=fxLayer(window)
+local shape=fx.Shape shape.Rotation=24 fx.GroupTransparency=0 local token=window
+._motionToken Tween.Value(0,1,0.95,function(k)if window._motionToken~=token or
+not fx.Parent then return end local e=-0.25+1.5*k shape.Transparency=sequence({{
+0,1},{e-0.2,1},{e,0.9},{e+0.06,0.93},{e+0.2,1},{1,1}})if k>=1 then fx:Destroy()
+end end,Enum.EasingStyle.Sine)local rim=window._rim if rim and window.RimEnabled
+then local base=window._rimThickness or rim.Thickness window._rimThickness=base
+Tween.Play(rim,{Thickness=base+1.3},0.18,Enum.EasingStyle.Quad)task.delay(0.18,
+function()Tween.Play(rim,{Thickness=base},0.5,Enum.EasingStyle.Sine)end)end end
+function Motion.Cascade(window)local page=window.CurrentPage if not(page and
+page.Frame)or Tween.Speed<=0 then return end page.Frame.Position=UDim2.
+fromOffset(0,12)Tween.Play(page.Frame,{Position=UDim2.fromOffset(0,0)},0.65,Enum
+.EasingStyle.Quint)for i,section in page.Sections or{}do local stroke=section.
+Stroke if stroke then stroke.Transparency=1 task.delay(0.04*i,function()Tween.
+Play(stroke,{Transparency=0},0.45)end)end end end local function pieces(window)
+local holder=window.Holder return holder:FindFirstChild('Border'),holder:
+FindFirstChild('Rim')end local function cleanup(window)local holder,canvas=
+window.Holder,window.Canvas for _,name in{'ProximityMotionMask'}do local m=
+canvas:FindFirstChild(name)if m then m:Destroy()end local pm=window.Plate:
+FindFirstChild(name)if pm then pm:Destroy()end end local fx=holder:
+FindFirstChild('ProximityMotionFx')if fx then fx:Destroy()end if window._ghosts
+then for _,g in window._ghosts do g.Frame:Destroy()end window._ghosts=nil end
+local border,rimFrame=pieces(window)for _,f in{canvas,window.Plate,border,
+rimFrame}do if f then f.Rotation=0 end end canvas.GroupColor3=WHITE end function
+Motion.Play(window,style,opening,rest,info,done)info=info or{}local holder,
+canvas,plate=window.Holder,window.Canvas,window.Plate local def=S[style]window.
+_motionToken=(window._motionToken or 0)+1 local token=window._motionToken local
+glass=window.GlassTransparency or 0 local scale=window:GetScale()local target=
+opening and 1 or 0 local function finalOpen()cleanup(window)holder.Position=rest
+window._uiScale.Scale=scale canvas.GroupTransparency=glass plate.
+BackgroundTransparency=glass window._borderStroke.Transparency=0 window._rim.
+Transparency=window.RimEnabled and 0 or 1 setShadow(window,1)end if not def or
+Tween.Speed<=0 then window._motion=nil if opening then finalOpen()else cleanup(
+window)end if done then done()end return end local parent=holder.Parent local
+area=parent and parent.AbsoluteSize or Vector2.new(1920,1080)local restPx=
+Vector2.new(rest.X.Scale*area.X+rest.X.Offset,rest.Y.Scale*area.Y+rest.Y.Offset)
+local ctx={Size=holder.AbsoluteSize.Magnitude>0 and(Vector2.new(holder.Size.X.
+Offset,holder.Size.Y.Offset)*scale)or Vector2.new(700,480),Dir=restPx.X<area.X/2
+and-1 or 1,From=info.From and(info.From-restPx)or nil}local state=window._motion
+if not state or state.Style~=style then state={P=opening and 0 or 1,V=0,Style=
+style}if window._motion and window._motion.Style~=style then state.P=window.
+_motion.P cleanup(window)end end window._motion=state local spring=opening and
+def.Open or def.Close local omega=spring[1]*math.pi*2 local zeta=spring[2]local
+border,rimFrame=pieces(window)local masked=def.Masked local mask,plateMask local
+history={}if opening and def.Ripple and state.P<0.3 then ripple(window,info.From
+or restPx,340,info.From~=nil)end if opening and state.P<0.2 then task.delay(
+masked and 0.25 or 0.08,function()if window._motionToken==token then Motion.
+Cascade(window)end end)end local function apply(p)local c={Offset=Vector2.zero,
+Scale=1,Rotation=0,Alpha=1,Exposure=1}def.Map(c,p,ctx)local alpha=clamp01(c.
+Alpha)local frameA=clamp01(c.Frame or alpha)holder.Position=rest+UDim2.
+fromOffset(c.Offset.X,c.Offset.Y)window._uiScale.Scale=scale*math.max(c.Scale,
+0.01)for _,f in{canvas,plate,border,rimFrame}do if f then f.Rotation=c.Rotation
+end end canvas.GroupTransparency=glass+(1-glass)*(1-alpha)local e=0.42+0.58*
+clamp01(c.Exposure)canvas.GroupColor3=Color3.new(e,e,e)window._borderStroke.
+Transparency=1-frameA window._rim.Transparency=window.RimEnabled and(1-frameA)or
+1 if c.Mask then if not mask then mask=canvas:FindFirstChild(
+'ProximityMotionMask')or Util.New('UIGradient',{Name='ProximityMotionMask',
+Parent=canvas})plateMask=plate:FindFirstChild('ProximityMotionMask')if not
+plateMask and not plate:FindFirstChildOfClass('UIGradient')then plateMask=Util.
+New('UIGradient',{Name='ProximityMotionMask',Parent=plate})end end mask.Rotation
+,mask.Transparency=c.Mask.Rotation,c.Mask.Seq if plateMask then plateMask.
+Rotation,plateMask.Transparency=c.Mask.Rotation,c.Mask.Seq plate.
+BackgroundTransparency=glass+(1-glass)*(1-alpha)else plate.
+BackgroundTransparency=1-frameA*(1-glass)end else plate.BackgroundTransparency=
+glass+(1-glass)*(1-alpha)end local tilt=1-clamp01(math.abs(c.Rotation)/2.5)
+setShadow(window,(c.ShadowK or(c.Mask and frameA or alpha))*tilt)if c.Fx then
+local fx=fxLayer(window)fx.Shape.Rotation=c.Fx.Rotation fx.Shape.Transparency=c.
+Fx.Seq fx.GroupTransparency=1-clamp01(c.Fx.Alpha)else local fx=holder:
+FindFirstChild('ProximityMotionFx')if fx and not fx:GetAttribute('Shine')then fx
+.GroupTransparency=1 end end if def.Trail then table.insert(history,1,c.Offset)
+if#history>16 then table.remove(history)end if not window._ghosts then window.
+_ghosts={}for i=1,3 do local g=Util.New('Frame',{Name='ProximityMotionGhost',
+AnchorPoint=holder.AnchorPoint,Size=holder.Size,BackgroundColor3=canvas.
+BackgroundColor3,BackgroundTransparency=1,ZIndex=0,Parent=holder.Parent})Util.
+Corner(10,g)local st=Util.Stroke(g,WHITE,1,1)local gs=Util.New('UIScale',{Parent
+=g})window._ghosts[i]={Frame=g,Stroke=st,Scale=gs,Lag=i*4}end end for i,g in
+window._ghosts do local lagged=history[math.min(g.Lag,#history)]or c.Offset
+local gap=(lagged-c.Offset).Magnitude local a=clamp01(gap/90)*(0.16-i*0.04)*
+alpha g.Frame.Position=rest+UDim2.fromOffset(lagged.X,lagged.Y)g.Frame.Rotation=
+c.Rotation g.Scale.Scale=scale*c.Scale g.Frame.BackgroundTransparency=1-a g.
+Stroke.Transparency=1-a*1.6 end end end local finished=false local conn conn=
+RunService.RenderStepped:Connect(function(dt)if window._motionToken~=token or
+not holder.Parent then conn:Disconnect()return end dt=math.min(dt,5E-2)/math.
+max(Tween.Speed,0.05)local steps=math.max(1,math.ceil(dt/(4.166666666666667E-3))
+)local h=dt/steps for _=1,steps do local a=-omega*omega*(state.P-target)-2*zeta*
+omega*state.V state.V+=a*h state.P+=state.V*h end if not opening then state.P=
+math.max(state.P,-2E-2)end if math.abs(state.P-target)<0.0015 and math.abs(state
+.V)<0.02 then state.P,state.V=target,0 finished=true end apply(state.P)if
+finished then conn:Disconnect()window._motion=nil if opening then finalOpen()
+flourish(window)else cleanup(window)if def.Ripple and info.From then ripple(
+window,info.From,120,true)end end if done then done()end end end)end function
+Motion.Stop(window)window._motionToken=(window._motionToken or 0)+1 window.
+_motion=nil cleanup(window)end return Motion end function
+__DARKLUA_BUNDLE_MODULES.x()local v=__DARKLUA_BUNDLE_MODULES.cache.x if not v
+then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.x=v end return v.c end end
+do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
+__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
+__DARKLUA_BUNDLE_MODULES.g()local Locale=__DARKLUA_BUNDLE_MODULES.j()local
+Shared=__DARKLUA_BUNDLE_MODULES.k()local RunService=Env.Service('RunService')
+local UserInputService=Env.Service('UserInputService')local Loader={}Loader.
+__index=Loader local PHONE=UserInputService.TouchEnabled and not
 UserInputService.KeyboardEnabled local SPHERE,RING=PHONE and 560 or 900,PHONE
 and 380 or 600 local TILES=PHONE and 330 or 520 local RADIUS=92 local RING_IN,
-RING_OUT=1.36,2.02 local STAGE=420 local FOV=30 local DIST=(STAGE/2)/(RADIUS*
+RING_OUT=1.28,1.96 local STAGE=420 local FOV=30 local DIST=(STAGE/2)/(RADIUS*
 math.tan(math.rad(FOV/2)))local TILT_Z,TILT_X=math.rad(17),math.rad(15)local
 FRAME=CFrame.Angles(0,0,TILT_Z)*CFrame.Angles(TILT_X,0,0)local LIGHT=Vector3.
 new(0.72,0.55,0.42).Unit local SPIN=0.3 local BUILD_AT,BUILD_FOR=1.45,1.9 local
@@ -3480,28 +3585,35 @@ then dir=dir.Unit local sz=rng:NextNumber(0.12,0.34)local shade=rng:NextNumber()
 Enum.PartType.Cylinder,Size=Vector3.new(0.01,sz,sz),Color=Color3.fromRGB(shade,
 shade,shade+2),Transparency=1})patch.CFrame=CFrame.lookAt(dir*0.99,dir*2)*CFrame
 .Angles(0,math.rad(90),0)patch.Parent=model table.insert(patches,patch)end end
-local tiles={}local golden=math.pi*(3-math.sqrt(5))local size=0.235*math.sqrt(
-520/TILES)for i=0,TILES-1 do local y=1-(i/(TILES-1))*2 local r=math.sqrt(1-y*y)
-local th=golden*i local dir=Vector3.new(math.cos(th)*r,y,math.sin(th)*r)local
-color=surfaceColor(dir)local tile=part({Shape=Enum.PartType.Cylinder,Size=
-Vector3.new(0.02,size,size),Color=color,Transparency=1})tile.CFrame=CFrame.
-lookAt(dir*0.993,dir*2)*CFrame.Angles(0,math.rad(90),0)tile.Parent=model table.
-insert(tiles,{Part=tile,Thr=thrSphere(dir),Color=color,M=-1})end local segs={}
-local bands={{1.4,0.16,0.55},{1.6,0.2,0.35},{1.8,0.12,0.6},{1.95,0.08,0.75}}
-local count=128 for _,band in bands do local r,width,base=band[1],band[2],band[3
-]local length=(TAU*r)/count*1.005 for i=0,count-1 do local a=(i/count)*TAU local
-dust=0.5+0.25*math.sin(a*3+r*4)+0.15*math.sin(a*7+r)+rng:NextNumber(-0.12,0.12)
-local seg=part({Size=Vector3.new(width,0.004,length),Color=Color3.fromRGB(235,
-235,240),Material=Enum.Material.Neon,Transparency=1})seg.CFrame=CFrame.new(math.
-cos(a)*r,0,math.sin(a)*r)*CFrame.Angles(0,-a,0)seg.Parent=model table.insert(
-segs,{Part=seg,Thr=thrRing(a,r),Base=math.clamp(base+0.18+(1-dust)*0.4,0.42,0.97
-),M=-1})end end model.Parent=viewport return model,body,tiles,segs,patches end
-function Loader.new(window,options)options=options or{}local self=setmetatable({
-},Loader)self.Window=window self.Started=os.clock()self.Points={}self.Angle=0
-self.Display=0 self.Samples={}self.Solid=1 self.Build=0 local root=Util.New(
-'Frame',{Name='ProximityLoader',BackgroundTransparency=1,Size=UDim2.fromScale(1,
-1),ZIndex=300,Parent=Shared.Gui.Root})self.Root=root local dim=Util.New('Frame',
-{BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=1,Size=UDim2.
+local belts={{-0.78,0.05,8},{-0.6,0.09,17},{-0.42,0.05,11},{-0.27,0.11,21},{-0.1
+,0.06,13},{0.06,0.13,23},{0.24,0.05,10},{0.38,0.09,19},{0.55,0.06,12},{0.7,0.08,
+16},{0.84,0.04,9}}for _,belt in belts do local h,thick,shade=belt[1],belt[2],
+belt[3]local d=2*math.sqrt(1-h*h)*1.004 local ring=part({Shape=Enum.PartType.
+Cylinder,Size=Vector3.new(thick,d,d),Color=Color3.fromRGB(shade,shade,shade+2),
+Transparency=1})ring.CFrame=CFrame.new(0,h,0)*CFrame.Angles(0,0,math.rad(90))
+ring.Parent=model table.insert(patches,ring)end local tiles={}local golden=math.
+pi*(3-math.sqrt(5))local size=0.235*math.sqrt(520/TILES)for i=0,TILES-1 do local
+y=1-(i/(TILES-1))*2 local r=math.sqrt(1-y*y)local th=golden*i local dir=Vector3.
+new(math.cos(th)*r,y,math.sin(th)*r)local color=surfaceColor(dir)local tile=
+part({Shape=Enum.PartType.Cylinder,Size=Vector3.new(0.02,size,size),Color=color,
+Transparency=1})tile.CFrame=CFrame.lookAt(dir*0.993,dir*2)*CFrame.Angles(0,math.
+rad(90),0)tile.Parent=model table.insert(tiles,{Part=tile,Thr=thrSphere(dir),
+Color=color,M=-1})end local segs={}local bands={{1.32,0.08,0.82},{1.45,0.1,0.45}
+,{1.56,0.11,0.36},{1.66,0.08,0.42},{1.81,0.1,0.55},{1.92,0.05,0.7}}local count=
+96 for _,band in bands do local r,width,base=band[1],band[2],band[3]local length
+=(TAU*r)/count*1.005 for i=0,count-1 do local a=(i/count)*TAU local dust=0.5+
+0.25*math.sin(a*3+r*4)+0.15*math.sin(a*7+r)+rng:NextNumber(-0.12,0.12)local seg=
+part({Size=Vector3.new(width,0.004,length),Color=Color3.fromRGB(235,235,240),
+Material=Enum.Material.Neon,Transparency=1})seg.CFrame=CFrame.new(math.cos(a)*r,
+0,math.sin(a)*r)*CFrame.Angles(0,-a,0)seg.Parent=model table.insert(segs,{Part=
+seg,Thr=thrRing(a,r),Base=math.clamp(base+0.18+(1-dust)*0.4,0.42,0.97),M=-1})end
+end model.Parent=viewport return model,body,tiles,segs,patches end function
+Loader.new(window,options)options=options or{}local self=setmetatable({},Loader)
+self.Window=window self.Started=os.clock()self.Points={}self.Angle=0 self.
+Display=0 self.Samples={}self.Solid=1 self.Build=0 local root=Util.New('Frame',{
+Name='ProximityLoader',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex
+=300,Parent=Shared.Gui.Root})self.Root=root local dim=Util.New('Frame',{
+BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=1,Size=UDim2.
 fromScale(1,1),ZIndex=300,Parent=root})Util.Gradient(dim,nil,NumberSequence.new(
 {NumberSequenceKeypoint.new(0,0.2),NumberSequenceKeypoint.new(0.5,0),
 NumberSequenceKeypoint.new(1,0.2)}),90)Tween.Play(dim,{BackgroundTransparency=
@@ -3527,10 +3639,10 @@ NumberSequenceKeypoint.new(1,0)}),-40)self.Crescent=crescent local viewport=Util
 Size=UDim2.fromOffset(STAGE,STAGE),Ambient=Color3.fromRGB(14,14,18),LightColor=
 Color3.fromRGB(130,130,138),LightDirection=-LIGHT,ZIndex=303,Parent=stage})self.
 Viewport=viewport Util.New('UIGradient',{Rotation=-28,Color=ColorSequence.new({
-ColorSequenceKeypoint.new(0,Color3.fromRGB(150,150,156)),ColorSequenceKeypoint.
-new(0.45,Color3.fromRGB(205,205,210)),ColorSequenceKeypoint.new(1,Color3.new(1,1
-,1))}),Parent=viewport})local ok,planet,body,tiles,segs,patches=pcall(buildModel
-,viewport)if ok then self.Planet,self.Body,self.Tiles,self.Segs,self.Patches=
+ColorSequenceKeypoint.new(0,Color3.fromRGB(208,208,214)),ColorSequenceKeypoint.
+new(0.5,Color3.fromRGB(232,232,236)),ColorSequenceKeypoint.new(1,Color3.new(1,1,
+1))}),Parent=viewport})local ok,planet,body,tiles,segs,patches=pcall(buildModel,
+viewport)if ok then self.Planet,self.Body,self.Tiles,self.Segs,self.Patches=
 planet,body,tiles,segs,patches end local rim=Util.New('Frame',{
 BackgroundTransparency=1,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.
 fromOffset(c.X,c.Y),Size=UDim2.fromOffset(RADIUS*2+2,RADIUS*2+2),ZIndex=304,
@@ -4626,110 +4738,88 @@ _anchorPoint()local target=self.TopbarButton or self.Bubble if target and target
 Windows.AbsolutePosition end return nil end function Window:Open(options)if self
 ._isOpen or self._destroyed then return self end self._isOpen=true local holder=
 self.Holder holder.Visible=true self._modal.Visible=self.Options.UnlockMouse~=
-false local canvas=self.Canvas canvas.GroupTransparency=1 local s=self:GetScale(
-)local rest=self._restPosition or holder.Position self._restPosition=rest local
-style=self:GetAnimation()if Motion.Has(style)and not(options and options.From)
-then self._animating=true Motion.Play(self,style,true,rest,function()self.
-_animating=false end)self.Opened:Fire()return self end Motion.Stop(self)local
-from=options and options.From or self:_anchorPoint()if style=='None'then from=
-nil end if from and Tween.Speed>0 then holder.Position=UDim2.fromOffset(from.X,
-from.Y)self._uiScale.Scale=s*0.05 Tween.Play(holder,{Position=rest},0.5,Enum.
-EasingStyle.Quint)Tween.Play(self._uiScale,{Scale=s},0.55,Enum.EasingStyle.Back)
-else holder.Position=rest self._uiScale.Scale=s*0.96 Tween.Play(self._uiScale,{
-Scale=s},0.3,Enum.EasingStyle.Back)end Tween.Play(canvas,{GroupTransparency=self
-.GlassTransparency or 0},0.3)Tween.Play(self._borderStroke,{Transparency=0},0.3)
-Tween.Play(self._rim,{Transparency=self.RimEnabled and 0 or 1},0.5)Tween.Play(
-self.Plate,{BackgroundTransparency=self.GlassTransparency or 0},0.3)self.Opened:
-Fire()return self end function Window:Close()if not self._isOpen then return
-self end self._isOpen=false self._modal.Visible=false Shared.Overlay.CloseAll()
-Shared.Overlay.HideTooltip()local holder=self.Holder local s=self:GetScale()if
-not self._animating then self._restPosition=holder.Position end local style=self
-:GetAnimation()if Motion.Has(style)then self._animating=true Motion.Play(self,
-style,false,self._restPosition,function()self._animating=false if not self.
-_isOpen and holder.Parent then holder.Visible=false holder.Position=self.
-_restPosition or holder.Position end end)self:_afterClose()return self end
-Motion.Stop(self)local to=style~='None'and self:_anchorPoint()or nil local time=
-Tween.Speed>0 and(style=='None'and 0.01 or to and 0.38 or 0.2)or 0 if to then
-Tween.Play(holder,{Position=UDim2.fromOffset(to.X,to.Y)},time,Enum.EasingStyle.
-Quint,Enum.EasingDirection.In)Tween.Play(self._uiScale,{Scale=s*0.05},time,Enum.
-EasingStyle.Quint,Enum.EasingDirection.In)else Tween.Play(self._uiScale,{Scale=s
-*0.97},time)end Tween.Play(self.Canvas,{GroupTransparency=1},time*0.9)Tween.
-Play(self._borderStroke,{Transparency=1},time*0.8)Tween.Play(self._rim,{
-Transparency=1},time*0.6)Tween.Play(self.Plate,{BackgroundTransparency=1},time*
-0.9)self._animating=true task.delay(time+0.02,function()self._animating=false if
-not self._isOpen and holder.Parent then holder.Visible=false holder.Position=
-self._restPosition or holder.Position end end)self:_afterClose()return self end
-function Window:SetAnimation(style)self.Library:SetSetting('OpenAnimation',style
-)return self end function Window:GetAnimation()local style=self.Library:
-GetSetting('OpenAnimation',self.Options.Animation or'Planet')if style~='Planet'
-and style~='None'and not Motion.Has(style)then style='Planet'end return style
-end function Window:_afterClose()self.Closed:Fire()local Lib=self.Library if Lib
-.Dirty and Lib.CurrentConfig and not self._dirtyNoticed then self._dirtyNoticed=
-true Lib:Notify({Title=Locale.T('Unsaved'),Content=Locale.T('UnsavedHint',Lib.
-CurrentConfig),Type='warning',Duration=6,Actions={{Text=Locale.T('Save'),
-Callback=function()Lib:QuickSave(self)end}}})elseif self.Options.HiddenHint~=
-false and not self._hintShown then self._hintShown=true Lib:Notify({Content=
-Locale.T('Hidden',Keys.Display(self.Keybind)),Duration=3})end return self end
-Window.Minimize=Window.Close Window.Hide=Window.Close Window.Show=Window.Open
-function Window:Toggle()if self._isOpen then return self:Close()end return self:
-Open()end function Window:SetOpen(open)return open and self:Open()or self:Close(
-)end function Window:IsOpen()return self._isOpen end function Window:SetScale(
-value)if value=='Auto'or value==nil then self._autoScale=true local view=
-workspace.CurrentCamera.ViewportSize value=math.min(1,(view.X-40)/self.Size.X,(
-view.Y-40)/self.Size.Y)value=math.max(value,0.5)else self._autoScale=false value
-=math.clamp(tonumber(value)or 1,0.5,2)end self._scaleValue=value self._uiScale.
-Scale=value Shared.Scale=value Shared.Overlay.SetScale(value)return self end
-function Window:GetScale()return self._scaleValue or 1 end function Window:
-SetSize(size,keepScale)if typeof(size)=='UDim2'then size=Vector2.new(size.X.
-Offset,size.Y.Offset)end self.Size=Vector2.new(math.max(size.X,self.MinSize.X),
-math.max(size.Y,self.MinSize.Y))self.Holder.Size=UDim2.fromOffset(self.Size.X,
-self.Size.Y)if self._autoScale and not keepScale then self:SetScale('Auto')end
-return self end function Window:GetSize()return self.Size end function Window:
-SetPosition(pos)if typeof(pos)=='Vector2'then pos=UDim2.fromOffset(pos.X,pos.Y)
-end self.Holder.Position=pos return self end function Window:Center()self.Holder
-.Position=UDim2.fromScale(0.5,0.5)return self end function Window:SetTitle(text)
-self.Title=text self._titleLabel.Text=text return self end function Window:
-SetSubtitle(text)self.Subtitle=text self._subLabel.Text=text return self end
-function Window:SetKeybind(key)self.Keybind=Keys.Normalize(key)return self end
-Window.SetMenuKey=Window.SetKeybind function Window:GetKeybind()return self.
-Keybind end function Window:SetTransparency(value)self.GlassTransparency=math.
-clamp(tonumber(value)or 0,0,0.4)if self._isOpen then self.Canvas.
-GroupTransparency=self.GlassTransparency self.Plate.BackgroundTransparency=self.
-GlassTransparency end return self end function Window:SetRim(enabled)self.
-RimEnabled=enabled and true or false Tween.Play(self._rim,{Transparency=(self.
-RimEnabled and self._isOpen)and 0 or 1},0.3)return self end function Window:
-SetDraggable(value)self.Options.Draggable=value return self end function Window:
-_bindInput()local Lib=self.Library self.Maid:Connect(UIS.InputBegan,function(
-input,processed)if UIS:GetFocusedTextBox()or Shared.KeybindListening then return
-end local name=Keys.FromInput(input)if name and Keys.MatchesCombo(self.Keybind,
-name)and string.sub(name,1,2)~='MB'then self:Toggle()return end if not self.
-_isOpen then return end local ctrl=UIS:IsKeyDown(Enum.KeyCode.LeftControl)or UIS
-:IsKeyDown(Enum.KeyCode.RightControl)if ctrl and input.KeyCode==Enum.KeyCode.K
-then self:OpenSearch()elseif ctrl and input.KeyCode==Enum.KeyCode.Z then Lib:
-Undo()elseif ctrl and input.KeyCode==Enum.KeyCode.Y then Lib:Redo()elseif ctrl
-and input.KeyCode==Enum.KeyCode.S then Lib:QuickSave(self)end end)end function
-Window:Command(options,callback)if type(options)=='string'then options={Name=
-options,Callback=callback}end table.insert(self._commands,options)return options
-end Window.AddCommand=Window.Command function Window:Notify(options)return self.
-Library:Notify(options)end function Window:GetElements()local out={}for _,tab in
-self.Tabs do for _,el in tab:GetElements()do table.insert(out,el)end end return
-out end function Window:Find(name)for _,el in self:GetElements()do if el.Name==
-name or el.Flag==name then return el end end return nil end function Window:
-Destroy()if self._destroyed then return end self._destroyed=true if self.
-Skeleton then self.Skeleton:Destroy()end for _,tab in table.clone(self.Tabs)do
-for _,el in tab:GetElements()do pcall(el.Destroy,el)end end self.Maid:Clean()
-local list=self.Library.Windows local i=table.find(list,self)if i then table.
-remove(list,i)end end return Window end function __DARKLUA_BUNDLE_MODULES.A()
-local v=__DARKLUA_BUNDLE_MODULES.cache.A if not v then v={c=__modImpl()}
-__DARKLUA_BUNDLE_MODULES.cache.A=v end return v.c end end do local function 
-__modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()local Tween=
-__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()local Theme=
-__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()local Locale
-=__DARKLUA_BUNDLE_MODULES.j()__DARKLUA_BUNDLE_MODULES.k()local UIS=Env.Service(
-'UserInputService')return function(Window)local function modal(self,width,height
-)local layer=Util.New('TextButton',{Name='Modal',Text='',AutoButtonColor=false,
-BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=1,Size=UDim2.
-fromScale(1,1),ZIndex=80,Parent=self.Canvas})Tween.Play(layer,{
+false local rest=self._restPosition or holder.Position self._restPosition=rest
+local from=options and options.From local style=from and'Planet'or self:
+GetAnimation()self._animating=true Motion.Play(self,style,true,rest,{From=from
+or self:_anchorPoint()},function()self._animating=false end)self.Opened:Fire()
+return self end function Window:Close()if not self._isOpen then return self end
+self._isOpen=false self._modal.Visible=false Shared.Overlay.CloseAll()Shared.
+Overlay.HideTooltip()local holder=self.Holder if not self._animating then self.
+_restPosition=holder.Position end self._animating=true Motion.Play(self,self:
+GetAnimation(),false,self._restPosition,{From=self:_anchorPoint()},function()
+self._animating=false if not self._isOpen and holder.Parent then holder.Visible=
+false holder.Position=self._restPosition or holder.Position end end)self:
+_afterClose()return self end Window.Minimize=Window.Close Window.Hide=Window.
+Close Window.Show=Window.Open function Window:Toggle()if self._isOpen then
+return self:Close()end return self:Open()end function Window:SetOpen(open)return
+open and self:Open()or self:Close()end function Window:IsOpen()return self.
+_isOpen end function Window:SetAnimation(style)self.Library:SetSetting(
+'OpenAnimation',style)return self end function Window:GetAnimation()local style=
+self.Library:GetSetting('OpenAnimation',self.Options.Animation or'Planet')if
+style~='Planet'and style~='None'and not Motion.Has(style)then style='Planet'end
+return style end function Window:_afterClose()self.Closed:Fire()local Lib=self.
+Library if Lib.Dirty and Lib.CurrentConfig and not self._dirtyNoticed then self.
+_dirtyNoticed=true Lib:Notify({Title=Locale.T('Unsaved'),Content=Locale.T(
+'UnsavedHint',Lib.CurrentConfig),Type='warning',Duration=6,Actions={{Text=Locale
+.T('Save'),Callback=function()Lib:QuickSave(self)end}}})elseif self.Options.
+HiddenHint~=false and not self._hintShown then self._hintShown=true Lib:Notify({
+Content=Locale.T('Hidden',Keys.Display(self.Keybind)),Duration=3})end return
+self end function Window:SetScale(value)if value=='Auto'or value==nil then self.
+_autoScale=true local view=workspace.CurrentCamera.ViewportSize value=math.min(1
+,(view.X-40)/self.Size.X,(view.Y-40)/self.Size.Y)value=math.max(value,0.5)else
+self._autoScale=false value=math.clamp(tonumber(value)or 1,0.5,2)end self.
+_scaleValue=value self._uiScale.Scale=value Shared.Scale=value Shared.Overlay.
+SetScale(value)return self end function Window:GetScale()return self._scaleValue
+or 1 end function Window:SetSize(size,keepScale)if typeof(size)=='UDim2'then
+size=Vector2.new(size.X.Offset,size.Y.Offset)end self.Size=Vector2.new(math.max(
+size.X,self.MinSize.X),math.max(size.Y,self.MinSize.Y))self.Holder.Size=UDim2.
+fromOffset(self.Size.X,self.Size.Y)if self._autoScale and not keepScale then
+self:SetScale('Auto')end return self end function Window:GetSize()return self.
+Size end function Window:SetPosition(pos)if typeof(pos)=='Vector2'then pos=UDim2
+.fromOffset(pos.X,pos.Y)end self.Holder.Position=pos return self end function
+Window:Center()self.Holder.Position=UDim2.fromScale(0.5,0.5)return self end
+function Window:SetTitle(text)self.Title=text self._titleLabel.Text=text return
+self end function Window:SetSubtitle(text)self.Subtitle=text self._subLabel.Text
+=text return self end function Window:SetKeybind(key)self.Keybind=Keys.
+Normalize(key)return self end Window.SetMenuKey=Window.SetKeybind function
+Window:GetKeybind()return self.Keybind end function Window:SetTransparency(value
+)self.GlassTransparency=math.clamp(tonumber(value)or 0,0,0.4)if self._isOpen
+then self.Canvas.GroupTransparency=self.GlassTransparency self.Plate.
+BackgroundTransparency=self.GlassTransparency end return self end function
+Window:SetRim(enabled)self.RimEnabled=enabled and true or false Tween.Play(self.
+_rim,{Transparency=(self.RimEnabled and self._isOpen)and 0 or 1},0.3)return self
+end function Window:SetDraggable(value)self.Options.Draggable=value return self
+end function Window:_bindInput()local Lib=self.Library self.Maid:Connect(UIS.
+InputBegan,function(input,processed)if UIS:GetFocusedTextBox()or Shared.
+KeybindListening then return end local name=Keys.FromInput(input)if name and
+Keys.MatchesCombo(self.Keybind,name)and string.sub(name,1,2)~='MB'then self:
+Toggle()return end if not self._isOpen then return end local ctrl=UIS:IsKeyDown(
+Enum.KeyCode.LeftControl)or UIS:IsKeyDown(Enum.KeyCode.RightControl)if ctrl and
+input.KeyCode==Enum.KeyCode.K then self:OpenSearch()elseif ctrl and input.
+KeyCode==Enum.KeyCode.Z then Lib:Undo()elseif ctrl and input.KeyCode==Enum.
+KeyCode.Y then Lib:Redo()elseif ctrl and input.KeyCode==Enum.KeyCode.S then Lib:
+QuickSave(self)end end)end function Window:Command(options,callback)if type(
+options)=='string'then options={Name=options,Callback=callback}end table.insert(
+self._commands,options)return options end Window.AddCommand=Window.Command
+function Window:Notify(options)return self.Library:Notify(options)end function
+Window:GetElements()local out={}for _,tab in self.Tabs do for _,el in tab:
+GetElements()do table.insert(out,el)end end return out end function Window:Find(
+name)for _,el in self:GetElements()do if el.Name==name or el.Flag==name then
+return el end end return nil end function Window:Destroy()if self._destroyed
+then return end self._destroyed=true if self.Skeleton then self.Skeleton:
+Destroy()end for _,tab in table.clone(self.Tabs)do for _,el in tab:GetElements()
+do pcall(el.Destroy,el)end end self.Maid:Clean()local list=self.Library.Windows
+local i=table.find(list,self)if i then table.remove(list,i)end end return Window
+end function __DARKLUA_BUNDLE_MODULES.A()local v=__DARKLUA_BUNDLE_MODULES.cache.
+A if not v then v={c=__modImpl()}__DARKLUA_BUNDLE_MODULES.cache.A=v end return v
+.c end end do local function __modImpl()local Util=__DARKLUA_BUNDLE_MODULES.a()
+local Tween=__DARKLUA_BUNDLE_MODULES.d()local Env=__DARKLUA_BUNDLE_MODULES.e()
+local Theme=__DARKLUA_BUNDLE_MODULES.g()local Icons=__DARKLUA_BUNDLE_MODULES.i()
+local Locale=__DARKLUA_BUNDLE_MODULES.j()__DARKLUA_BUNDLE_MODULES.k()local UIS=
+Env.Service('UserInputService')return function(Window)local function modal(self,
+width,height)local layer=Util.New('TextButton',{Name='Modal',Text='',
+AutoButtonColor=false,BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=
+1,Size=UDim2.fromScale(1,1),ZIndex=80,Parent=self.Canvas})Tween.Play(layer,{
 BackgroundTransparency=0.45},0.18)local box=Util.New('Frame',{AnchorPoint=
 Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.52),Size=UDim2.fromOffset(
 width,height or 0),AutomaticSize=height and Enum.AutomaticSize.None or Enum.
@@ -4936,11 +5026,11 @@ v)Lib:SetSetting('Decoration',v)window:SetDecoration(v)end})look:Toggle({Name=T(
 'ReducedMotion'),Icon='motion',Default=Lib:GetSetting('ReducedMotion',false),
 Save=false,Callback=function(v)Lib:SetSetting('ReducedMotion',v)Tween.Speed=v
 and 0 or 1 end})look:Dropdown({Name=T('OpenAnimation'),Icon='move',Values={
-'Planet','Rise','Zoom','Drop','Slide','Swing','Wipe','Unfold','Scan','Fade',
-'None'},Display=function(v)return T('Anim'..v)end,Default=window:GetAnimation(),
-Description=T('OpenAnimationHint'),Save=false,Callback=function(v)if v and v~=
-window:GetAnimation()then window:SetAnimation(v)task.spawn(function()window:
-Close()task.wait(0.5)window:Open()end)end end})look:Dropdown({Name=T(
+'Planet','Rise','Zoom','Drop','Slide','Swing','Wipe','Unfold','Scan','Glitch',
+'Fade','None'},Display=function(v)return T('Anim'..v)end,Default=window:
+GetAnimation(),Description=T('OpenAnimationHint'),Save=false,Callback=function(v
+)if v and v~=window:GetAnimation()then window:SetAnimation(v)task.spawn(function
+()window:Close()task.wait(0.5)window:Open()end)end end})look:Dropdown({Name=T(
 'LoadingStyle'),Icon='loader',Values={'Planet','Orbit','Eclipse','Constellation'
 ,'Terminal','Skeleton','None'},Display=function(v)return T('Loading'..v)end,
 Default=Lib:GetSetting('LoadingStyle','Planet'),Description=T('LoadingStyleHint'
@@ -5596,7 +5686,7 @@ local Locale=__DARKLUA_BUNDLE_MODULES.j()local Shared=__DARKLUA_BUNDLE_MODULES.
 k()local Overlay=__DARKLUA_BUNDLE_MODULES.l()local shared=Env.Shared()local
 previousVersion=nil if shared.Library and shared.Library.Unload then
 previousVersion=shared.Library.Version pcall(shared.Library.Unload,shared.
-Library,true)end local Library={Version='1.2.7',VersionUrl=
+Library,true)end local Library={Version='1.2.8',VersionUrl=
 [[https://raw.githubusercontent.com/ProximityDevProject/ProximityGUI/main/VERSION]]
 ,ToggleStyle='Switch',DensityName='Normal',Flags={},Elements={},AllElements={},
 Windows={},Debug=false,Unloaded=false,Anonymous=false,_classes={},_custom={},

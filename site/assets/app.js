@@ -8,7 +8,7 @@
     ["elements.html", "Elements"],
     ["systems.html", "Systems"],
     ["widgets.html", "Widgets"],
-    ["generator.html", "Generator"],
+    ["generator.html", "Builder"],
     ["executors.html", "Executors"],
     ["changelog.html", "Changelog"],
   ];
@@ -126,74 +126,52 @@
     if (e.key === "Enter" && items[sel]) location.href = items[sel].href;
   });
 
-  // particle planet (same idea as the in-game loader)
-  window.proximityPlanet = function (canvas, opts) {
-    opts = opts || {};
-    const ctx = canvas.getContext("2d");
-    const pts = [];
-    const N = opts.points || 1400, R = 1, golden = Math.PI * (3 - Math.sqrt(5));
-    for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), t = golden * i; pts.push({ x: Math.cos(t) * r, y, z: Math.sin(t) * r, k: 0 }); }
-    for (let i = 0; i < (opts.ring || 700); i++) { const t = Math.random() * Math.PI * 2, rr = 1.42 + Math.pow(Math.random(), 1.6) * 0.5; pts.push({ x: Math.cos(t) * rr, y: (Math.random() - 0.5) * 0.02, z: Math.sin(t) * rr, k: 1, g: Math.random() < 0.06 }); }
-    const stars = Array.from({ length: 160 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 1.2 + 0.2, p: Math.random() * 6 }));
-    const L = [0.72, 0.55, 0.42]; const ll = Math.hypot(...L); L[0] /= ll; L[1] /= ll; L[2] /= ll;
-    let w, h, dpr, angle = 0, t0 = performance.now(), mx = 0, my = 0;
-    const resize = () => { dpr = Math.min(devicePixelRatio || 1, 2); w = canvas.clientWidth; h = canvas.clientHeight; canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
-    resize(); addEventListener("resize", resize);
-    addEventListener("pointermove", (e) => { mx = e.clientX / innerWidth - 0.5; my = e.clientY / innerHeight - 0.5; }, { passive: true });
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const tz = -16 * Math.PI / 180, tx = 74 * Math.PI / 180;
-    function frame(now) {
-      const t = (now - t0) / 1000;
-      angle += reduce ? 0 : 0.0035;
-      ctx.clearRect(0, 0, w, h);
-      for (const s of stars) { ctx.globalAlpha = 0.15 + 0.35 * (0.5 + 0.5 * Math.sin(t * s.s + s.p)); ctx.fillStyle = "#fff"; ctx.fillRect(s.x * w, s.y * h, s.s, s.s); }
-      const size = Math.min(w, h) * (opts.scale || 0.26), cx = w * (opts.cx || 0.5) + mx * 18, cy = h * (opts.cy || 0.48) + my * 12;
-      const appear = Math.min(1, t / 1.6), ease = 1 - Math.pow(1 - appear, 3);
-      // with a solid 3D planet behind, the points dissolve once assembled
-      const dissolve = opts.solid ? Math.max(0, 1 - Math.max(0, t - 1.3) / 1.0) : 1;
-      if (opts.solid && dissolve <= 0) { ctx.clearRect(0, 0, w, h); for (const s of stars) { ctx.globalAlpha = 0.15 + 0.35 * (0.5 + 0.5 * Math.sin(t * s.s + s.p)); ctx.fillStyle = "#fff"; ctx.fillRect(s.x * w, s.y * h, s.s, s.s); } ctx.globalAlpha = 1; requestAnimationFrame(frame); return; }
-      // soft halo and a dark disc that hides the stars behind the planet
-      const halo = ctx.createRadialGradient(cx, cy, size * 0.9, cx, cy, size * 1.9);
-      halo.addColorStop(0, `rgba(255,255,255,${0.07 * ease})`); halo.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.globalAlpha = 1; ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx, cy, size * 1.9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#050506"; ctx.beginPath(); ctx.arc(cx, cy, size * 1.0, 0, Math.PI * 2); ctx.fill();
-      let flare = null, best = -9;
-      for (const p of pts) {
-        let x = p.x, y = p.y, z = p.z;
-        if (p.k) { const a = angle * 0.6, c = Math.cos(a), s = Math.sin(a); [x, z] = [x * c + z * s, -x * s + z * c]; const c2 = Math.cos(tx), s2 = Math.sin(tx); [y, z] = [y * c2 - z * s2, y * s2 + z * c2]; }
-        else { const c = Math.cos(angle), s = Math.sin(angle); [x, z] = [x * c + z * s, -x * s + z * c]; }
-        const cz = Math.cos(tz), sz = Math.sin(tz); [x, y] = [x * cz - y * sz, x * sz + y * cz];
-        const persp = 3.2 / (3.2 - z), sx = cx + x * size * persp, sy = cy - y * size * persp;
-        let a, v;
-        if (!p.k) {
-          if (z < -0.05) continue;
-          const d = Math.max(0, x * L[0] + y * L[1] + z * L[2]); const rim = Math.pow(1 - Math.abs(z), 2.2);
-          v = Math.min(1, 0.08 + Math.pow(d, 1.4) * 0.45 + rim * d * 1.7); a = Math.min(1, 0.28 + v * 1.1);
-          if (v > 0.6 && y > best) { best = y; flare = [sx, sy]; }
-        } else {
-          if (z < 0 && x * x + y * y < 1.04) continue;
-          v = Math.min(1, 0.35 + x * 0.3 + z * 0.15 + (p.g ? 0.4 : 0)); a = 0.15 + v * 0.65;
-        }
-        const scatter = (1 - ease) * 400;
-        const px = sx + Math.sin(p.x * 99) * scatter, py = sy + Math.cos(p.z * 77) * scatter;
-        ctx.globalAlpha = a * ease * dissolve;
-        const g = Math.round(55 + v * 200);
-        ctx.fillStyle = `rgb(${g},${g},${g})`;
-        const r = p.k ? (p.g ? 2.2 : 1.5) : (v > 0.6 ? 2.4 : 1.8);
-        ctx.fillRect(px, py, r, r);
-      }
-      if (flare && appear >= 1) {
-        const [fx, fy] = flare, pulse = 0.65 + 0.2 * Math.sin(t * 2.4);
-        const grad = ctx.createRadialGradient(fx, fy, 0, fx, fy, size * 0.35);
-        grad.addColorStop(0, `rgba(255,255,255,${0.55 * pulse})`); grad.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.globalAlpha = 1; ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(fx, fy, size * 0.35, 0, Math.PI * 2); ctx.fill();
-        const lg = ctx.createLinearGradient(fx, fy, fx + size * 1.4, fy);
-        lg.addColorStop(0, `rgba(255,255,255,${0.7 * pulse})`); lg.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = lg; ctx.fillRect(fx, fy - 0.6, size * 1.4, 1.2);
-      }
-      ctx.globalAlpha = 1;
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
+  // ── nav: phone menu, scrolled state, reading progress ──────────────
+  const navIn = nav.querySelector(".in");
+  const burger = document.createElement("button");
+  burger.className = "burger"; burger.setAttribute("aria-label", "Menu"); burger.innerHTML = "<span></span><span></span>";
+  navIn.append(burger);
+  burger.onclick = () => nav.classList.toggle("menu-open");
+  nav.querySelectorAll(".links a").forEach((a) => a.addEventListener("click", () => nav.classList.remove("menu-open")));
+  const bar = document.createElement("div"); bar.className = "readbar"; nav.append(bar);
+  const onScroll = () => {
+    nav.classList.toggle("scrolled", scrollY > 8);
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`;
   };
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+
+  // ── reveal on scroll, staggered inside a row ───────────────────────
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll("article > h2, article > h3, article > pre, article > .note, article > .tablewrap, article > .grid").forEach((el) => el.classList.add("reveal"));
+  const revealed = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const el = e.target, sibs = [...el.parentElement.children].filter((c) => c.classList.contains("reveal"));
+      const delay = el.closest(".grid") ? Math.min(sibs.indexOf(el), 8) * 60 : 0;
+      setTimeout(() => el.classList.add("in-view"), delay);
+      revealed.unobserve(el);
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
+  document.querySelectorAll(".reveal").forEach((el) => (reduce ? el.classList.add("in-view") : revealed.observe(el)));
+
+  // ── cards: a soft light follows the cursor ─────────────────────────
+  document.querySelectorAll(".card").forEach((card) => {
+    card.addEventListener("pointermove", (e) => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", e.clientX - r.left + "px");
+      card.style.setProperty("--my", e.clientY - r.top + "px");
+    });
+  });
+
+  // ── buttons: a tiny magnetic pull ──────────────────────────────────
+  if (!reduce && matchMedia("(pointer: fine)").matches) {
+    document.querySelectorAll(".btn.primary").forEach((b) => {
+      b.addEventListener("pointermove", (e) => { const r = b.getBoundingClientRect(); b.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * 0.12}px, ${(e.clientY - r.top - r.height / 2) * 0.2}px)`; });
+      b.addEventListener("pointerleave", () => (b.style.transform = ""));
+    });
+  }
+
+  // ── page enters softly ─────────────────────────────────────────────
+  requestAnimationFrame(() => document.body.classList.add("ready"));
 })();

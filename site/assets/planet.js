@@ -38,6 +38,16 @@ float fbm3(vec3 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++){ v += a*
 float thrS(vec3 o){ return clamp(0.5 + 0.24*sin(3.7*o.x + 1.3 + 2.0*o.y) + 0.2*sin(3.1*o.y + 2.1)*cos(2.9*o.z - 0.6) + 0.14*sin(5.3*o.z + 1.7*o.x + 0.4), 0.02, 0.98); }
 vec3 toObj(vec3 v){ float a1 = dot(v, uE1), c1 = dot(v, uE2), cs = cos(spin), sn = sin(spin);
   return vec3(a1*cs + c1*sn, dot(v, uN), -a1*sn + c1*cs); }
+// ring structure by radius: faint inner ring, bright main ring, a dark gap,
+// the outer ring with its own thin gap, all made of fine ringlets
+float ringDensity(float r){
+  float c = smoothstep(1.25, 1.31, r) * smoothstep(1.41, 1.37, r) * 0.22;
+  float b = smoothstep(1.40, 1.44, r) * smoothstep(1.71, 1.68, r) * (0.82 + 0.18 * sin(r * 97.0));
+  float a = smoothstep(1.75, 1.78, r) * smoothstep(1.93, 1.90, r) * 0.62;
+  a *= 1.0 - smoothstep(0.011, 0.0, abs(r - 1.86)) * 0.85;
+  float fine = 0.72 + 0.2 * noise(vec2(r * 230.0, 3.0)) + 0.16 * noise(vec2(r * 61.0, 1.0));
+  return clamp((c + b + a) * fine, 0.0, 1.0);
+}
 
 void main(){
   vec2 q = (gl_FragCoord.xy - place.xy) / place.z;      // planet radii, y up
@@ -67,16 +77,37 @@ void main(){
     float thr = thrS(o);
     sm = clamp((build - thr) / 0.05, 0.0, 1.0);
     float edge = exp(-pow((build - thr) / 0.025, 2.0));
-    // banded gas giant with drifting storms - it turns with the planet
-    float turb = fbm3(o * 3.0);
-    float bands = 0.5 + 0.5*sin(o.y * 15.0 + turb * 3.2);
-    float fine = 0.5 + 0.5*sin(o.y * 46.0 + turb * 5.0);
-    float storms = smoothstep(0.6, 0.78, fbm3(o * 5.0 + 4.0));
-    float diff = max(dot(n, L), 0.0);
+    // a gas giant: cloud belts bent by turbulence, fine streaks, a great
+    // oval storm and small ones, darker poles - all turning with the planet
+    float warp = fbm3(o * vec3(2.2, 6.0, 2.2) + vec3(0.0, 0.0, time * 0.015)) - 0.5;
+    float lat = o.y + warp * 0.13;
+    float b1 = 0.5 + 0.5 * sin(lat * 19.0);
+    float b2 = 0.5 + 0.5 * sin(lat * 43.0 + 1.7);
+    float b3 = 0.5 + 0.5 * sin(lat * 7.0 - 0.6);
+    float streaks = fbm3(o * vec3(9.0, 42.0, 9.0));
+    float tone = 0.16 + 0.3 * b3 + 0.26 * b1 + 0.12 * b2 + 0.3 * (streaks - 0.5);
+    vec3 sc = normalize(vec3(0.55, -0.34, 0.76));
+    vec3 so = o - sc;
+    float sd = length(so * vec3(1.0, 2.1, 1.0));
+    float storm = smoothstep(0.26, 0.02, sd);
+    float swirl = 0.5 + 0.5 * sin(atan(so.y, dot(so, normalize(cross(sc, vec3(0.0, 1.0, 0.0))))) * 2.0 + sd * 46.0);
+    tone = mix(tone, 0.62 + 0.3 * swirl, storm * 0.85);
+    tone += smoothstep(0.64, 0.8, fbm3(o * 6.0 + 7.0)) * 0.3;
+    tone *= 1.0 - smoothstep(0.72, 0.98, abs(o.y)) * 0.55;
+    // the ring's shadow on the planet: from this point towards the light
+    float ringShade = 1.0;
+    float ln = dot(L, uN);
+    if (abs(ln) > 0.001) {
+      float tr = -dot(n, uN) / ln;
+      if (tr > 0.0) ringShade = 1.0 - ringDensity(length(n + L * tr)) * 0.8;
+    }
+    float lamb = dot(n, L);
+    float diff = max(lamb, 0.0);
+    float soft = clamp((lamb + 0.16) / 1.16, 0.0, 1.0);   // gentle terminator
     float fres = pow(1.0 - n.z, 3.2);
     float limb = smoothstep(0.86, 1.0, d);
-    vec3 body = vec3(0.007) + vec3(0.13) * pow(diff, 1.2) * (0.3 + 0.5*bands + 0.2*fine) * (0.65 + 0.35*turb) + vec3(0.2) * storms * pow(diff, 1.4);
-    vec3 lit = vec3(1.0) * (pow(diff, 3.0)*0.05 + pow(fres, 1.6)*pow(diff, 0.9)*1.1 + limb*pow(diff, 1.5)*0.35);
+    vec3 body = vec3(0.006) + vec3(0.3) * tone * pow(soft, 1.3) * ringShade;
+    vec3 lit = vec3(1.0) * (pow(diff, 3.0) * 0.05 * ringShade + pow(fres, 1.6) * pow(diff, 0.9) * 1.1 + limb * pow(diff, 1.5) * 0.35);
     float crescent = smoothstep(0.955, 0.997, d) * smoothstep(0.15, 0.7, diff);
     vec3 pc = body + lit + vec3(1.0) * crescent * 1.4;
     col = mix(col, pc, sm); alpha = mix(alpha, 1.0, sm);
@@ -92,23 +123,25 @@ void main(){
   float zr = -(uN.x*q.x + uN.y*q.y) / uN.z;
   vec3 rp = vec3(q, zr);
   float rr = length(rp);
-  float ringMask = smoothstep(1.3, 1.4, rr) * smoothstep(1.98, 1.82, rr);
+  float ringMask = smoothstep(1.22, 1.3, rr) * smoothstep(1.97, 1.9, rr);
   float th = atan(dot(rp, uE2), dot(rp, uE1)) - spin;
   th = mod(th + PI, 2.0*PI) - PI;
   float rthr = clamp(0.08 + 0.8*(th/(2.0*PI) + 0.5) + 0.12*(rr - 1.36)/0.6, 0.0, 1.0);
   float rm = clamp((build - rthr) / 0.05, 0.0, 1.0);
   float redge = exp(-pow((build - rthr) / 0.02, 2.0)) * ringMask;
-  float bandsR = pow(noise(vec2(rr * 34.0, 0.0)), 1.6) * 0.8 + pow(noise(vec2(rr * 110.0, 1.0)), 2.0) * 0.5;
-  bandsR *= 0.6 + 0.4 * noise(vec2(cos(th), sin(th)) * 2.5 + rr * 1.5);
+  float dens = ringDensity(rr) * ringMask;
+  // slow clumps in the particles that travel round with the ring
+  dens *= 0.86 + 0.14 * noise(vec2(cos(th), sin(th)) * 3.0 + rr * 2.0);
   float hidden = (d < 1.0 && zr < zs) ? sm : 0.0;
   vec3 sp = rp - L * dot(rp, L);
-  // the planet's shadow only darkens the far part of the ring a little, and the
-  // side away from the light stays clearly visible (it vanished before)
-  float shadow = dot(rp, L) < 0.0 ? mix(1.0, 0.85, smoothstep(1.3, 0.6, length(sp))) : 1.0;
-  // one long, even fade from white on the lit side to dark grey on the far side
+  // the planet's shadow falls on the ring behind it, with a soft edge
+  float shadow = dot(rp, L) < 0.0 ? mix(1.0, 0.82, smoothstep(1.15, 0.85, length(sp))) : 1.0;
+  // one long, even fade from white on the lit side to grey on the far side
   float lk = 0.5 + 0.5 * dot(normalize(rp + 1e-4), L);
-  float side = mix(0.62, 1.0, lk * lk * (3.0 - 2.0 * lk));
-  float ring = min(1.0, ringMask * (0.22 + bandsR) * side * shadow * (1.0 - hidden) * 0.8 * rm);
+  // a long, very soft fade: bright on the lit side, still light on the far
+  // side (sunlight scattered through the ring keeps it glowing)
+  float side = mix(0.8, 1.0, smoothstep(0.0, 1.0, lk)) + 0.08 * pow(1.0 - lk, 2.0);
+  float ring = min(1.0, dens * side * shadow * (1.0 - hidden) * 0.95 * rm);
   float ringGlint = ringMask * pow(max(0.0, dot(normalize(vec3(q, 0.3)), L)), 22.0) * 0.9 * (1.0 - hidden) * rm;
   float re = redge * (1.0 - hidden) * 0.55;
   col = col * (1.0 - ring * 0.85) + vec3(1.0) * (ring * 0.85 + ringGlint + re);
@@ -202,8 +235,10 @@ void main(){
       const u = Math.min(1, Math.max(0, (t - BUILD_AT) / BUILD_FOR)), b = -0.08 + 1.16 * u * u * (3 - 2 * u);
       const spin = t * SPIN_SPEED, cs = Math.cos(spin), sn = Math.sin(spin);
       // layout: fit the ring inside narrow screens, sit a bit higher on phones
-      const R = Math.min(h * (opts.radius ?? 0.27), w * 0.25);
-      const cx = w * 0.5 + mx * 14, cy = h * (w < h * 0.8 ? 0.34 : (opts.cy ?? 0.44)) + my * 10;
+      // wide screens: the planet sits beside the text; narrow: above it
+      const wide = w >= 980;
+      const R = wide ? Math.min(h * 0.25, w * 0.13) : Math.min(h * 0.15, w * 0.235);
+      const cx = (wide ? w * 0.71 : w * 0.5) + mx * 14, cy = (wide ? h * 0.5 : h * 0.25) + my * 10;
 
       if (GL) {
         const { gl, U } = GL;

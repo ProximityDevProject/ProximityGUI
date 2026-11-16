@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.8 - springs and a new look
+
+- Menu animations rewritten on a physics spring: the window lands with a natural settle, and pressing the key mid-way turns it around keeping its speed
+- Every style moves the content, plate, border, rim and shadow together, brightens the content as it arrives, and glows along its edges where it reveals; when the window lands a soft shine sweeps over it, the rim pulses and the page content rises in
+- Planet grows from its button (or its own centre) with a ripple; Slide leaves motion trails; Swing hangs on a real hinge; new Glitch style
+- Loader planet: cloud belts wrapped around the sphere, a ring of six ringlets with a gap, a lighter and smoother far side
+- Website: rebuilt home page - planet beside the text, a feature ticker, live previews of all 7 loading screens, a mini window running the real menu animation springs, count-up stats, cursor-lit cards, scroll reveals, a phone menu and a reading bar
+- Website planet: a banded gas giant with a great storm, ringlets with gaps, the ring's shadow on the planet, a soft bright far side of the ring
+
 ## 1.2.7 - new loading screens
 
 - Orbit: three thin orbits with moons and trails, 96 ticks around the outside light up with real progress, the percent in the middle; the orbits fold into the centre and the menu grows from it

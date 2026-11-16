@@ -37,7 +37,7 @@ local PHONE = UserInputService.TouchEnabled and not UserInputService.KeyboardEna
 local SPHERE, RING = PHONE and 560 or 900, PHONE and 380 or 600
 local TILES = PHONE and 330 or 520
 local RADIUS = 92 -- planet radius on screen, px
-local RING_IN, RING_OUT = 1.36, 2.02 -- ring radii in planet radii
+local RING_IN, RING_OUT = 1.28, 1.96 -- ring radii in planet radii
 local STAGE = 420 -- stage and viewport size, px
 local FOV = 30
 local DIST = (STAGE / 2) / (RADIUS * math.tan(math.rad(FOV / 2))) -- camera distance for that radius
@@ -157,6 +157,17 @@ local function buildModel(viewport)
 			table.insert(patches, patch)
 		end
 	end
+	-- cloud belts: thin cylinders around the axis whose rims just break the
+	-- surface, so each one reads as a stripe wrapped round the planet
+	local belts = { { -0.78, 0.05, 8 }, { -0.6, 0.09, 17 }, { -0.42, 0.05, 11 }, { -0.27, 0.11, 21 }, { -0.1, 0.06, 13 }, { 0.06, 0.13, 23 }, { 0.24, 0.05, 10 }, { 0.38, 0.09, 19 }, { 0.55, 0.06, 12 }, { 0.7, 0.08, 16 }, { 0.84, 0.04, 9 } }
+	for _, belt in belts do
+		local h, thick, shade = belt[1], belt[2], belt[3]
+		local d = 2 * math.sqrt(1 - h * h) * 1.004
+		local ring = part({ Shape = Enum.PartType.Cylinder, Size = Vector3.new(thick, d, d), Color = Color3.fromRGB(shade, shade, shade + 2), Transparency = 1 })
+		ring.CFrame = CFrame.new(0, h, 0) * CFrame.Angles(0, 0, math.rad(90))
+		ring.Parent = model
+		table.insert(patches, ring)
+	end
 
 	-- surface tiles on a Fibonacci sphere, overlapping a little
 	local tiles = {}
@@ -176,8 +187,10 @@ local function buildModel(viewport)
 
 	-- the ring: dusty neon segments in four bands
 	local segs = {}
-	local bands = { { 1.40, 0.16, 0.55 }, { 1.60, 0.20, 0.35 }, { 1.80, 0.12, 0.6 }, { 1.95, 0.08, 0.75 } }
-	local count = 128
+	-- faint inner ring, the bright main ring in three ringlets, a dark gap,
+	-- then the outer ring and a thin outermost one (same layout as the site)
+	local bands = { { 1.32, 0.08, 0.82 }, { 1.45, 0.1, 0.45 }, { 1.56, 0.11, 0.36 }, { 1.66, 0.08, 0.42 }, { 1.81, 0.1, 0.55 }, { 1.92, 0.05, 0.7 } }
+	local count = 96
 	for _, band in bands do
 		local r, width, base = band[1], band[2], band[3]
 		local length = (TAU * r) / count * 1.005
@@ -256,8 +269,8 @@ function Loader.new(window, options)
 	Util.New("UIGradient", {
 		Rotation = -28,
 		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 156)),
-			ColorSequenceKeypoint.new(0.45, Color3.fromRGB(205, 205, 210)),
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(208, 208, 214)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(232, 232, 236)),
 			ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1)),
 		}),
 		Parent = viewport,

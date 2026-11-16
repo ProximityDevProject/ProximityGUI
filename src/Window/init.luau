@@ -1663,45 +1663,20 @@ function Window:Open(options)
 	local holder = self.Holder
 	holder.Visible = true
 	self._modal.Visible = self.Options.UnlockMouse ~= false
-	local canvas = self.Canvas
-	canvas.GroupTransparency = 1
-	local s = self:GetScale()
 	local rest = self._restPosition or holder.Position
 	self._restPosition = rest
-	local style = self:GetAnimation()
 	-- the loader burst always grows the window out of the planet
-	if Motion.Has(style) and not (options and options.From) then
-		self._animating = true
-		Motion.Play(self, style, true, rest, function()
-			self._animating = false
-		end)
-		self.Opened:Fire()
-		return self
-	end
-	Motion.Stop(self)
-	local from = options and options.From or self:_anchorPoint()
-	if style == "None" then
-		from = nil
-	end
-	if from and Tween.Speed > 0 then
-		holder.Position = UDim2.fromOffset(from.X, from.Y)
-		self._uiScale.Scale = s * 0.05
-		Tween.Play(holder, { Position = rest }, 0.5, Enum.EasingStyle.Quint)
-		Tween.Play(self._uiScale, { Scale = s }, 0.55, Enum.EasingStyle.Back)
-	else
-		holder.Position = rest
-		self._uiScale.Scale = s * 0.96
-		Tween.Play(self._uiScale, { Scale = s }, 0.3, Enum.EasingStyle.Back)
-	end
-	Tween.Play(canvas, { GroupTransparency = self.GlassTransparency or 0 }, 0.3)
-	Tween.Play(self._borderStroke, { Transparency = 0 }, 0.3)
-	Tween.Play(self._rim, { Transparency = self.RimEnabled and 0 or 1 }, 0.5)
-	Tween.Play(self.Plate, { BackgroundTransparency = self.GlassTransparency or 0 }, 0.3)
+	local from = options and options.From
+	local style = from and "Planet" or self:GetAnimation()
+	self._animating = true
+	Motion.Play(self, style, true, rest, { From = from or self:_anchorPoint() }, function()
+		self._animating = false
+	end)
 	self.Opened:Fire()
 	return self
 end
 
--- Folds back into the place it came from (topbar planet / bubble).
+-- Hides with the chosen animation (Planet folds back into its button).
 function Window:Close()
 	if not self._isOpen then
 		return self
@@ -1711,38 +1686,11 @@ function Window:Close()
 	Shared.Overlay.CloseAll()
 	Shared.Overlay.HideTooltip()
 	local holder = self.Holder
-	local s = self:GetScale()
 	if not self._animating then
 		self._restPosition = holder.Position
 	end
-	local style = self:GetAnimation()
-	if Motion.Has(style) then
-		self._animating = true
-		Motion.Play(self, style, false, self._restPosition, function()
-			self._animating = false
-			if not self._isOpen and holder.Parent then
-				holder.Visible = false
-				holder.Position = self._restPosition or holder.Position
-			end
-		end)
-		self:_afterClose()
-		return self
-	end
-	Motion.Stop(self)
-	local to = style ~= "None" and self:_anchorPoint() or nil
-	local time = Tween.Speed > 0 and (style == "None" and 0.01 or to and 0.38 or 0.2) or 0
-	if to then
-		Tween.Play(holder, { Position = UDim2.fromOffset(to.X, to.Y) }, time, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
-		Tween.Play(self._uiScale, { Scale = s * 0.05 }, time, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
-	else
-		Tween.Play(self._uiScale, { Scale = s * 0.97 }, time)
-	end
-	Tween.Play(self.Canvas, { GroupTransparency = 1 }, time * 0.9)
-	Tween.Play(self._borderStroke, { Transparency = 1 }, time * 0.8)
-	Tween.Play(self._rim, { Transparency = 1 }, time * 0.6)
-	Tween.Play(self.Plate, { BackgroundTransparency = 1 }, time * 0.9)
 	self._animating = true
-	task.delay(time + 0.02, function()
+	Motion.Play(self, self:GetAnimation(), false, self._restPosition, { From = self:_anchorPoint() }, function()
 		self._animating = false
 		if not self._isOpen and holder.Parent then
 			holder.Visible = false
@@ -1751,6 +1699,24 @@ function Window:Close()
 	end)
 	self:_afterClose()
 	return self
+end
+Window.Minimize = Window.Close
+Window.Hide = Window.Close
+Window.Show = Window.Open
+
+function Window:Toggle()
+	if self._isOpen then
+		return self:Close()
+	end
+	return self:Open()
+end
+
+function Window:SetOpen(open)
+	return open and self:Open() or self:Close()
+end
+
+function Window:IsOpen(): boolean
+	return self._isOpen
 end
 
 -- Window:SetAnimation("Swing") - how the window appears and hides (Motion.Styles)
@@ -1780,24 +1746,6 @@ function Window:_afterClose()
 		Lib:Notify({ Content = Locale.T("Hidden", Keys.Display(self.Keybind)), Duration = 3 })
 	end
 	return self
-end
-Window.Minimize = Window.Close
-Window.Hide = Window.Close
-Window.Show = Window.Open
-
-function Window:Toggle()
-	if self._isOpen then
-		return self:Close()
-	end
-	return self:Open()
-end
-
-function Window:SetOpen(open)
-	return open and self:Open() or self:Close()
-end
-
-function Window:IsOpen(): boolean
-	return self._isOpen
 end
 
 function Window:SetScale(value)

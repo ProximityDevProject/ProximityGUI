@@ -212,7 +212,7 @@ return function(Window)
 		look:Dropdown({
 			Name = T("OpenAnimation"),
 			Icon = "move",
-			Values = { "Planet", "Rise", "Zoom", "Drop", "Slide", "Swing", "Wipe", "Unfold", "Scan", "Fade", "None" },
+			Values = { "Planet", "Rise", "Zoom", "Drop", "Slide", "Swing", "Wipe", "Unfold", "Scan", "Glitch", "Fade", "None" },
 			Display = function(v)
 				return T("Anim" .. v)
 			end,
